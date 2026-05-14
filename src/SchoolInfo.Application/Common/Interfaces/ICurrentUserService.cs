@@ -1,9 +1,9 @@
-using System;
+﻿using System;
 
 namespace SchoolInfo.Application.Common.Interfaces;
 
 /// <summary>
-/// Mevcut kullanıcının bilgilerini sağlayan servis.
+/// Mevcut kullanÄ±cÄ±nÄ±n bilgilerini saÄŸlayan servis.
 /// </summary>
 public interface ICurrentUserService
 {

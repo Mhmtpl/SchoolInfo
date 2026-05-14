@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using SchoolInfo.Domain.Entities;
@@ -6,7 +6,7 @@ using SchoolInfo.Domain.Entities;
 namespace SchoolInfo.Domain.Interfaces;
 
 /// <summary>
-/// Günlük özetlere erişim için repository arayüzü.
+/// GÃ¼nlÃ¼k Ã¶zetlere eriÅŸim iÃ§in repository arayÃ¼zÃ¼.
 /// </summary>
 public interface IDailySummaryRepository
 {

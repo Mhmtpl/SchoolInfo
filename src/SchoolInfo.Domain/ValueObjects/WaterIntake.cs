@@ -1,7 +1,7 @@
-namespace SchoolInfo.Domain.ValueObjects;
+﻿namespace SchoolInfo.Domain.ValueObjects;
 
 /// <summary>
-/// Su tüketimi verisini temsil eden değer nesnesi (Value Object).
+/// Su tÃ¼ketimi verisini temsil eden deÄŸer nesnesi (Value Object).
 /// </summary>
-/// <param name="AmountInMilliliters">Mililitre cinsinden tüketilen su miktarı.</param>
+/// <param name="AmountInMilliliters">Mililitre cinsinden tÃ¼ketilen su miktarÄ±.</param>
 public record WaterIntake(int AmountInMilliliters);

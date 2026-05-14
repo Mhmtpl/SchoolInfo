@@ -1,11 +1,11 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SchoolInfo.Domain.Entities;
 
 namespace SchoolInfo.Infrastructure.Persistence.Configurations;
 
 /// <summary>
-/// Activity entity'si için veritabanı yapılandırması.
+/// Activity entity'si iÃ§in veritabanÄ± yapÄ±landÄ±rmasÄ±.
 /// </summary>
 public class ActivityConfiguration : IEntityTypeConfiguration<Activity>
 {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -10,7 +10,7 @@ using SchoolInfo.Domain.Exceptions;
 namespace SchoolInfo.API.Middleware;
 
 /// <summary>
-/// Tüm uygulamada oluşan hataları yakalayıp standart bir formatta ve doğru HTTP statü kodları ile dönen middleware.
+/// TÃ¼m uygulamada oluÅŸan hatalarÄ± yakalayÄ±p standart bir formatta ve doÄŸru HTTP statÃ¼ kodlarÄ± ile dÃ¶nen middleware.
 /// </summary>
 public class ExceptionHandlingMiddleware
 {
@@ -31,7 +31,7 @@ public class ExceptionHandlingMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Uygulama çalışırken bir hata oluştu.");
+            _logger.LogError(ex, "Uygulama Ã§alÄ±ÅŸÄ±rken bir hata oluÅŸtu.");
             await HandleExceptionAsync(context, ex);
         }
     }

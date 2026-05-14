@@ -1,10 +1,10 @@
-using SchoolInfo.Domain.Enums;
+﻿using SchoolInfo.Domain.Enums;
 
 namespace SchoolInfo.Domain.ValueObjects;
 
 /// <summary>
-/// Öğün durumunu temsil eden değer nesnesi (Value Object).
+/// Ã–ÄŸÃ¼n durumunu temsil eden deÄŸer nesnesi (Value Object).
 /// </summary>
-/// <param name="Type">Öğünün tüketim tipi.</param>
-/// <param name="Description">Öğün hakkında ek açıklama (isteğe bağlı).</param>
+/// <param name="Type">Ã–ÄŸÃ¼nÃ¼n tÃ¼ketim tipi.</param>
+/// <param name="Description">Ã–ÄŸÃ¼n hakkÄ±nda ek aÃ§Ä±klama (isteÄŸe baÄŸlÄ±).</param>
 public record MealStatus(MealStatusType Type, string? Description);

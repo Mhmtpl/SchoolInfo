@@ -16,7 +16,7 @@ using SchoolInfo.Infrastructure.BackgroundServices;
 namespace SchoolInfo.Infrastructure;
 
 /// <summary>
-/// Infrastructure katmanına ait bağımlılıkların IoC konteynerine eklendiği sınıf.
+/// Infrastructure katmanÄ±na ait baÄŸÄ±mlÄ±lÄ±klarÄ±n IoC konteynerine eklendiÄŸi sÄ±nÄ±f.
 /// </summary>
 public static class DependencyInjection
 {
@@ -31,6 +31,9 @@ public static class DependencyInjection
 
         // Repositories
         services.AddScoped<IStudentRepository, StudentRepository>();
+        services.AddScoped<IClassroomRepository, ClassroomRepository>();
+        services.AddScoped<ISchoolRepository, SchoolRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IDailyRecordRepository, DailyRecordRepository>();
         services.AddScoped<IMealRecordRepository, MealRecordRepository>();
         services.AddScoped<IActivityRepository, ActivityRepository>();
@@ -41,19 +44,19 @@ public static class DependencyInjection
         var apiKey = configuration["AgentFramework:ApiKey"] ?? "key";
         var model = configuration["AgentFramework:Model"] ?? "gpt-4o";
 
-        var instructions = @"Sen bir anaokulu ve ilkokul öğretmenisin.
-Sana JSON formatında verilen günlük çocuk verilerini, ebeveyne hitap eden sıcak, güven verici ve pedagojik bir dille özetle.
+        var instructions = @"Sen bir anaokulu ve ilkokul Ã¶ÄŸretmenisin.
+Sana JSON formatÄ±nda verilen gÃ¼nlÃ¼k Ã§ocuk verilerini, ebeveyne hitap eden sÄ±cak, gÃ¼ven verici ve pedagojik bir dille Ã¶zetle.
 Kurallar:
-- Türkçe yaz
-- 'Bugün [ÇocukAdı]...' diye başla
-- Özbakım, beslenme ve öğrenme bilgilerini doğal akışta geç
-- Negatif bilgileri (yemedi, uyumadı) yumuşat ama gizleme
-- Maksimum 4 cümle
+- TÃ¼rkÃ§e yaz
+- 'BugÃ¼n [Ã‡ocukAdÄ±]...' diye baÅŸla
+- Ã–zbakÄ±m, beslenme ve Ã¶ÄŸrenme bilgilerini doÄŸal akÄ±ÅŸta geÃ§
+- Negatif bilgileri (yemedi, uyumadÄ±) yumuÅŸat ama gizleme
+- Maksimum 4 cÃ¼mle
 - Emoji kullanma
-- Resmi değil, samimi dil kullan
-- Sadece özet metni döndür, başka hiçbir şey yazma";
+- Resmi deÄŸil, samimi dil kullan
+- Sadece Ã¶zet metni dÃ¶ndÃ¼r, baÅŸka hiÃ§bir ÅŸey yazma";
 
-        // Agent instance'ı DI ile singleton olarak register et
+        // Agent instance'Ä± DI ile singleton olarak register et
         services.AddSingleton(provider => 
         {
             var client = new OpenAIClient(apiKey);

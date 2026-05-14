@@ -1,12 +1,12 @@
-namespace SchoolInfo.Domain.Enums;
+﻿namespace SchoolInfo.Domain.Enums;
 
 /// <summary>
-/// Öğün tüketim durumlarını belirtir.
+/// Ã–ÄŸÃ¼n tÃ¼ketim durumlarÄ±nÄ± belirtir.
 /// </summary>
 public enum MealStatusType
 {
     /// <summary>
-    /// Hiç yemedi.
+    /// HiÃ§ yemedi.
     /// </summary>
     None = 0,
 
@@ -16,7 +16,7 @@ public enum MealStatusType
     Little = 1,
 
     /// <summary>
-    /// Yarısını yedi.
+    /// YarÄ±sÄ±nÄ± yedi.
     /// </summary>
     Half = 2,
 

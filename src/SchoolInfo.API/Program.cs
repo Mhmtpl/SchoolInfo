@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -17,7 +17,7 @@ using System;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Domain (Herhangi bir servis kaydı yok)
+// 1. Domain (Herhangi bir servis kaydÄ± yok)
 
 // 2. Application
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(SchoolInfo.Application.Common.Interfaces.IAppDbContext).Assembly));
@@ -25,14 +25,14 @@ builder.Services.AddValidatorsFromAssembly(typeof(SchoolInfo.Application.Common.
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
 
-// Real Current User Service (Gerçek uygulamada HttpContextAccessor üzerinden User alınır)
+// Real Current User Service (GerÃ§ek uygulamada HttpContextAccessor Ã¼zerinden User alÄ±nÄ±r)
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<SchoolInfo.Application.Common.Interfaces.ICurrentUserService, SchoolInfo.API.Services.CurrentUserService>();
 
 // 3. Infrastructure
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// 4. Endpoints Registration (Reflection ile tüm IEndpoint'ler)
+// 4. Endpoints Registration (Reflection ile tÃ¼m IEndpoint'ler)
 builder.Services.AddEndpoints();
 
 // 5. JWT Authentication
@@ -52,7 +52,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
-// 6. Swagger Config (JWT desteği)
+// 6. Swagger Config (JWT desteÄŸi)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {

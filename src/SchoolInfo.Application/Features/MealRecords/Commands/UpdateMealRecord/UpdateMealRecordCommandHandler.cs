@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -10,7 +10,7 @@ using SchoolInfo.Domain.ValueObjects;
 namespace SchoolInfo.Application.Features.MealRecords.Commands.UpdateMealRecord;
 
 /// <summary>
-/// Öğün kaydı güncelleme işlemini yürüten sınıf.
+/// Ã–ÄŸÃ¼n kaydÄ± gÃ¼ncelleme iÅŸlemini yÃ¼rÃ¼ten sÄ±nÄ±f.
 /// </summary>
 public class UpdateMealRecordCommandHandler : IRequestHandler<UpdateMealRecordCommand>
 {
@@ -32,13 +32,13 @@ public class UpdateMealRecordCommandHandler : IRequestHandler<UpdateMealRecordCo
     {
         if (_currentUserService.Role != "Teacher" && _currentUserService.Role != "Admin")
         {
-            throw new UnauthorizedAccessException("Öğün kaydı güncellemek için yetkiniz bulunmamaktadır.");
+            throw new UnauthorizedAccessException("Ã–ÄŸÃ¼n kaydÄ± gÃ¼ncellemek iÃ§in yetkiniz bulunmamaktadÄ±r.");
         }
 
         var mealRecord = await _mealRecordRepository.GetByIdAsync(request.MealRecordId);
         if (mealRecord == null)
         {
-            throw new DomainException($"Id'si {request.MealRecordId} olan öğün kaydı bulunamadı.");
+            throw new DomainException($"Id'si {request.MealRecordId} olan Ã¶ÄŸÃ¼n kaydÄ± bulunamadÄ±.");
         }
 
         mealRecord.UpdateStatus(new MealStatus(request.StatusType, request.Description));

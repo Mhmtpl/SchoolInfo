@@ -1,38 +1,48 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace SchoolInfo.Domain.Common;
 
 /// <summary>
-/// Tüm entity'ler için temel sınıf.
-/// Kimlik, oluşturulma/güncellenme zamanı ve domain event yönetimini içerir.
+/// TÃ¼m entity'ler iÃ§in temel sÄ±nÄ±f.
+/// Kimlik, oluÅŸturulma/gÃ¼ncellenme zamanÄ± ve domain event yÃ¶netimini iÃ§erir.
 /// </summary>
 public abstract class BaseEntity
 {
     /// <summary>
-    /// Entity'nin benzersiz kimliği.
+    /// Entity'nin benzersiz kimliÄŸi.
     /// </summary>
     public Guid Id { get; protected set; }
 
     /// <summary>
-    /// Multi-tenant (Çoklu Okul) yapısı için okul kimliği.
+    /// Multi-tenant (Ã‡oklu Okul) yapÄ±sÄ± iÃ§in okul kimliÄŸi.
     /// </summary>
     public Guid SchoolId { get; set; }
 
     /// <summary>
-    /// Entity'nin oluşturulma zamanı.
+    /// Entity'nin oluÅŸturulma zamanÄ±.
     /// </summary>
     public DateTime CreatedAt { get; protected set; }
 
     /// <summary>
-    /// Entity'nin son güncellenme zamanı.
+    /// Entity'nin son gÃ¼ncellenme zamanÄ±.
     /// </summary>
     public DateTime? UpdatedAt { get; protected set; }
+
+    /// <summary>
+    /// Entity'nin silinme durumu (Soft Delete).
+    /// </summary>
+    public bool IsDeleted { get; private set; }
+
+    /// <summary>
+    /// Entity'nin silinme zamanÄ±.
+    /// </summary>
+    public DateTime? DeletedAt { get; private set; }
 
     private readonly List<IDomainEvent> _domainEvents = new();
 
     /// <summary>
-    /// Entity üzerinde gerçekleşen domain event'leri.
+    /// Entity Ã¼zerinde gerÃ§ekleÅŸen domain event'leri.
     /// </summary>
     public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
@@ -52,7 +62,7 @@ public abstract class BaseEntity
     }
 
     /// <summary>
-    /// Tüm domain event'leri temizler.
+    /// TÃ¼m domain event'leri temizler.
     /// </summary>
     public void ClearDomainEvents()
     {
@@ -60,10 +70,20 @@ public abstract class BaseEntity
     }
 
     /// <summary>
-    /// Güncellenme zamanını şu anki zamana ayarlar.
+    /// GÃ¼ncellenme zamanÄ±nÄ± ÅŸu anki zamana ayarlar.
     /// </summary>
     protected void UpdateTimestamp()
     {
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Entity'i silindi olarak iÅŸaretler (Soft Delete).
+    /// </summary>
+    public void Delete()
+    {
+        IsDeleted = true;
+        DeletedAt = DateTime.UtcNow;
+        UpdateTimestamp();
     }
 }

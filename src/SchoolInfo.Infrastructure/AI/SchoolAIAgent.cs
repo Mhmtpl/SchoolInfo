@@ -1,4 +1,4 @@
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using OpenAI;
 
 namespace SchoolInfo.Infrastructure.AI;
@@ -18,6 +18,6 @@ public class SchoolAIAgent
 
     public Task<string> RunAsync(string input)
     {
-        return Task.FromResult("Bugün okulda her şey harikaydı. Yemeklerini güzelce yedi.");
+        return Task.FromResult("BugÃ¼n okulda her ÅŸey harikaydÄ±. Yemeklerini gÃ¼zelce yedi.");
     }
 }

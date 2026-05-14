@@ -1,16 +1,16 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace SchoolInfo.Application.Common.Exceptions;
 
 /// <summary>
-/// Validasyon hatalarında fırlatılan istisna sınıfı.
+/// Validasyon hatalarÄ±nda fÄ±rlatÄ±lan istisna sÄ±nÄ±fÄ±.
 /// </summary>
 public class ValidationException : Exception
 {
     public IDictionary<string, string[]> Errors { get; }
 
-    public ValidationException() : base("Bir veya daha fazla doğrulama hatası oluştu.")
+    public ValidationException() : base("Bir veya daha fazla doÄŸrulama hatasÄ± oluÅŸtu.")
     {
         Errors = new Dictionary<string, string[]>();
     }

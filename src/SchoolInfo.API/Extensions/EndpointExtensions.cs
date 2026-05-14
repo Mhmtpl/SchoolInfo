@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Reflection;
 using Microsoft.AspNetCore.Builder;
@@ -9,7 +9,7 @@ using SchoolInfo.API.Endpoints;
 namespace SchoolInfo.API.Extensions;
 
 /// <summary>
-/// Minimal API endpoint'lerini Reflection ile otomatik bulup kaydeden genişletme metotları.
+/// Minimal API endpoint'lerini Reflection ile otomatik bulup kaydeden geniÅŸletme metotlarÄ±.
 /// </summary>
 public static class EndpointExtensions
 {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,7 +11,7 @@ using SchoolInfo.Domain.Interfaces;
 namespace SchoolInfo.Application.Features.DailySummary.Commands.GenerateDailySummary;
 
 /// <summary>
-/// Günlük özet raporu oluşturma işlemini yürüten sınıf.
+/// GÃ¼nlÃ¼k Ã¶zet raporu oluÅŸturma iÅŸlemini yÃ¼rÃ¼ten sÄ±nÄ±f.
 /// </summary>
 public class GenerateDailySummaryCommandHandler : IRequestHandler<GenerateDailySummaryCommand, Guid>
 {
@@ -49,27 +49,27 @@ public class GenerateDailySummaryCommandHandler : IRequestHandler<GenerateDailyS
 
     public async Task<Guid> Handle(GenerateDailySummaryCommand request, CancellationToken cancellationToken)
     {
-        // 1. ICurrentUserService ile yetki kontrolü yap
+        // 1. ICurrentUserService ile yetki kontrolÃ¼ yap
         if (_currentUserService.Role != "Teacher" && _currentUserService.Role != "Admin" && _currentUserService.Role != "System")
         {
-            throw new UnauthorizedAccessException("Günlük özet raporu oluşturmak için yetkiniz bulunmamaktadır.");
+            throw new UnauthorizedAccessException("GÃ¼nlÃ¼k Ã¶zet raporu oluÅŸturmak iÃ§in yetkiniz bulunmamaktadÄ±r.");
         }
 
-        // 2. StudentRepository'den öğrenciyi getir
+        // 2. StudentRepository'den Ã¶ÄŸrenciyi getir
         var student = await _studentRepository.GetByIdAsync(request.StudentId);
         if (student == null)
         {
             throw new StudentNotFoundException(request.StudentId);
         }
 
-        // 3. IDailyRecordRepository'den o günün kaydını getir
+        // 3. IDailyRecordRepository'den o gÃ¼nÃ¼n kaydÄ±nÄ± getir
         var dailyRecord = await _dailyRecordRepository.GetByStudentAndDateAsync(request.StudentId, request.Date);
         if (dailyRecord == null)
         {
-            throw new DomainException("Bu tarihte öğrenciye ait günlük kayıt bulunamadı.");
+            throw new DomainException("Bu tarihte Ã¶ÄŸrenciye ait gÃ¼nlÃ¼k kayÄ±t bulunamadÄ±.");
         }
 
-        // 4. IMealRecordRepository'den yemek kayıtlarını getir
+        // 4. IMealRecordRepository'den yemek kayÄ±tlarÄ±nÄ± getir
         var meals = await _mealRecordRepository.GetByDailyRecordIdAsync(dailyRecord.Id);
 
         // 5. IActivityRepository'den etkinlikleri getir
@@ -85,23 +85,23 @@ public class GenerateDailySummaryCommandHandler : IRequestHandler<GenerateDailyS
                     ? (int)(dailyRecord.SleepInfo.EndTime.Value - dailyRecord.SleepInfo.StartTime.Value).TotalMinutes 
                     : 0,
                 Status: dailyRecord.SleepInfo.Status.ToString()),
-            ToiletCount: 0, // Varsayılan değer
+            ToiletCount: 0, // VarsayÄ±lan deÄŸer
             Meals: meals.Select(m => new MealDto(m.MealName, m.Status.Type.ToString(), m.Status.Description ?? "")).ToList(),
             Activities: activities.Select(a => new ActivityDto(a.Title, a.Description, a.ActivityDate)).ToList()
         );
 
-        // 7. IAISummaryService.GenerateAsync() çağır
+        // 7. IAISummaryService.GenerateAsync() Ã§aÄŸÄ±r
         var aiContent = await _aiSummaryService.GenerateAsync(summaryDto);
         
-        // 8. DailySummary entity'si oluştur ve kaydet
+        // 8. DailySummary entity'si oluÅŸtur ve kaydet
         var summary = new SchoolInfo.Domain.Entities.DailySummary(student.Id, request.Date, aiContent);
 
         await _dailySummaryRepository.AddAsync(summary);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        // 9. INotificationService ile veliye bildirim gönder
+        // 9. INotificationService ile veliye bildirim gÃ¶nder
         var firstSentence = aiContent.Split('.').FirstOrDefault() + ".";
-        await _notificationService.SendNotificationAsync(student.Id, "Bugünün özeti hazır", firstSentence);
+        await _notificationService.SendNotificationAsync(student.Id, "BugÃ¼nÃ¼n Ã¶zeti hazÄ±r", firstSentence);
 
         return summary.Id;
     }

@@ -1,9 +1,9 @@
-using Microsoft.AspNetCore.Routing;
+﻿using Microsoft.AspNetCore.Routing;
 
 namespace SchoolInfo.API.Endpoints;
 
 /// <summary>
-/// Minimal API endpoint'lerini gruplamak ve kaydetmek için kullanılan arayüz.
+/// Minimal API endpoint'lerini gruplamak ve kaydetmek iÃ§in kullanÄ±lan arayÃ¼z.
 /// </summary>
 public interface IEndpoint
 {

@@ -1,10 +1,10 @@
-using System;
+﻿using System;
 using SchoolInfo.Domain.Common;
 
 namespace SchoolInfo.Domain.Events;
 
 /// <summary>
-/// Öğün kaydı güncellendiğinde fırlatılan olay.
+/// Ã–ÄŸÃ¼n kaydÄ± gÃ¼ncellendiÄŸinde fÄ±rlatÄ±lan olay.
 /// </summary>
-/// <param name="MealRecordId">Güncellenen öğün kaydının Id'si.</param>
+/// <param name="MealRecordId">GÃ¼ncellenen Ã¶ÄŸÃ¼n kaydÄ±nÄ±n Id'si.</param>
 public record MealRecordUpdatedEvent(Guid MealRecordId) : IDomainEvent;

@@ -22,6 +22,21 @@ namespace SchoolInfo.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ClassroomUser", b =>
+                {
+                    b.Property<Guid>("ClassroomsId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TeachersId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ClassroomsId", "TeachersId");
+
+                    b.HasIndex("TeachersId");
+
+                    b.ToTable("ClassroomTeachers", (string)null);
+                });
+
             modelBuilder.Entity("SchoolInfo.Domain.Entities.Activity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -34,13 +49,22 @@ namespace SchoolInfo.Infrastructure.Migrations
                     b.Property<Guid>("ClassroomId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
@@ -66,6 +90,12 @@ namespace SchoolInfo.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -96,6 +126,12 @@ namespace SchoolInfo.Infrastructure.Migrations
 
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid>("SchoolId")
                         .HasColumnType("uuid");
@@ -132,6 +168,12 @@ namespace SchoolInfo.Infrastructure.Migrations
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsReadByParent")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -163,6 +205,12 @@ namespace SchoolInfo.Infrastructure.Migrations
                     b.Property<Guid>("DailyRecordId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("MealName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -187,6 +235,12 @@ namespace SchoolInfo.Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -219,10 +273,16 @@ namespace SchoolInfo.Infrastructure.Migrations
                     b.Property<DateTime>("DateOfBirth")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -251,15 +311,25 @@ namespace SchoolInfo.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("FcmToken")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -285,6 +355,36 @@ namespace SchoolInfo.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("StudentUser", b =>
+                {
+                    b.Property<Guid>("ParentsId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StudentsId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ParentsId", "StudentsId");
+
+                    b.HasIndex("StudentsId");
+
+                    b.ToTable("StudentParents", (string)null);
+                });
+
+            modelBuilder.Entity("ClassroomUser", b =>
+                {
+                    b.HasOne("SchoolInfo.Domain.Entities.Classroom", null)
+                        .WithMany()
+                        .HasForeignKey("ClassroomsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SchoolInfo.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("TeachersId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("SchoolInfo.Domain.Entities.Classroom", b =>
@@ -380,6 +480,21 @@ namespace SchoolInfo.Infrastructure.Migrations
                     b.HasOne("SchoolInfo.Domain.Entities.Classroom", null)
                         .WithMany("Students")
                         .HasForeignKey("ClassroomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StudentUser", b =>
+                {
+                    b.HasOne("SchoolInfo.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ParentsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SchoolInfo.Domain.Entities.Student", null)
+                        .WithMany()
+                        .HasForeignKey("StudentsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

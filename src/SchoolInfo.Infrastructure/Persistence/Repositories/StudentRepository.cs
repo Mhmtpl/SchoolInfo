@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,7 +9,7 @@ using SchoolInfo.Domain.Interfaces;
 namespace SchoolInfo.Infrastructure.Persistence.Repositories;
 
 /// <summary>
-/// Öğrenci verilerine erişimi sağlayan repository sınıfı.
+/// Ã–ÄŸrenci verilerine eriÅŸimi saÄŸlayan repository sÄ±nÄ±fÄ±.
 /// </summary>
 public class StudentRepository : BaseRepository<Student>, IStudentRepository
 {

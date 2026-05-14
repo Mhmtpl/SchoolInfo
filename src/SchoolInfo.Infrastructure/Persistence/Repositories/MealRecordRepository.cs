@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,7 +9,7 @@ using SchoolInfo.Domain.Interfaces;
 namespace SchoolInfo.Infrastructure.Persistence.Repositories;
 
 /// <summary>
-/// Öğün kayıtlarına erişimi sağlayan repository sınıfı.
+/// Ã–ÄŸÃ¼n kayÄ±tlarÄ±na eriÅŸimi saÄŸlayan repository sÄ±nÄ±fÄ±.
 /// </summary>
 public class MealRecordRepository : BaseRepository<MealRecord>, IMealRecordRepository
 {

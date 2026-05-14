@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace SchoolInfo.Application.Common.Behaviors;
 
 /// <summary>
-/// Tüm MediatR isteklerini loglayan araya girici (behavior).
+/// TÃ¼m MediatR isteklerini loglayan araya girici (behavior).
 /// </summary>
 public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse> where TRequest : notnull
 {
@@ -20,11 +20,11 @@ public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, 
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
     {
         var requestName = typeof(TRequest).Name;
-        _logger.LogInformation("SchoolInfo İstek Başlıyor: {Name} {@Request}", requestName, request);
+        _logger.LogInformation("SchoolInfo Ä°stek BaÅŸlÄ±yor: {Name} {@Request}", requestName, request);
 
         var response = await next();
 
-        _logger.LogInformation("SchoolInfo İstek Tamamlandı: {Name}", requestName);
+        _logger.LogInformation("SchoolInfo Ä°stek TamamlandÄ±: {Name}", requestName);
 
         return response;
     }

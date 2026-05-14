@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 namespace SchoolInfo.Infrastructure.BackgroundServices;
 
 /// <summary>
-/// Her gün 17:00'de çalışarak öğrencilerin günlük özetlerini oluşturan zamanlanmış arka plan servisi.
+/// Her gÃ¼n 17:00'de Ã§alÄ±ÅŸarak Ã¶ÄŸrencilerin gÃ¼nlÃ¼k Ã¶zetlerini oluÅŸturan zamanlanmÄ±ÅŸ arka plan servisi.
 /// </summary>
 public class DailySummaryScheduler : BackgroundService
 {
@@ -39,15 +39,15 @@ public class DailySummaryScheduler : BackgroundService
             }
 
             var delay = targetTime - now;
-            _logger.LogInformation("DailySummaryScheduler {TargetTime} saatinde çalışmak üzere bekliyor.", targetTime);
+            _logger.LogInformation("DailySummaryScheduler {TargetTime} saatinde Ã§alÄ±ÅŸmak Ã¼zere bekliyor.", targetTime);
 
             try
             {
                 await Task.Delay(delay, stoppingToken);
 
-                _logger.LogInformation("DailySummaryScheduler çalışmaya başladı.");
+                _logger.LogInformation("DailySummaryScheduler Ã§alÄ±ÅŸmaya baÅŸladÄ±.");
                 await ProcessSummariesAsync(stoppingToken);
-                _logger.LogInformation("DailySummaryScheduler işlemi tamamlandı.");
+                _logger.LogInformation("DailySummaryScheduler iÅŸlemi tamamlandÄ±.");
             }
             catch (TaskCanceledException)
             {
@@ -55,7 +55,7 @@ public class DailySummaryScheduler : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "DailySummaryScheduler döngüsünde hata oluştu.");
+                _logger.LogError(ex, "DailySummaryScheduler dÃ¶ngÃ¼sÃ¼nde hata oluÅŸtu.");
                 await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
             }
         }
@@ -80,8 +80,8 @@ public class DailySummaryScheduler : BackgroundService
             }
             catch (Exception ex)
             {
-                // Bir öğrencinin hatası diğerini etkilemesin
-                _logger.LogError(ex, "Öğrenci {StudentId} için günlük özet oluşturulurken hata meydana geldi.", studentId);
+                // Bir Ã¶ÄŸrencinin hatasÄ± diÄŸerini etkilemesin
+                _logger.LogError(ex, "Ã–ÄŸrenci {StudentId} iÃ§in gÃ¼nlÃ¼k Ã¶zet oluÅŸturulurken hata meydana geldi.", studentId);
             }
         }
     }

@@ -1,11 +1,11 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SchoolInfo.Domain.Entities;
 
 namespace SchoolInfo.Infrastructure.Persistence.Configurations;
 
 /// <summary>
-/// DailySummary entity'si için veritabanı yapılandırması.
+/// DailySummary entity'si iÃ§in veritabanÄ± yapÄ±landÄ±rmasÄ±.
 /// </summary>
 public class DailySummaryConfiguration : IEntityTypeConfiguration<DailySummary>
 {

@@ -1,11 +1,11 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SchoolInfo.Domain.Entities;
 
 namespace SchoolInfo.Infrastructure.Persistence.Configurations;
 
 /// <summary>
-/// MealRecord entity'si için veritabanı yapılandırması.
+/// MealRecord entity'si iÃ§in veritabanÄ± yapÄ±landÄ±rmasÄ±.
 /// </summary>
 public class MealRecordConfiguration : IEntityTypeConfiguration<MealRecord>
 {

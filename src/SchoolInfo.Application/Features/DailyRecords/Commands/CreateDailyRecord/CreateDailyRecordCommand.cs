@@ -1,9 +1,9 @@
-using System;
+﻿using System;
 using MediatR;
 
 namespace SchoolInfo.Application.Features.DailyRecords.Commands.CreateDailyRecord;
 
 /// <summary>
-/// Günlük kayıt oluşturma isteği.
+/// GÃ¼nlÃ¼k kayÄ±t oluÅŸturma isteÄŸi.
 /// </summary>
 public record CreateDailyRecordCommand(Guid StudentId, DateTime Date) : IRequest<Guid>;

@@ -10,7 +10,7 @@ using SchoolInfo.Application.Features.Activities.Commands.CreateActivity;
 namespace SchoolInfo.API.Endpoints.Activities;
 
 /// <summary>
-/// Aktivite iÅŸlemleri iÃ§in Minimal API endpoint'leri.
+/// Aktivite iÃ…Å¸lemleri iÃƒÂ§in Minimal API endpoint'leri.
 /// </summary>
 public class ActivityEndpoints : IEndpoint
 {
@@ -20,11 +20,16 @@ public class ActivityEndpoints : IEndpoint
 
         group.MapPost("/", CreateActivityAsync)
             .WithName("CreateActivity")
-            .WithSummary("Yeni aktivite oluÅŸturur.");
+            .WithSummary("Yeni aktivite oluÃ…Å¸turur.");
 
         group.MapPut("/{id:guid}/complete", CompleteActivityAsync)
             .WithName("CompleteActivity")
-            .WithSummary("Belirtilen aktiviteyi tamamlandÄ± olarak iÅŸaretler.");
+            .WithSummary("Belirtilen aktiviteyi tamamlandÃ„Â± olarak iÃ…Å¸aretler.");
+
+        group.MapDelete("/{id:guid}", DeleteActivityAsync)
+            .WithName("DeleteActivity")
+            .WithSummary("Aktiviteyi siler (sadece tamamlanmamÄ±ÅŸ).")
+            .RequireAuthorization();
     }
 
     private static async Task<IResult> CreateActivityAsync(CreateActivityCommand command, IMediator mediator)
@@ -37,6 +42,12 @@ public class ActivityEndpoints : IEndpoint
     {
         var command = new CompleteActivityCommand(id);
         await mediator.Send(command);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> DeleteActivityAsync(Guid id, IMediator mediator)
+    {
+        await mediator.Send(new SchoolInfo.Application.Features.Activities.Commands.DeleteActivity.DeleteActivityCommand(id));
         return Results.NoContent();
     }
 }

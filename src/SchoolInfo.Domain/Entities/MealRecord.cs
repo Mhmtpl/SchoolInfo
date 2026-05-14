@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using SchoolInfo.Domain.Common;
 using SchoolInfo.Domain.ValueObjects;
 using SchoolInfo.Domain.Events;
@@ -6,7 +6,7 @@ using SchoolInfo.Domain.Events;
 namespace SchoolInfo.Domain.Entities;
 
 /// <summary>
-/// Öğrencinin öğün kaydı.
+/// Ã–ÄŸrencinin Ã¶ÄŸÃ¼n kaydÄ±.
 /// </summary>
 public class MealRecord : BaseEntity
 {
@@ -14,7 +14,7 @@ public class MealRecord : BaseEntity
     public string MealName { get; private set; }
     public MealStatus Status { get; private set; }
 
-    protected MealRecord() { } // EF Core için
+    protected MealRecord() { } // EF Core iÃ§in
 
     public MealRecord(Guid dailyRecordId, string mealName, MealStatus status)
     {
@@ -24,7 +24,7 @@ public class MealRecord : BaseEntity
     }
 
     /// <summary>
-    /// Öğün durumunu günceller.
+    /// Ã–ÄŸÃ¼n durumunu gÃ¼nceller.
     /// </summary>
     public void UpdateStatus(MealStatus newStatus)
     {

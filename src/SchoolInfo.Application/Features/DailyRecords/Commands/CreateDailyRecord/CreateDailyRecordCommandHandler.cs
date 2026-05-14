@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -10,7 +10,7 @@ using SchoolInfo.Domain.Interfaces;
 namespace SchoolInfo.Application.Features.DailyRecords.Commands.CreateDailyRecord;
 
 /// <summary>
-/// Günlük kayıt oluşturma işlemini yürüten sınıf.
+/// GÃ¼nlÃ¼k kayÄ±t oluÅŸturma iÅŸlemini yÃ¼rÃ¼ten sÄ±nÄ±f.
 /// </summary>
 public class CreateDailyRecordCommandHandler : IRequestHandler<CreateDailyRecordCommand, Guid>
 {
@@ -35,7 +35,7 @@ public class CreateDailyRecordCommandHandler : IRequestHandler<CreateDailyRecord
     {
         if (_currentUserService.Role != "Teacher" && _currentUserService.Role != "Admin")
         {
-            throw new UnauthorizedAccessException("Günlük kayıt oluşturmak için yetkiniz bulunmamaktadır.");
+            throw new UnauthorizedAccessException("GÃ¼nlÃ¼k kayÄ±t oluÅŸturmak iÃ§in yetkiniz bulunmamaktadÄ±r.");
         }
 
         var student = await _studentRepository.GetByIdAsync(request.StudentId);
@@ -47,7 +47,7 @@ public class CreateDailyRecordCommandHandler : IRequestHandler<CreateDailyRecord
         var existingRecord = await _dailyRecordRepository.GetByStudentAndDateAsync(request.StudentId, request.Date);
         if (existingRecord != null)
         {
-            throw new DomainException("Bu öğrenci için bu tarihte zaten bir günlük kayıt var.");
+            throw new DomainException("Bu Ã¶ÄŸrenci iÃ§in bu tarihte zaten bir gÃ¼nlÃ¼k kayÄ±t var.");
         }
 
         var dailyRecord = new DailyRecord(request.StudentId, request.Date);

@@ -1,11 +1,11 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SchoolInfo.Domain.Entities;
 
 namespace SchoolInfo.Infrastructure.Persistence.Configurations;
 
 /// <summary>
-/// DailyRecord entity'si için veritabanı yapılandırması. Value Object'ler owned entity olarak map edilir.
+/// DailyRecord entity'si iÃ§in veritabanÄ± yapÄ±landÄ±rmasÄ±. Value Object'ler owned entity olarak map edilir.
 /// </summary>
 public class DailyRecordConfiguration : IEntityTypeConfiguration<DailyRecord>
 {

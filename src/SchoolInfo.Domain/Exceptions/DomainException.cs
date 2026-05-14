@@ -1,9 +1,9 @@
-using System;
+﻿using System;
 
 namespace SchoolInfo.Domain.Exceptions;
 
 /// <summary>
-/// Domain kuralları ihlal edildiğinde fırlatılan temel istisna sınıfı.
+/// Domain kurallarÄ± ihlal edildiÄŸinde fÄ±rlatÄ±lan temel istisna sÄ±nÄ±fÄ±.
 /// </summary>
 public class DomainException : Exception
 {

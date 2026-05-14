@@ -1,11 +1,11 @@
-using System;
+﻿using System;
 using SchoolInfo.Domain.Common;
 using SchoolInfo.Domain.Events;
 
 namespace SchoolInfo.Domain.Entities;
 
 /// <summary>
-/// Veliye sunulacak günlük özet raporu.
+/// Veliye sunulacak gÃ¼nlÃ¼k Ã¶zet raporu.
 /// </summary>
 public class DailySummary : BaseEntity
 {
@@ -23,7 +23,7 @@ public class DailySummary : BaseEntity
     }
 
     /// <summary>
-    /// Özeti okundu olarak işaretler.
+    /// Ã–zeti okundu olarak iÅŸaretler.
     /// </summary>
     public void MarkAsRead()
     {
@@ -35,7 +35,7 @@ public class DailySummary : BaseEntity
     }
 
     /// <summary>
-    /// Özetin tekrar talep edilmesi olayını fırlatır.
+    /// Ã–zetin tekrar talep edilmesi olayÄ±nÄ± fÄ±rlatÄ±r.
     /// </summary>
     public void RequestSummary()
     {

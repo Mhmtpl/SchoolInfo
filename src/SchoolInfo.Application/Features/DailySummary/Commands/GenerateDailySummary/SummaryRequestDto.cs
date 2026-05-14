@@ -1,10 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace SchoolInfo.Application.Features.DailySummary.Commands.GenerateDailySummary;
 
 /// <summary>
-/// Yapay zekaya gönderilecek özet verisi modeli.
+/// Yapay zekaya gÃ¶nderilecek Ã¶zet verisi modeli.
 /// </summary>
 public record SummaryRequestDto(
     string StudentName,

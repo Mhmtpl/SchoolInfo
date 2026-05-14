@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -16,7 +16,7 @@ namespace SchoolInfo.API.Endpoints.Auth;
 public record LoginRequest(string Email, string Password);
 
 /// <summary>
-/// Kimlik doğrulama işlemleri (Login, Refresh) için Minimal API endpoint'leri.
+/// Kimlik doÄŸrulama iÅŸlemleri (Login, Refresh) iÃ§in Minimal API endpoint'leri.
 /// </summary>
 public class AuthEndpoints : IEndpoint
 {
@@ -26,12 +26,12 @@ public class AuthEndpoints : IEndpoint
 
         group.MapPost("/login", LoginAsync)
             .WithName("Login")
-            .WithSummary("Kullanıcı girişi yapar ve JWT döner.")
+            .WithSummary("KullanÄ±cÄ± giriÅŸi yapar ve JWT dÃ¶ner.")
             .AllowAnonymous();
 
         group.MapPost("/refresh", RefreshAsync)
             .WithName("Refresh")
-            .WithSummary("Süresi dolan token'ı yeniler.");
+            .WithSummary("SÃ¼resi dolan token'Ä± yeniler.");
     }
 
     private static async Task<IResult> LoginAsync(LoginRequest request, AppDbContext dbContext, IConfiguration configuration)

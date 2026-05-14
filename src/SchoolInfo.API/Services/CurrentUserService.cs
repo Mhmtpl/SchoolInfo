@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using SchoolInfo.Application.Common.Interfaces;
@@ -6,7 +6,7 @@ using SchoolInfo.Application.Common.Interfaces;
 namespace SchoolInfo.API.Services;
 
 /// <summary>
-/// Sistemde o an işlem yapan kullanıcıyı HTTP Context içerisindeki JWT Token'dan (Claims) okuyan servis.
+/// Sistemde o an iÅŸlem yapan kullanÄ±cÄ±yÄ± HTTP Context iÃ§erisindeki JWT Token'dan (Claims) okuyan servis.
 /// </summary>
 public class CurrentUserService : ICurrentUserService
 {

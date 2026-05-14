@@ -1,4 +1,4 @@
-namespace SchoolInfo.Domain.Enums;
+﻿namespace SchoolInfo.Domain.Enums;
 
 /// <summary>
 /// Uyku durumunu belirtir.
@@ -6,7 +6,7 @@ namespace SchoolInfo.Domain.Enums;
 public enum SleepStatus
 {
     /// <summary>
-    /// Uyumadı.
+    /// UyumadÄ±.
     /// </summary>
     DidNotSleep = 0,
 

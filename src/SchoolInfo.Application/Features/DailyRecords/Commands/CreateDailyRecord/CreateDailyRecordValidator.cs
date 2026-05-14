@@ -1,16 +1,16 @@
-using System;
+﻿using System;
 using FluentValidation;
 
 namespace SchoolInfo.Application.Features.DailyRecords.Commands.CreateDailyRecord;
 
 /// <summary>
-/// Günlük kayıt oluşturma isteğinin kuralları.
+/// GÃ¼nlÃ¼k kayÄ±t oluÅŸturma isteÄŸinin kurallarÄ±.
 /// </summary>
 public class CreateDailyRecordValidator : AbstractValidator<CreateDailyRecordCommand>
 {
     public CreateDailyRecordValidator()
     {
-        RuleFor(v => v.StudentId).NotEmpty().WithMessage("Öğrenci Id boş olamaz.");
-        RuleFor(v => v.Date).NotEmpty().WithMessage("Tarih boş olamaz.");
+        RuleFor(v => v.StudentId).NotEmpty().WithMessage("Ã–ÄŸrenci Id boÅŸ olamaz.");
+        RuleFor(v => v.Date).NotEmpty().WithMessage("Tarih boÅŸ olamaz.");
     }
 }

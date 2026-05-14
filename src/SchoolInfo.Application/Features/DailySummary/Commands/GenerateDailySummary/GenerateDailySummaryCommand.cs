@@ -1,9 +1,9 @@
-using System;
+﻿using System;
 using MediatR;
 
 namespace SchoolInfo.Application.Features.DailySummary.Commands.GenerateDailySummary;
 
 /// <summary>
-/// Günlük özet raporu oluşturma isteği.
+/// GÃ¼nlÃ¼k Ã¶zet raporu oluÅŸturma isteÄŸi.
 /// </summary>
 public record GenerateDailySummaryCommand(Guid StudentId, DateTime Date) : IRequest<Guid>;

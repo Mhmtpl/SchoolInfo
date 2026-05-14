@@ -1,10 +1,10 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 
 namespace SchoolInfo.Application.Common.Interfaces;
 
 /// <summary>
-/// Kullanıcılara bildirim gönderen servis.
+/// KullanÄ±cÄ±lara bildirim gÃ¶nderen servis.
 /// </summary>
 public interface INotificationService
 {

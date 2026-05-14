@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using SchoolInfo.Domain.Common;
 
@@ -20,7 +20,7 @@ public class School : BaseEntity
     }
 
     /// <summary>
-    /// Okulun ismini günceller.
+    /// Okulun ismini gÃ¼nceller.
     /// </summary>
     public void UpdateName(string newName)
     {
@@ -29,7 +29,7 @@ public class School : BaseEntity
     }
 
     /// <summary>
-    /// Okula yeni bir sınıf ekler.
+    /// Okula yeni bir sÄ±nÄ±f ekler.
     /// </summary>
     public void AddClassroom(Classroom classroom)
     {

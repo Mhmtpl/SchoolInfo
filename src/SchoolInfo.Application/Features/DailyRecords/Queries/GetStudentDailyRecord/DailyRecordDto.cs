@@ -1,9 +1,9 @@
-using System;
+﻿using System;
 
 namespace SchoolInfo.Application.Features.DailyRecords.Queries.GetStudentDailyRecord;
 
 /// <summary>
-/// Günlük kayıt verisini döndüren DTO.
+/// GÃ¼nlÃ¼k kayÄ±t verisini dÃ¶ndÃ¼ren DTO.
 /// </summary>
 public record DailyRecordDto(
     Guid Id,

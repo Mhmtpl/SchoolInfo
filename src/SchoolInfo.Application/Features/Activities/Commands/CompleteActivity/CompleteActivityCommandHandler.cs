@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -9,7 +9,7 @@ using SchoolInfo.Domain.Interfaces;
 namespace SchoolInfo.Application.Features.Activities.Commands.CompleteActivity;
 
 /// <summary>
-/// Aktivite tamamlama işlemini yürüten sınıf.
+/// Aktivite tamamlama iÅŸlemini yÃ¼rÃ¼ten sÄ±nÄ±f.
 /// </summary>
 public class CompleteActivityCommandHandler : IRequestHandler<CompleteActivityCommand>
 {
@@ -31,17 +31,17 @@ public class CompleteActivityCommandHandler : IRequestHandler<CompleteActivityCo
     {
         if (_currentUserService.Role != "Teacher" && _currentUserService.Role != "Admin")
         {
-            throw new UnauthorizedAccessException("Aktiviteyi tamamlamak için yetkiniz bulunmamaktadır.");
+            throw new UnauthorizedAccessException("Aktiviteyi tamamlamak iÃ§in yetkiniz bulunmamaktadÄ±r.");
         }
 
         var activity = await _activityRepository.GetByIdAsync(request.ActivityId);
         if (activity == null)
         {
-            throw new DomainException("Aktivite bulunamadı.");
+            throw new DomainException("Aktivite bulunamadÄ±.");
         }
 
-        // Domain içerisinde tamamlandı işareti veya mantığı varsa o tetiklenir
-        // activity.MarkAsCompleted(); // Örn
+        // Domain iÃ§erisinde tamamlandÄ± iÅŸareti veya mantÄ±ÄŸÄ± varsa o tetiklenir
+        // activity.MarkAsCompleted(); // Ã–rn
         
         await _activityRepository.UpdateAsync(activity);
         await _dbContext.SaveChangesAsync(cancellationToken);

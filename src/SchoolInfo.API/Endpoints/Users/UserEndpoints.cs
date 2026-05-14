@@ -31,5 +31,17 @@ public class UserEndpoints : IEndpoint
             var result = await mediator.Send(new GetCurrentUserQuery());
             return Results.Ok(result);
         });
+
+        group.MapPut("/me", async (SchoolInfo.Application.Features.Users.Commands.UpdateCurrentUser.UpdateCurrentUserCommand command, IMediator mediator) =>
+        {
+            await mediator.Send(command);
+            return Results.NoContent();
+        });
+
+        group.MapPut("/me/password", async (SchoolInfo.Application.Features.Users.Commands.ChangePassword.ChangePasswordCommand command, IMediator mediator) =>
+        {
+            await mediator.Send(command);
+            return Results.NoContent();
+        });
     }
 }

@@ -1,11 +1,11 @@
-using System;
+﻿using System;
 using MediatR;
 using SchoolInfo.Domain.Enums;
 
 namespace SchoolInfo.Application.Features.DailyRecords.Commands.UpdateDailyRecord;
 
 /// <summary>
-/// Günlük kaydı güncelleme isteği.
+/// GÃ¼nlÃ¼k kaydÄ± gÃ¼ncelleme isteÄŸi.
 /// </summary>
 public record UpdateDailyRecordCommand(
     Guid DailyRecordId, 

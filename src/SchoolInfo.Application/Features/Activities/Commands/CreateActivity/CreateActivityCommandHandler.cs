@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -9,7 +9,7 @@ using SchoolInfo.Domain.Interfaces;
 namespace SchoolInfo.Application.Features.Activities.Commands.CreateActivity;
 
 /// <summary>
-/// Yeni aktivite oluşturma işlemini yürüten sınıf.
+/// Yeni aktivite oluÅŸturma iÅŸlemini yÃ¼rÃ¼ten sÄ±nÄ±f.
 /// </summary>
 public class CreateActivityCommandHandler : IRequestHandler<CreateActivityCommand, Guid>
 {
@@ -31,7 +31,7 @@ public class CreateActivityCommandHandler : IRequestHandler<CreateActivityComman
     {
         if (_currentUserService.Role != "Teacher" && _currentUserService.Role != "Admin")
         {
-            throw new UnauthorizedAccessException("Aktivite oluşturmak için yetkiniz bulunmamaktadır.");
+            throw new UnauthorizedAccessException("Aktivite oluÅŸturmak iÃ§in yetkiniz bulunmamaktadÄ±r.");
         }
 
         var activity = new Activity(request.Title, request.Description, request.ActivityDate, request.ClassroomId);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using SchoolInfo.Domain.Common;
 using SchoolInfo.Domain.ValueObjects;
 using SchoolInfo.Domain.Events;
@@ -6,7 +6,7 @@ using SchoolInfo.Domain.Events;
 namespace SchoolInfo.Domain.Entities;
 
 /// <summary>
-/// Öğrencinin günlük kaydı.
+/// Ã–ÄŸrencinin gÃ¼nlÃ¼k kaydÄ±.
 /// </summary>
 public class DailyRecord : BaseEntity
 {
@@ -28,7 +28,7 @@ public class DailyRecord : BaseEntity
     }
 
     /// <summary>
-    /// Uyku bilgisini günceller.
+    /// Uyku bilgisini gÃ¼nceller.
     /// </summary>
     public void UpdateSleepInfo(SleepData sleepData)
     {
@@ -37,7 +37,7 @@ public class DailyRecord : BaseEntity
     }
 
     /// <summary>
-    /// Su tüketimini günceller.
+    /// Su tÃ¼ketimini gÃ¼nceller.
     /// </summary>
     public void UpdateWaterConsumption(WaterIntake waterIntake)
     {
@@ -46,7 +46,7 @@ public class DailyRecord : BaseEntity
     }
 
     /// <summary>
-    /// Öğretmen notu ekler veya günceller.
+    /// Ã–ÄŸretmen notu ekler veya gÃ¼nceller.
     /// </summary>
     public void SetTeacherNote(string note)
     {

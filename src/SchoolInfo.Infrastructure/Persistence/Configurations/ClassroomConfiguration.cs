@@ -18,5 +18,10 @@ public class ClassroomConfiguration : IEntityTypeConfiguration<Classroom>
                .WithOne()
                .HasForeignKey(s => s.ClassroomId)
                .OnDelete(DeleteBehavior.Cascade);
+
+        // Birden fazla öğretmen atanabilir (many-to-many)
+        builder.HasMany(c => c.Teachers)
+               .WithMany(u => u.Classrooms)
+               .UsingEntity(j => j.ToTable("ClassroomTeachers"));
     }
 }

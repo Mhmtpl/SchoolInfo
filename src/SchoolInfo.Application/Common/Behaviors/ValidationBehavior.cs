@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,7 +8,7 @@ using MediatR;
 namespace SchoolInfo.Application.Common.Behaviors;
 
 /// <summary>
-/// MediatR isteklerinde tanımlı validatorları çalıştıran araya girici (behavior).
+/// MediatR isteklerinde tanÄ±mlÄ± validatorlarÄ± Ã§alÄ±ÅŸtÄ±ran araya girici (behavior).
 /// </summary>
 public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse> where TRequest : notnull
 {

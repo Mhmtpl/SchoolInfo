@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -10,7 +10,7 @@ using SchoolInfo.Domain.Entities;
 namespace SchoolInfo.Infrastructure.Persistence;
 
 /// <summary>
-/// Uygulamanın veritabanı bağlamı ve Unit Of Work implementasyonu.
+/// UygulamanÄ±n veritabanÄ± baÄŸlamÄ± ve Unit Of Work implementasyonu.
 /// </summary>
 public class AppDbContext : DbContext, IAppDbContext
 {
@@ -33,6 +33,17 @@ public class AppDbContext : DbContext, IAppDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+        
+        // Global Query Filters for Soft Delete
+        modelBuilder.Entity<School>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<Classroom>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<Student>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<User>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<DailyRecord>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<MealRecord>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<Activity>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<DailySummary>().HasQueryFilter(e => !e.IsDeleted);
+
         base.OnModelCreating(modelBuilder);
     }
 
@@ -48,13 +59,13 @@ public class AppDbContext : DbContext, IAppDbContext
             .SelectMany(x => x.Entity.DomainEvents)
             .ToList();
 
-        // 2. Event'leri temizle (Sonsuz döngüyü önlemek için)
+        // 2. Event'leri temizle (Sonsuz dÃ¶ngÃ¼yÃ¼ Ã¶nlemek iÃ§in)
         domainEntities.ForEach(entity => entity.Entity.ClearDomainEvents());
 
-        // 3. Veritabanına kaydet
+        // 3. VeritabanÄ±na kaydet
         var result = await base.SaveChangesAsync(cancellationToken);
 
-        // 4. MediatR üzerinden event'leri fırlat
+        // 4. MediatR Ã¼zerinden event'leri fÄ±rlat
         foreach (var domainEvent in domainEvents)
         {
             await _mediator.Publish(domainEvent, cancellationToken);

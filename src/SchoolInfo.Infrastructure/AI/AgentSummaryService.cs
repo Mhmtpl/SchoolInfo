@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -10,7 +10,7 @@ using SchoolInfo.Application.Features.DailySummary.Commands.GenerateDailySummary
 namespace SchoolInfo.Infrastructure.AI;
 
 /// <summary>
-/// Microsoft Agent Framework kullanarak günlük kayıt özeti üreten servis.
+/// Microsoft Agent Framework kullanarak gÃ¼nlÃ¼k kayÄ±t Ã¶zeti Ã¼reten servis.
 /// </summary>
 public class AgentSummaryService : IAISummaryService
 {
@@ -31,20 +31,20 @@ public class AgentSummaryService : IAISummaryService
         {
             var jsonData = JsonSerializer.Serialize(request, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
             
-            // RunAsync ile AI özeti üret
+            // RunAsync ile AI Ã¶zeti Ã¼ret
             var response = await _agent.RunAsync(jsonData);
 
             return response?.ToString() ?? GetFallbackMessage(request.StudentName);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Yapay zeka özeti oluşturulurken hata meydana geldi. Fallback metin üretiliyor.");
+            _logger.LogError(ex, "Yapay zeka Ã¶zeti oluÅŸturulurken hata meydana geldi. Fallback metin Ã¼retiliyor.");
             return GetFallbackMessage(request.StudentName);
         }
     }
 
     private string GetFallbackMessage(string studentName)
     {
-        return $"{studentName} bugün okulda güzel vakit geçirdi. Detaylar için öğretmeniyle iletişime geçebilirsiniz.";
+        return $"{studentName} bugÃ¼n okulda gÃ¼zel vakit geÃ§irdi. Detaylar iÃ§in Ã¶ÄŸretmeniyle iletiÅŸime geÃ§ebilirsiniz.";
     }
 }

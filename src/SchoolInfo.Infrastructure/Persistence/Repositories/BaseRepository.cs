@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -7,7 +7,7 @@ using SchoolInfo.Domain.Common;
 namespace SchoolInfo.Infrastructure.Persistence.Repositories;
 
 /// <summary>
-/// Tüm repository'ler için temel generic sınıf.
+/// TÃ¼m repository'ler iÃ§in temel generic sÄ±nÄ±f.
 /// </summary>
 public abstract class BaseRepository<T> where T : BaseEntity
 {

@@ -1,4 +1,4 @@
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 using SchoolInfo.Domain.Interfaces;
@@ -6,7 +6,7 @@ using SchoolInfo.Domain.Interfaces;
 namespace SchoolInfo.Application.Features.DailyRecords.Queries.GetStudentDailyRecord;
 
 /// <summary>
-/// Günlük kaydı getirme işlemini yürüten sınıf.
+/// GÃ¼nlÃ¼k kaydÄ± getirme iÅŸlemini yÃ¼rÃ¼ten sÄ±nÄ±f.
 /// </summary>
 public class GetStudentDailyRecordHandler : IRequestHandler<GetStudentDailyRecordQuery, DailyRecordDto?>
 {

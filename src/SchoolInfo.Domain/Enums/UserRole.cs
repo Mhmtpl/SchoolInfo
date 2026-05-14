@@ -1,22 +1,22 @@
-namespace SchoolInfo.Domain.Enums;
+﻿namespace SchoolInfo.Domain.Enums;
 
 /// <summary>
-/// Sistemdeki kullanıcı rollerini belirtir.
+/// Sistemdeki kullanÄ±cÄ± rollerini belirtir.
 /// </summary>
 public enum UserRole
 {
     /// <summary>
-    /// Yönetici rolü.
+    /// YÃ¶netici rolÃ¼.
     /// </summary>
     Admin = 1,
 
     /// <summary>
-    /// Öğretmen rolü.
+    /// Ã–ÄŸretmen rolÃ¼.
     /// </summary>
     Teacher = 2,
 
     /// <summary>
-    /// Veli rolü.
+    /// Veli rolÃ¼.
     /// </summary>
     Parent = 3
 }

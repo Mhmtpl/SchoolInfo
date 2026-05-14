@@ -32,5 +32,29 @@ public class StudentEndpoints : IEndpoint
             await mediator.Send(command);
             return Results.NoContent();
         });
+
+        group.MapDelete("/{id:guid}", async (System.Guid id, IMediator mediator) =>
+        {
+            await mediator.Send(new SchoolInfo.Application.Features.Students.Commands.DeleteStudent.DeleteStudentCommand(id));
+            return Results.NoContent();
+        }).RequireAuthorization(policy => policy.RequireRole(SchoolInfo.Domain.Enums.UserRole.Admin.ToString()));
+
+        group.MapPost("/{studentId:guid}/parent/{parentId:guid}", async (System.Guid studentId, System.Guid parentId, IMediator mediator) =>
+        {
+            await mediator.Send(new SchoolInfo.Application.Features.Students.Commands.LinkParentToStudent.LinkParentToStudentCommand(studentId, parentId));
+            return Results.Ok();
+        }).RequireAuthorization(policy => policy.RequireRole(SchoolInfo.Domain.Enums.UserRole.Admin.ToString()));
+
+        group.MapDelete("/{studentId:guid}/parent/{parentId:guid}", async (System.Guid studentId, System.Guid parentId, IMediator mediator) =>
+        {
+            await mediator.Send(new SchoolInfo.Application.Features.Students.Commands.UnlinkParentFromStudent.UnlinkParentFromStudentCommand(studentId, parentId));
+            return Results.NoContent();
+        }).RequireAuthorization(policy => policy.RequireRole(SchoolInfo.Domain.Enums.UserRole.Admin.ToString()));
+
+        group.MapGet("/{studentId:guid}/parents", async (System.Guid studentId, IMediator mediator) =>
+        {
+            var result = await mediator.Send(new SchoolInfo.Application.Features.Students.Queries.GetStudentParents.GetStudentParentsQuery(studentId));
+            return Results.Ok(result);
+        });
     }
 }
