@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -9,7 +9,7 @@ using SchoolInfo.Application.Features.MealRecords.Commands.UpdateMealRecord;
 namespace SchoolInfo.API.Endpoints.MealRecords;
 
 /// <summary>
-/// Ã–ÄŸÃ¼n kayÄ±t iÅŸlemleri iÃ§in Minimal API endpoint'leri.
+/// Öğün kayıt işlemleri için Minimal API endpoint'leri.
 /// </summary>
 public class MealRecordEndpoints : IEndpoint
 {
@@ -19,12 +19,12 @@ public class MealRecordEndpoints : IEndpoint
 
         group.MapPut("/{studentId:guid}", UpdateMealRecordAsync)
             .WithName("UpdateMealRecord")
-            .WithSummary("Ã–ÄŸrencinin Ã¶ÄŸÃ¼n kaydÄ±nÄ± gÃ¼nceller.");
+            .WithSummary("Öğrencinin öğün kaydını günceller.");
     }
 
     private static async Task<IResult> UpdateMealRecordAsync(Guid studentId, UpdateMealRecordCommand command, IMediator mediator)
     {
-        // Not: GerÃ§ek senaryoda StudentId Ã¼zerinden MealRecordId bulunur, Ã¶rnek olarak direkt gÃ¶nderiliyor.
+        // Not: Gerçek senaryoda StudentId üzerinden MealRecordId bulunur, örnek olarak direkt gönderiliyor.
         await mediator.Send(command);
         return Results.NoContent();
     }

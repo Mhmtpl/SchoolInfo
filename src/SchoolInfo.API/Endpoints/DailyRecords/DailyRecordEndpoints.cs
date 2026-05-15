@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -11,7 +11,7 @@ using SchoolInfo.Application.Features.DailyRecords.Queries.GetStudentDailyRecord
 namespace SchoolInfo.API.Endpoints.DailyRecords;
 
 /// <summary>
-/// GÃ¼nlÃ¼k kayÄ±t (Daily Record) iÅŸlemleri iÃ§in Minimal API endpoint'leri.
+/// Günlük kayıt (Daily Record) işlemleri için Minimal API endpoint'leri.
 /// </summary>
 public class DailyRecordEndpoints : IEndpoint
 {
@@ -21,15 +21,15 @@ public class DailyRecordEndpoints : IEndpoint
 
         group.MapPost("/", CreateDailyRecordAsync)
             .WithName("CreateDailyRecord")
-            .WithSummary("Yeni gÃ¼nlÃ¼k kayÄ±t oluÅŸturur.");
+            .WithSummary("Yeni günlük kayıt oluşturur.");
 
         group.MapPut("/{id:guid}", UpdateDailyRecordAsync)
             .WithName("UpdateDailyRecord")
-            .WithSummary("Mevcut gÃ¼nlÃ¼k kaydÄ± gÃ¼nceller.");
+            .WithSummary("Mevcut günlük kaydı günceller.");
 
         group.MapGet("/student/{studentId:guid}/today", GetStudentDailyRecordTodayAsync)
             .WithName("GetStudentDailyRecordToday")
-            .WithSummary("Ã–ÄŸrencinin bugÃ¼nkÃ¼ gÃ¼nlÃ¼k kaydÄ±nÄ± getirir.");
+            .WithSummary("Öğrencinin bugünkü günlük kaydını getirir.");
     }
 
     private static async Task<IResult> CreateDailyRecordAsync(CreateDailyRecordCommand command, IMediator mediator)
@@ -41,7 +41,7 @@ public class DailyRecordEndpoints : IEndpoint
     private static async Task<IResult> UpdateDailyRecordAsync(Guid id, UpdateDailyRecordCommand command, IMediator mediator)
     {
         if (id != command.DailyRecordId)
-            return Results.BadRequest("Route Ã¼zerindeki ID ile body iÃ§erisindeki ID uyuÅŸmuyor.");
+            return Results.BadRequest("Route üzerindeki ID ile body içerisindeki ID uyuşmuyor.");
 
         await mediator.Send(command);
         return Results.NoContent();

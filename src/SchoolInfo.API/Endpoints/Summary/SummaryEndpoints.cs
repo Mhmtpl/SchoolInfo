@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -9,7 +9,7 @@ using SchoolInfo.Application.Features.DailySummary.Commands.GenerateDailySummary
 namespace SchoolInfo.API.Endpoints.Summary;
 
 /// <summary>
-/// GÃ¼nlÃ¼k AI Ã¶zetleri iÃ§in Minimal API endpoint'leri.
+/// Günlük AI özetleri için Minimal API endpoint'leri.
 /// </summary>
 public class SummaryEndpoints : IEndpoint
 {
@@ -19,16 +19,16 @@ public class SummaryEndpoints : IEndpoint
 
         group.MapPost("/generate/{studentId:guid}", GenerateSummaryAsync)
             .WithName("GenerateSummary")
-            .WithSummary("Ã–ÄŸrenci iÃ§in yapay zeka destekli gÃ¼n sonu Ã¶zetini oluÅŸturur.");
+            .WithSummary("Öğrenci için yapay zeka destekli gün sonu özetini oluşturur.");
 
         group.MapGet("/student/{studentId:guid}/today", GetSummaryTodayAsync)
             .WithName("GetSummaryToday")
-            .WithSummary("Ã–ÄŸrencinin bugÃ¼nkÃ¼ AI Ã¶zetini getirir.");
+            .WithSummary("Öğrencinin bugünkü AI özetini getirir.");
     }
 
     private static async Task<IResult> GenerateSummaryAsync(Guid studentId, IMediator mediator)
     {
-        // Not: GerÃ§ek senaryoda Ã¶nce DailyRecordId bulunur, Ã¶rnek olarak StudentId Ã¼zerinden tetikleme yapÄ±lÄ±yor.
+        // Not: Gerçek senaryoda önce DailyRecordId bulunur, örnek olarak StudentId üzerinden tetikleme yapılıyor.
         // Guid dailyRecordId = ...;
         // var command = new GenerateDailySummaryCommand(dailyRecordId);
         // var summaryId = await mediator.Send(command);
@@ -37,7 +37,7 @@ public class SummaryEndpoints : IEndpoint
 
     private static IResult GetSummaryTodayAsync(Guid studentId)
     {
-        // Ã–rnek dÃ¶nÃ¼ÅŸ
-        return Results.Ok(new { Content = "BugÃ¼n Ã§ok keyifli vakit geÃ§irdi." });
+        // Örnek dönüş
+        return Results.Ok(new { Content = "Bugün çok keyifli vakit geçirdi." });
     }
 }

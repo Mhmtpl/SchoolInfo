@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -10,7 +10,7 @@ using SchoolInfo.Application.Features.Activities.Commands.CreateActivity;
 namespace SchoolInfo.API.Endpoints.Activities;
 
 /// <summary>
-/// Aktivite iÃ…Å¸lemleri iÃƒÂ§in Minimal API endpoint'leri.
+/// Aktivite işlemleri için Minimal API endpoint'leri.
 /// </summary>
 public class ActivityEndpoints : IEndpoint
 {
@@ -20,15 +20,15 @@ public class ActivityEndpoints : IEndpoint
 
         group.MapPost("/", CreateActivityAsync)
             .WithName("CreateActivity")
-            .WithSummary("Yeni aktivite oluÃ…Å¸turur.");
+            .WithSummary("Yeni aktivite oluşturur.");
 
         group.MapPut("/{id:guid}/complete", CompleteActivityAsync)
             .WithName("CompleteActivity")
-            .WithSummary("Belirtilen aktiviteyi tamamlandÃ„Â± olarak iÃ…Å¸aretler.");
+            .WithSummary("Belirtilen aktiviteyi tamamlandı olarak işaretler.");
 
         group.MapDelete("/{id:guid}", DeleteActivityAsync)
             .WithName("DeleteActivity")
-            .WithSummary("Aktiviteyi siler (sadece tamamlanmamÄ±ÅŸ).")
+            .WithSummary("Aktiviteyi siler (sadece tamamlanmamış).")
             .RequireAuthorization();
     }
 
