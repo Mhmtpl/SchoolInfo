@@ -22,6 +22,14 @@ public class ActivityEndpoints : IEndpoint
             .WithName("CreateActivity")
             .WithSummary("Yeni aktivite oluşturur.");
 
+        group.MapGet("/{id:guid}", GetActivityAsync)
+            .WithName("GetActivity")
+            .WithSummary("Aktivite detaylarını getirir.");
+
+        group.MapGet("/classroom/{classroomId:guid}", GetClassroomActivitiesAsync)
+            .WithName("GetClassroomActivities")
+            .WithSummary("Belirtilen sınıfa ait tüm aktiviteleri listeler.");
+
         group.MapPut("/{id:guid}/complete", CompleteActivityAsync)
             .WithName("CompleteActivity")
             .WithSummary("Belirtilen aktiviteyi tamamlandı olarak işaretler.");
@@ -36,6 +44,18 @@ public class ActivityEndpoints : IEndpoint
     {
         var id = await mediator.Send(command);
         return Results.Created($"/api/activities/{id}", id);
+    }
+
+    private static async Task<IResult> GetActivityAsync(Guid id, IMediator mediator)
+    {
+        var result = await mediator.Send(new SchoolInfo.Application.Features.Activities.Queries.GetActivity.GetActivityQuery(id));
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> GetClassroomActivitiesAsync(Guid classroomId, IMediator mediator)
+    {
+        var result = await mediator.Send(new SchoolInfo.Application.Features.Activities.Queries.GetClassroomActivities.GetClassroomActivitiesQuery(classroomId));
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> CompleteActivityAsync(Guid id, IMediator mediator)

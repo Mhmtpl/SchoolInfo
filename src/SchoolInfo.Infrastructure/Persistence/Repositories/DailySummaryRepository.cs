@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using SchoolInfo.Domain.Entities;
@@ -18,6 +18,6 @@ public class DailySummaryRepository : BaseRepository<DailySummary>, IDailySummar
     public async Task<DailySummary?> GetByStudentAndDateAsync(Guid studentId, DateTime date)
     {
         return await DbContext.DailySummaries
-            .FirstOrDefaultAsync(d => d.StudentId == studentId && d.Date.Date == date.Date);
+            .FirstOrDefaultAsync(d => d.StudentId == studentId && d.Date == date.Date);
     }
 }

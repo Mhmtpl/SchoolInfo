@@ -58,8 +58,8 @@ public class ClassroomEndpoints : IEndpoint
         })
         .WithName("GetClassroomDailyRecordsToday")
         .WithSummary("Sınıftaki tüm öğrencilerin bugünkü günlük kayıtlarını listeler.")
-        .WithDescription("Öğretmenin tek ekranda sınıfın tamamını görebilmesi için bugünün özbakım, uyku ve su tüketim kayıtlarını döner.")
-        .RequireAuthorization(policy => policy.RequireRole(SchoolInfo.Domain.Enums.UserRole.Teacher.ToString()));
+        .WithDescription("Öğretmenin veya yöneticinin tek ekranda sınıfın tamamını görebilmesi için bugünün özbakım, uyku ve su tüketim kayıtlarını döner.")
+        .RequireAuthorization(policy => policy.RequireRole(SchoolInfo.Domain.Enums.UserRole.Teacher.ToString(), SchoolInfo.Domain.Enums.UserRole.Admin.ToString()));
 
         group.MapGet("/{id:guid}/meal-records/today", async (System.Guid id, IMediator mediator) =>
         {
@@ -68,8 +68,8 @@ public class ClassroomEndpoints : IEndpoint
         })
         .WithName("GetClassroomMealRecordsToday")
         .WithSummary("Sınıftaki tüm öğrencilerin bugünkü yemek kayıtlarını listeler.")
-        .WithDescription("Öğretmenin tek ekranda sınıfın tamamının yemek durumunu görebilmesi için bugünün öğün kayıtlarını döner.")
-        .RequireAuthorization(policy => policy.RequireRole(SchoolInfo.Domain.Enums.UserRole.Teacher.ToString()));
+        .WithDescription("Öğretmenin veya yöneticinin tek ekranda sınıfın tamamının yemek durumunu görebilmesi için bugünün öğün kayıtlarını döner.")
+        .RequireAuthorization(policy => policy.RequireRole(SchoolInfo.Domain.Enums.UserRole.Teacher.ToString(), SchoolInfo.Domain.Enums.UserRole.Admin.ToString()));
 
         group.MapDelete("/{id:guid}", async (System.Guid id, IMediator mediator) =>
         {
