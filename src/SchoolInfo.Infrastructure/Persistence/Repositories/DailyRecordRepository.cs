@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using SchoolInfo.Domain.Entities;
@@ -18,6 +18,6 @@ public class DailyRecordRepository : BaseRepository<DailyRecord>, IDailyRecordRe
     public async Task<DailyRecord?> GetByStudentAndDateAsync(Guid studentId, DateTime date)
     {
         return await DbContext.DailyRecords
-            .FirstOrDefaultAsync(d => d.StudentId == studentId && d.Date.Date == date.Date);
+            .FirstOrDefaultAsync(d => d.StudentId == studentId && d.Date == date.Date);
     }
 }

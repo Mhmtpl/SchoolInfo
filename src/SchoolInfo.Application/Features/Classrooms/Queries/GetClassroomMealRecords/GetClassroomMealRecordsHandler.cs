@@ -32,7 +32,7 @@ public class GetClassroomMealRecordsHandler : IRequestHandler<GetClassroomMealRe
         var studentIds = students.Select(s => s.Id).ToList();
 
         var dailyRecords = await _dbContext.DailyRecords
-            .Where(r => studentIds.Contains(r.StudentId) && r.Date.Date == today)
+            .Where(r => studentIds.Contains(r.StudentId) && r.Date == today)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
