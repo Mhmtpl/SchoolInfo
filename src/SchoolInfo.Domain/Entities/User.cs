@@ -33,6 +33,7 @@ public class User : BaseEntity
         LastName = lastName;
         Email = email;
         Role = role;
+        FcmToken = string.Empty;
     }
 
     /// <summary>
