@@ -1,0 +1,233 @@
+@using SchoolInfo.Web.Models
+@{
+    var dailyRecord = ViewBag.DailyRecord as ClassroomDailyRecordDto;
+    var mealRecord = ViewBag.MealRecord as StudentMealDto;
+    var activities = ViewBag.Activities as List<ActivityDto> ?? new List<ActivityDto>();
+    var aiSummary = ViewBag.AiSummary as string;
+    
+    ViewData["Title"] = $"{ViewBag.StudentName} Gelişim Kartı";
+}
+
+<div class="teacher-workspace">
+    <!-- Üst Başlık ve Geri Dönüş -->
+    <div style="border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem;">
+        <a asp-action="Index" style="font-size: 0.85rem; color: var(--text-muted); display: inline-flex; align-items: center; gap: 0.25rem; margin-bottom: 0.5rem;">
+            &larr; Çocuklarıma Geri Dön
+        </a>
+        <h1 style="font-size: 2.2rem;">@ViewBag.StudentName</h1>
+        <p style="color: var(--text-secondary); font-size: 0.95rem; margin-top: 0.25rem;">
+            Sınıf: <strong>@ViewBag.ClassroomName</strong> | Bugün: <strong>@DateTime.UtcNow.ToLocalTime().ToString("dd MMMM yyyy")</strong>
+        </p>
+    </div>
+
+    @if (ViewBag.ErrorMessage != null)
+    {
+        <div class="error-summary">@ViewBag.ErrorMessage</div>
+    }
+
+    <!-- ÇİFT KOLONLU DÜZEN -->
+    <div class="parent-dashboard">
+        <!-- SOL KOLON: GÜNLÜK DURUM VE AI ÖZETİ -->
+        <div class="child-main-panel">
+            
+            <!-- AI GÜNLÜK ÖZETİ -->
+            <div class="glass-card ai-summary-card">
+                <span class="ai-badge">Yapay Zeka Gün Sonu Özeti</span>
+                <p class="ai-text">
+                    @aiSummary
+                </p>
+            </div>
+
+            <!-- GÜNLÜK ÖZBAKIM VE BESLENME -->
+            <div class="glass-card">
+                <h2 style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800;">Bugünkü Özbakım & Beslenme Durumu</h2>
+
+                <div class="child-stats-cards" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
+                    <!-- SU TÜKETİMİ -->
+                    <div class="glass-card stat-item" style="padding: 1.2rem; display: flex; align-items: center; gap: 1rem;">
+                        <div class="stat-icon" style="font-size: 2.2rem; color: var(--accent-blue);">💧</div>
+                        <div>
+                            <div class="stat-value" style="font-size: 1.3rem; font-weight: 700;">
+                                @(dailyRecord != null ? $"{dailyRecord.WaterIntake} ml" : "Girilmedi")
+                            </div>
+                            <div class="stat-label" style="font-size: 0.85rem; color: var(--text-muted);">Su Tüketimi</div>
+                        </div>
+                    </div>
+
+                    <!-- UYKU DURUMU -->
+                    <div class="glass-card stat-item" style="padding: 1.2rem; display: flex; align-items: center; gap: 1rem;">
+                        <div class="stat-icon" style="font-size: 2.2rem; color: var(--accent-amber);">🌙</div>
+                        <div>
+                            <div class="stat-value" style="font-size: 1.3rem; font-weight: 700;">
+                                @{
+                                    var sleepText = dailyRecord?.SleepStatus switch
+                                    {
+                                        2 => "Çok İyi Uyudu",
+                                        1 => "Az Uyudu",
+                                        0 => "Hiç Uyumadı",
+                                        _ => "Girilmedi"
+                                    };
+                                }
+                                @sleepText
+                            </div>
+                            <div class="stat-label" style="font-size: 0.85rem; color: var(--text-muted);">Uyku Düzeni</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- YEMEK TAKİP KARTLARI -->
+                <h3 style="margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">🍳 Günlük Öğün Tüketim Raporu</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                    @{
+                        var detailedMeals = ViewBag.DetailedMeals as StudentDetailedMealsResponse;
+                        var breakfast = detailedMeals?.Meals?.FirstOrDefault(m => m.MealName.Contains("Kahvaltı", StringComparison.OrdinalIgnoreCase));
+                        var lunch = detailedMeals?.Meals?.FirstOrDefault(m => m.MealName.Contains("Öğle", StringComparison.OrdinalIgnoreCase));
+                        var snack = detailedMeals?.Meals?.FirstOrDefault(m => m.MealName.Contains("İkindi", StringComparison.OrdinalIgnoreCase));
+                    }
+
+                    <!-- KAHVALTI -->
+                    <div class="glass-card" style="padding: 1rem; border-radius: 12px; border: 1px solid rgba(251, 191, 36, 0.15); background: rgba(254, 243, 199, 0.2); display: flex; flex-direction: column; justify-content: space-between; gap: 0.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; font-size: 0.9rem; color: #78350f;">🍳 Kahvaltı</span>
+                            @if (breakfast != null)
+                            {
+                                var badgeColor = breakfast.StatusType switch
+                                {
+                                    3 => "#10b981", // Hepsini Yedi
+                                    2 => "#3b82f6", // Yarısını Yedi
+                                    1 => "#fbbf24", // Az Yedi
+                                    _ => "#ef4444"  // Hiç Yemedi
+                                };
+                                var statusLabel = breakfast.StatusType switch
+                                {
+                                    3 => "Hepsini Yedi",
+                                    2 => "Yarısını Yedi",
+                                    1 => "Az Yedi",
+                                    _ => "Hiç Yemedi"
+                                };
+                                <span style="background: @badgeColor; color: white; font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 20px; font-weight: 700;">@statusLabel</span>
+                            }
+                            else
+                            {
+                                <span style="background: var(--border-color); color: var(--text-muted); font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 20px; font-weight: 700;">Girilmedi</span>
+                            }
+                        </div>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.4rem; font-style: italic;">
+                            @(breakfast != null && !string.IsNullOrEmpty(breakfast.StatusDescription) ? $"\"{breakfast.StatusDescription}\"" : "Açıklama girilmemiş.")
+                        </p>
+                    </div>
+
+                    <!-- ÖĞLE YEMEĞİ -->
+                    <div class="glass-card" style="padding: 1rem; border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.15); background: rgba(219, 234, 254, 0.2); display: flex; flex-direction: column; justify-content: space-between; gap: 0.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; font-size: 0.9rem; color: #1e3a8a;">🍲 Öğle</span>
+                            @if (lunch != null)
+                            {
+                                var badgeColor = lunch.StatusType switch
+                                {
+                                    3 => "#10b981",
+                                    2 => "#3b82f6",
+                                    1 => "#fbbf24",
+                                    _ => "#ef4444"
+                                };
+                                var statusLabel = lunch.StatusType switch
+                                {
+                                    3 => "Hepsini Yedi",
+                                    2 => "Yarısını Yedi",
+                                    1 => "Az Yedi",
+                                    _ => "Hiç Yemedi"
+                                };
+                                <span style="background: @badgeColor; color: white; font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 20px; font-weight: 700;">@statusLabel</span>
+                            }
+                            else
+                            {
+                                <span style="background: var(--border-color); color: var(--text-muted); font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 20px; font-weight: 700;">Girilmedi</span>
+                            }
+                        </div>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.4rem; font-style: italic;">
+                            @(lunch != null && !string.IsNullOrEmpty(lunch.StatusDescription) ? $"\"{lunch.StatusDescription}\"" : "Açıklama girilmemiş.")
+                        </p>
+                    </div>
+
+                    <!-- İKİNDİ KAHVALTISI -->
+                    <div class="glass-card" style="padding: 1rem; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.15); background: rgba(209, 250, 229, 0.2); display: flex; flex-direction: column; justify-content: space-between; gap: 0.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; font-size: 0.9rem; color: #065f46;">🧁 İkindi</span>
+                            @if (snack != null)
+                            {
+                                var badgeColor = snack.StatusType switch
+                                {
+                                    3 => "#10b981",
+                                    2 => "#3b82f6",
+                                    1 => "#fbbf24",
+                                    _ => "#ef4444"
+                                };
+                                var statusLabel = snack.StatusType switch
+                                {
+                                    3 => "Hepsini Yedi",
+                                    2 => "Yarısını Yedi",
+                                    1 => "Az Yedi",
+                                    _ => "Hiç Yemedi"
+                                };
+                                <span style="background: @badgeColor; color: white; font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 20px; font-weight: 700;">@statusLabel</span>
+                            }
+                            else
+                            {
+                                <span style="background: var(--border-color); color: var(--text-muted); font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 20px; font-weight: 700;">Girilmedi</span>
+                            }
+                        </div>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.4rem; font-style: italic;">
+                            @(snack != null && !string.IsNullOrEmpty(snack.StatusDescription) ? $"\"{snack.StatusDescription}\"" : "Açıklama girilmemiş.")
+                        </p>
+                    </div>
+                </div>
+
+                @if (dailyRecord != null && !string.IsNullOrEmpty(dailyRecord.TeacherNotes))
+                {
+                    <div style="margin-top: 2rem; padding: 1rem; background: rgba(255,255,255,0.01); border-left: 3px solid var(--accent-blue); border-radius: 4px;">
+                        <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase;">Öğretmen Notu</span>
+                        <p style="margin-top: 0.25rem; font-size: 0.95rem; color: var(--text-primary);">
+                            "@dailyRecord.TeacherNotes"
+                        </p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- SAĞ KOLON: AKTİVİTELER VE PROGRAM -->
+        <div class="child-main-panel">
+            <div class="glass-card">
+                <h2 style="margin-bottom: 1.5rem;">Sınıf İçi Aktiviteler</h2>
+
+                @if (activities.Count == 0)
+                {
+                    <p style="color: var(--text-secondary); text-align: center; padding: 1rem; font-size: 0.9rem;">
+                        Bugün henüz bir aktivite yapılmadı.
+                    </p>
+                }
+                else
+                {
+                    <div class="timeline">
+                        @foreach (var activity in activities)
+                        {
+                            <div class="timeline-item">
+                                <div class="timeline-dot @(activity.CompletedAt.HasValue ? "completed" : "")">
+                                    @(activity.CompletedAt.HasValue ? "✓" : "•")
+                                </div>
+                                <div class="timeline-content">
+                                    <div class="timeline-title" style="font-size: 0.95rem;">
+                                        <span>@activity.Title</span>
+                                    </div>
+                                    <div class="timeline-desc" style="font-size: 0.8rem;">@activity.Description</div>
+                                    <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem;">
+                                        @(activity.CompletedAt.HasValue ? "Tamamlandı" : "Planlandı")
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

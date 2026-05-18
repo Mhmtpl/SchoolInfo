@@ -1,0 +1,117 @@
+using System;
+using System.Collections.Generic;
+
+namespace SchoolInfo.Web.Models;
+
+// --- AUTHENTICATION ---
+public class LoginModel
+{
+    public string Email { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+}
+
+public class LoginResponse
+{
+    public string Token { get; set; } = string.Empty;
+}
+
+// --- CLASSROOMS ---
+public class ClassroomDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public Guid SchoolId { get; set; }
+}
+
+public class ClassroomStudentDto
+{
+    public Guid Id { get; set; }
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+}
+
+// --- DAILY RECORDS ---
+public class ClassroomDailyRecordDto
+{
+    public Guid StudentId { get; set; }
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public bool HasRecordToday { get; set; }
+    public int? SleepStatus { get; set; } // 0: DidNotSleep, 1: SleptLittle, 2: SleptWell
+    public int? WaterIntake { get; set; }
+    public string? TeacherNotes { get; set; }
+}
+
+// --- MEALS ---
+public class StudentMealDto
+{
+    public Guid StudentId { get; set; }
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public Guid? MealRecordId { get; set; }
+    public int? Status { get; set; } // 0: None, 1: Little, 2: Half, 3: All
+    public string? Notes { get; set; }
+}
+
+// --- ACTIVITIES ---
+public class ActivityDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public DateTime ActivityDate { get; set; }
+    public Guid ClassroomId { get; set; }
+    public DateTime? CompletedAt { get; set; }
+}
+
+public class CreateActivityCommand
+{
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public DateTime ActivityDate { get; set; }
+    public Guid ClassroomId { get; set; }
+}
+
+// --- UPDATE REQUESTS ---
+public class UpdateDailyRecordRequest
+{
+    public Guid StudentId { get; set; }
+    public int SleepStatus { get; set; }
+    public int WaterConsumptionInMl { get; set; }
+    public string TeacherNote { get; set; } = string.Empty;
+}
+
+public class UpdateMealRecordRequest
+{
+    public Guid StudentId { get; set; }
+    public Guid MealRecordId { get; set; }
+    public string MealName { get; set; } = string.Empty;
+    public int StatusType { get; set; }
+    public string StatusDescription { get; set; } = string.Empty;
+}
+
+public class StudentDetailedMealsResponse
+{
+    public Guid StudentId { get; set; }
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public List<MealRecordDetailDto> Meals { get; set; } = new();
+}
+
+public class MealRecordDetailDto
+{
+    public Guid MealRecordId { get; set; }
+    public string MealName { get; set; } = string.Empty;
+    public int StatusType { get; set; }
+    public string? StatusDescription { get; set; }
+}
+
+// --- DAILY SUMMARIES (AI REPORT) ---
+public class DailySummaryDto
+{
+    public Guid Id { get; set; }
+    public Guid StudentId { get; set; }
+    public DateTime Date { get; set; }
+    public string SummaryText { get; set; } = string.Empty;
+    public bool IsRead { get; set; }
+}

@@ -1,0 +1,39 @@
+@model SchoolInfo.Web.Models.LoginModel
+@{
+    ViewData["Title"] = "Giriş Yap";
+}
+
+<div class="login-wrapper">
+    <div class="glass-card login-card">
+        <div class="login-header">
+            <h1 class="brand" style="justify-content: center; font-size: 2.4rem; margin-bottom: 0.5rem;">
+                SchoolInfo<span class="brand-dot"></span>
+            </h1>
+            <p>Eğitimde sadelik ve yüksek veli deneyimi.</p>
+        </div>
+
+        <form asp-controller="Account" asp-action="Login" method="post">
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div asp-validation-summary="All" class="error-summary"></div>
+            }
+
+            <div class="form-group">
+                <label asp-for="Email">E-posta Adresi</label>
+                <input asp-for="Email" class="form-control" placeholder="adiniz@okul.com" required autocomplete="email" />
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Password">Şifre</label>
+                <input asp-for="Password" type="password" class="form-control" placeholder="••••••" required autocomplete="current-password" />
+            </div>
+
+            <button type="submit" class="btn-primary">Giriş Yap</button>
+        </form>
+
+        <div style="margin-top: 2rem; font-size: 0.8rem; color: var(--text-muted);">
+            <div>Denemek için öğretmen: <strong>fatma@yildiz.com</strong></div>
+            <div>Veli: <strong>hasan@yildiz.com</strong> | Şifre: <strong>123456</strong></div>
+        </div>
+    </div>
+</div>
