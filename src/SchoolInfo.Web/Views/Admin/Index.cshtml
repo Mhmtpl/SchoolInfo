@@ -1,0 +1,45 @@
+@model List<SchoolInfo.Web.Models.ClassroomDto>
+@{
+    ViewData["Title"] = "Yönetici Paneli";
+}
+
+<div class="teacher-workspace">
+    <div>
+        <h1 class="dashboard-title">Yönetici Paneli</h1>
+        <p class="dashboard-desc">Okulunuzdaki sınıfları ve genel düzeni buradan yönetebilirsiniz.</p>
+    </div>
+
+    @if (ViewBag.ErrorMessage != null)
+    {
+        <div class="error-summary">@ViewBag.ErrorMessage</div>
+    }
+
+    <div class="glass-card">
+        <div class="section-card-header">
+            <h2>Sınıflar (@Model.Count)</h2>
+        </div>
+
+        @if (Model.Count == 0)
+        {
+            <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Henüz bir sınıf bulunmuyor.</p>
+        }
+        else
+        {
+            <div class="classrooms-grid">
+                @foreach (var classroom in Model)
+                {
+                    <div class="glass-card class-card" style="padding: 1.5rem;">
+                        <div>
+                            <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em;">Sınıf Tanımı</span>
+                            <h3 style="margin-top: 0.25rem;">@classroom.Name</h3>
+                        </div>
+                        <div class="class-card-action">
+                            <span style="font-size: 0.85rem; color: var(--text-secondary);">Aktif Sınıf</span>
+                            <a href="#" class="card-link" style="color: var(--accent-blue);">Sınıfı Düzenle &rarr;</a>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>

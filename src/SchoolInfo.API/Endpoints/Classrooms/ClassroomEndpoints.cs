@@ -2,6 +2,9 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
+using System.Collections.Generic;
 using SchoolInfo.Application.Features.Classrooms.Commands.CreateClassroom;
 using SchoolInfo.Application.Features.Classrooms.Queries.GetClassroom;
 using SchoolInfo.Application.Features.Classrooms.Queries.GetClassroomStudents;
@@ -70,6 +73,63 @@ public class ClassroomEndpoints : IEndpoint
         .WithSummary("Sınıftaki tüm öğrencilerin bugünkü yemek kayıtlarını listeler.")
         .WithDescription("Öğretmenin veya yöneticinin tek ekranda sınıfın tamamının yemek durumunu görebilmesi için bugünün öğün kayıtlarını döner.")
         .RequireAuthorization(policy => policy.RequireRole(SchoolInfo.Domain.Enums.UserRole.Teacher.ToString(), SchoolInfo.Domain.Enums.UserRole.Admin.ToString()));
+
+        group.MapGet("/{id:guid}/meal-records/detailed", async (System.Guid id, SchoolInfo.Application.Common.Interfaces.IAppDbContext dbContext) =>
+        {
+            var today = DateTime.UtcNow.Date;
+            var students = await dbContext.Students
+                .Where(s => s.ClassroomId == id && !s.IsDeleted)
+                .AsNoTracking()
+                .ToListAsync();
+
+            var studentIds = students.Select(s => s.Id).ToList();
+
+            var dailyRecords = await dbContext.DailyRecords
+                .Where(r => studentIds.Contains(r.StudentId) && r.Date == today && !r.IsDeleted)
+                .AsNoTracking()
+                .ToListAsync();
+
+            var dailyRecordIds = dailyRecords.Select(d => d.Id).ToList();
+
+            var mealRecords = await dbContext.MealRecords
+                .Where(m => dailyRecordIds.Contains(m.DailyRecordId) && !m.IsDeleted)
+                .AsNoTracking()
+                .ToListAsync();
+
+            var result = students.Select(student =>
+            {
+                var dailyRecord = dailyRecords.FirstOrDefault(d => d.StudentId == student.Id);
+                var studentMeals = new List<object>();
+
+                if (dailyRecord != null)
+                {
+                    var meals = mealRecords.Where(m => m.DailyRecordId == dailyRecord.Id).ToList();
+                    foreach (var m in meals)
+                    {
+                        studentMeals.Add(new
+                        {
+                            MealRecordId = m.Id,
+                            MealName = m.MealName,
+                            StatusType = (int)m.Status.Type,
+                            StatusDescription = m.Status.Description
+                        });
+                    }
+                }
+
+                return new
+                {
+                    StudentId = student.Id,
+                    FirstName = student.FirstName,
+                    LastName = student.LastName,
+                    Meals = studentMeals
+                };
+            }).ToList();
+
+            return Results.Ok(result);
+        })
+        .WithName("GetClassroomDetailedMeals")
+        .WithSummary("Sınıftaki öğrencilerin bugünkü tüm detaylı yemek kayıtlarını listeler.")
+        .RequireAuthorization();
 
         group.MapDelete("/{id:guid}", async (System.Guid id, IMediator mediator) =>
         {

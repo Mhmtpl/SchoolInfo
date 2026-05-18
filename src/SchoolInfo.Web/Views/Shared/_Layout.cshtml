@@ -1,0 +1,54 @@
+@using System.Security.Claims
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - SchoolInfo</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <div class="app-container">
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <nav class="navbar">
+                <a href="/" class="brand">
+                    SchoolInfo<span class="brand-dot"></span>
+                </a>
+                
+                <div class="nav-user">
+                    @{
+                        var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "Parent";
+                        var roleClass = role.ToLower();
+                        var roleDisplayName = role switch
+                        {
+                            "Admin" => "Yönetici",
+                            "Teacher" => "Öğretmen",
+                            _ => "Veli"
+                        };
+                    }
+                    <div class="user-badge">
+                        <span class="user-role-dot @roleClass"></span>
+                        <span>@User.Identity.Name (@roleDisplayName)</span>
+                    </div>
+                    <a asp-controller="Account" asp-action="Logout" class="logout-btn">Çıkış Yap</a>
+                </div>
+            </nav>
+        }
+
+        <main class="main-content">
+            @RenderBody()
+        </main>
+
+        <footer class="footer">
+            <div>&copy; @DateTime.UtcNow.Year - SchoolInfo. Tüm hakları saklıdır.</div>
+            <div style="font-size: 0.75rem; margin-top: 0.5rem; color: var(--text-muted);">
+                Sadelik ve Yüksek Deneyim (UX) ile Güçlendirildi
+            </div>
+        </footer>
+    </div>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

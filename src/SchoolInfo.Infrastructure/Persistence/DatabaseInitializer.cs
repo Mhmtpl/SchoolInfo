@@ -13,16 +13,30 @@ namespace SchoolInfo.Infrastructure.Persistence;
 /// </summary>
 public static class DatabaseInitializer
 {
+    private static void SetId(object entity, string idStr)
+    {
+        var property = typeof(SchoolInfo.Domain.Common.BaseEntity).GetProperty("Id");
+        if (property != null)
+        {
+            property.SetValue(entity, Guid.Parse(idStr));
+        }
+    }
+
     public static async Task SeedAsync(AppDbContext context)
     {
         // 1. Bekleyen migration'ları uygula (Veritabanı yoksa oluşturulur)
         await context.Database.MigrateAsync();
 
-        // 2. Eğer veritabanı zaten doluysa yeniden seed etme, çık.
-        if (await context.Set<School>().AnyAsync())
-        {
-            return;
-        }
+        // 2. Geliştirme ortamında seed kararlılığı için eski verileri temizle
+        context.Set<DailySummary>().RemoveRange(context.Set<DailySummary>());
+        context.Set<MealRecord>().RemoveRange(context.Set<MealRecord>());
+        context.Set<DailyRecord>().RemoveRange(context.Set<DailyRecord>());
+        context.Set<Activity>().RemoveRange(context.Set<Activity>());
+        context.Set<Student>().RemoveRange(context.Set<Student>());
+        context.Set<User>().RemoveRange(context.Set<User>());
+        context.Set<Classroom>().RemoveRange(context.Set<Classroom>());
+        context.Set<School>().RemoveRange(context.Set<School>());
+        await context.SaveChangesAsync();
 
         // Şifre: "123456" (Hız için tek sefer hash'liyoruz)
         var defaultPasswordHash = BCrypt.Net.BCrypt.HashPassword("123456");
@@ -34,14 +48,17 @@ public static class DatabaseInitializer
         // 🏫 OKUL 1: YILDIZ ANAOKULU
         // ==========================================
         var school1 = new School("Yıldız Anaokulu");
+        SetId(school1, "10b06b00-349f-4318-97be-fb14c330f81d");
         school1.SchoolId = school1.Id;
         await context.Set<School>().AddAsync(school1);
 
         // --- Sınıflar ---
         var class1 = new Classroom("Papatyalar Sınıfı", school1.Id);
+        SetId(class1, "80b06b00-349f-4318-97be-fb14c330f81d");
         await context.Set<Classroom>().AddAsync(class1);
 
         var class2 = new Classroom("Kelebekler Sınıfı", school1.Id);
+        SetId(class2, "90b06b00-349f-4318-97be-fb14c330f81d");
         await context.Set<Classroom>().AddAsync(class2);
 
         // --- Kullanıcılar (Admin, Öğretmenler, Veliler) ---
@@ -76,11 +93,13 @@ public static class DatabaseInitializer
 
         // --- Öğrenciler ---
         var student1_1 = new Student("Efe", "Şahin", new DateTime(2018, 4, 12, 0, 0, 0, DateTimeKind.Utc), class1.Id);
+        SetId(student1_1, "60c04a00-333e-42ef-9f3b-fa14c330f81d");
         student1_1.SchoolId = school1.Id;
         student1_1.AddParent(parent1_1);
         await context.Set<Student>().AddAsync(student1_1);
 
         var student1_2 = new Student("Zeynep", "Çelik", new DateTime(2019, 9, 23, 0, 0, 0, DateTimeKind.Utc), class2.Id);
+        SetId(student1_2, "70c04a00-333e-42ef-9f3b-fa14c330f81d");
         student1_2.SchoolId = school1.Id;
         student1_2.AddParent(parent1_2);
         await context.Set<Student>().AddAsync(student1_2);
@@ -109,14 +128,17 @@ public static class DatabaseInitializer
         // 🏫 OKUL 2: GÜNEŞ KREŞİ
         // ==========================================
         var school2 = new School("Güneş Kreşi");
+        SetId(school2, "20b06b00-349f-4318-97be-fb14c330f81d");
         school2.SchoolId = school2.Id;
         await context.Set<School>().AddAsync(school2);
 
         // --- Sınıflar ---
         var class3 = new Classroom("Bulutlar Sınıfı", school2.Id);
+        SetId(class3, "a0b06b00-349f-4318-97be-fb14c330f81d");
         await context.Set<Classroom>().AddAsync(class3);
 
         var class4 = new Classroom("Gökkuşağı Sınıfı", school2.Id);
+        SetId(class4, "b0b06b00-349f-4318-97be-fb14c330f81d");
         await context.Set<Classroom>().AddAsync(class4);
 
         // --- Kullanıcılar ---
@@ -151,11 +173,13 @@ public static class DatabaseInitializer
 
         // --- Öğrenciler ---
         var student2_1 = new Student("Can", "Koç", new DateTime(2017, 2, 10, 0, 0, 0, DateTimeKind.Utc), class3.Id);
+        SetId(student2_1, "60c04a00-333e-42ef-9f3b-fa14c330f82d");
         student2_1.SchoolId = school2.Id;
         student2_1.AddParent(parent2_1);
         await context.Set<Student>().AddAsync(student2_1);
 
         var student2_2 = new Student("Eylül", "Aslan", new DateTime(2018, 11, 3, 0, 0, 0, DateTimeKind.Utc), class4.Id);
+        SetId(student2_2, "70c04a00-333e-42ef-9f3b-fa14c330f82d");
         student2_2.SchoolId = school2.Id;
         student2_2.AddParent(parent2_2);
         await context.Set<Student>().AddAsync(student2_2);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -95,6 +95,7 @@ public class GenerateDailySummaryCommandHandler : IRequestHandler<GenerateDailyS
         
         // 8. DailySummary entity'si oluÅŸtur ve kaydet
         var summary = new SchoolInfo.Domain.Entities.DailySummary(student.Id, request.Date, aiContent);
+        summary.SchoolId = student.SchoolId;
 
         await _dailySummaryRepository.AddAsync(summary);
         await _dbContext.SaveChangesAsync(cancellationToken);

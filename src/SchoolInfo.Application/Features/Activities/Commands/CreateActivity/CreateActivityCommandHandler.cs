@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -35,6 +35,7 @@ public class CreateActivityCommandHandler : IRequestHandler<CreateActivityComman
         }
 
         var activity = new Activity(request.Title, request.Description, request.ActivityDate, request.ClassroomId);
+        activity.SchoolId = _currentUserService.SchoolId;
         
         await _activityRepository.AddAsync(activity);
         await _dbContext.SaveChangesAsync(cancellationToken);

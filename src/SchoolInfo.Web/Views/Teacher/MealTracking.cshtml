@@ -1,0 +1,209 @@
+@using SchoolInfo.Web.Models
+@model List<StudentDetailedMealsResponse>
+@{
+    var classroom = ViewBag.Classroom as ClassroomDto;
+    ViewData["Title"] = $"{classroom?.Name} Yemek Takibi";
+}
+
+<div class="teacher-workspace">
+    <!-- Üst Başlık ve Yönlendirme -->
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem; margin-bottom: 2rem;">
+        <div>
+            <a asp-action="ClassroomDetails" asp-route-id="@classroom?.Id" style="font-size: 0.85rem; color: var(--text-muted); display: inline-flex; align-items: center; gap: 0.25rem; margin-bottom: 0.5rem; text-decoration: none; font-weight: 500; transition: color 0.2s;" onmouseover="this.style.color='var(--accent-blue)'" onmouseout="this.style.color='var(--text-muted)'">
+                &larr; Sınıf Defterine Geri Dön
+            </a>
+            <h1 style="font-size: 2.2rem; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800;">
+                @classroom?.Name Yemek Takibi 🍳🍲🧁
+            </h1>
+            <p style="color: var(--text-secondary); font-size: 0.95rem; margin-top: 0.25rem;">
+                Bugün: <strong>@DateTime.UtcNow.ToLocalTime().ToString("dd MMMM yyyy")</strong> | Öğrencilerin günlük beslenme durumlarını buradan detaylıca yönetin.
+            </p>
+        </div>
+    </div>
+
+    @if (ViewBag.ErrorMessage != null)
+    {
+        <div class="error-summary" style="margin-bottom: 2rem; padding: 1rem; border-radius: 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #ef4444;">
+            @ViewBag.ErrorMessage
+        </div>
+    }
+
+    <!-- DETAYLI YEMEK GRİDİ -->
+    <div class="glass-card" style="padding: 1.5rem; border-radius: 20px; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.45); backdrop-filter: blur(20px); box-shadow: 0 10px 30px rgba(0,0,0,0.03);">
+        <div class="section-card-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h2 style="font-size: 1.4rem; color: var(--text-primary); font-weight: 700;">Günlük Öğün Çizelgesi</h2>
+                <span style="font-size: 0.85rem; color: var(--text-muted);">Öğrencilerin kahvaltı, öğle yemeği ve ikindi kahvaltısı tüketim durumlarını tek ekrandan güncelleyin.</span>
+            </div>
+        </div>
+
+        <div class="grid-table-container" style="overflow-x: auto; border-radius: 12px; border: 1px solid var(--border-color);">
+            <table class="grid-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="background: rgba(240, 242, 245, 0.6); border-bottom: 2px solid var(--border-color);">
+                        <th style="padding: 1.2rem 1rem; width: 22%; font-weight: 700; color: var(--text-primary);">Öğrenci</th>
+                        <th style="padding: 1.2rem 1rem; width: 26%; font-weight: 700; color: var(--text-primary); text-align: center;">🍳 Kahvaltı</th>
+                        <th style="padding: 1.2rem 1rem; width: 26%; font-weight: 700; color: var(--text-primary); text-align: center;">🍲 Öğle Yemeği</th>
+                        <th style="padding: 1.2rem 1rem; width: 26%; font-weight: 700; color: var(--text-primary); text-align: center;">🧁 İkindi Kahvaltısı</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var student in Model)
+                    {
+                        var breakfast = student.Meals.FirstOrDefault(m => m.MealName.Contains("Kahvaltı", StringComparison.OrdinalIgnoreCase));
+                        var lunch = student.Meals.FirstOrDefault(m => m.MealName.Contains("Öğle", StringComparison.OrdinalIgnoreCase));
+                        var snack = student.Meals.FirstOrDefault(m => m.MealName.Contains("İkindi", StringComparison.OrdinalIgnoreCase));
+                        
+                        <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.2s;" onmouseover="this.style.background='rgba(240, 242, 245, 0.2)'" onmouseout="this.style.background='none'">
+                            <td style="padding: 1.2rem 1rem;">
+                                <div class="student-info" style="font-weight: 600; color: var(--text-primary); font-size: 1rem;">
+                                    @student.FirstName @student.LastName
+                                </div>
+                                <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 0.2rem;">
+                                    Bugün 3 öğün tanımlı
+                                </span>
+                            </td>
+                            
+                            <!-- KAHVALTI CELL -->
+                            <td style="padding: 1rem; vertical-align: top;">
+                                @if (breakfast != null)
+                                {
+                                    <div class="meal-cell-container" style="background: rgba(254, 243, 199, 0.4); border: 1px solid rgba(251, 191, 36, 0.2); padding: 0.8rem; border-radius: 12px; display: flex; flex-direction: column; gap: 0.5rem;">
+                                        <select id="meal-status-@student.StudentId-@breakfast.MealRecordId" class="state-select" style="width: 100%; padding: 0.4rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.85rem;">
+                                            <option value="3" selected="@(breakfast.StatusType == 3)">Hepsini Yedi</option>
+                                            <option value="2" selected="@(breakfast.StatusType == 2)">Yarısını Yedi</option>
+                                            <option value="1" selected="@(breakfast.StatusType == 1)">Az Yedi</option>
+                                            <option value="0" selected="@(breakfast.StatusType == 0)">Hiç Yemedi</option>
+                                        </select>
+                                        <input type="text" id="meal-note-@student.StudentId-@breakfast.MealRecordId" class="note-input" value="@breakfast.StatusDescription" placeholder="Not ekleyin..." style="width: 100%; padding: 0.4rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.08); font-size: 0.8rem;" />
+                                        <button type="button" onclick="saveIndividualMeal('@student.StudentId', '@breakfast.MealRecordId', 'Kahvaltı')" id="btn-save-@student.StudentId-@breakfast.MealRecordId" class="save-row-btn" style="width: 100%; padding: 0.4rem; font-size: 0.8rem; margin-top: 0.2rem; border-radius: 8px; border: none; background: #fbbf24; color: #78350f; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">
+                                            Kaydet
+                                        </button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 1rem;">Öğün tanımlanmamış</div>
+                                }
+                            </td>
+
+                            <!-- ÖĞLE YEMEĞİ CELL -->
+                            <td style="padding: 1rem; vertical-align: top;">
+                                @if (lunch != null)
+                                {
+                                    <div class="meal-cell-container" style="background: rgba(219, 234, 254, 0.4); border: 1px solid rgba(59, 130, 246, 0.2); padding: 0.8rem; border-radius: 12px; display: flex; flex-direction: column; gap: 0.5rem;">
+                                        <select id="meal-status-@student.StudentId-@lunch.MealRecordId" class="state-select" style="width: 100%; padding: 0.4rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.85rem;">
+                                            <option value="3" selected="@(lunch.StatusType == 3)">Hepsini Yedi</option>
+                                            <option value="2" selected="@(lunch.StatusType == 2)">Yarısını Yedi</option>
+                                            <option value="1" selected="@(lunch.StatusType == 1)">Az Yedi</option>
+                                            <option value="0" selected="@(lunch.StatusType == 0)">Hiç Yemedi</option>
+                                        </select>
+                                        <input type="text" id="meal-note-@student.StudentId-@lunch.MealRecordId" class="note-input" value="@lunch.StatusDescription" placeholder="Not ekleyin..." style="width: 100%; padding: 0.4rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.08); font-size: 0.8rem;" />
+                                        <button type="button" onclick="saveIndividualMeal('@student.StudentId', '@lunch.MealRecordId', 'Öğle Yemeği')" id="btn-save-@student.StudentId-@lunch.MealRecordId" class="save-row-btn" style="width: 100%; padding: 0.4rem; font-size: 0.8rem; margin-top: 0.2rem; border-radius: 8px; border: none; background: #3b82f6; color: white; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">
+                                            Kaydet
+                                        </button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 1rem;">Öğün tanımlanmamış</div>
+                                }
+                            </td>
+
+                            <!-- İKİNDİ CELL -->
+                            <td style="padding: 1rem; vertical-align: top;">
+                                @if (snack != null)
+                                {
+                                    <div class="meal-cell-container" style="background: rgba(243, 244, 246, 0.8); border: 1px solid rgba(156, 163, 175, 0.2); padding: 0.8rem; border-radius: 12px; display: flex; flex-direction: column; gap: 0.5rem;">
+                                        <select id="meal-status-@student.StudentId-@snack.MealRecordId" class="state-select" style="width: 100%; padding: 0.4rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.85rem;">
+                                            <option value="3" selected="@(snack.StatusType == 3)">Hepsini Yedi</option>
+                                            <option value="2" selected="@(snack.StatusType == 2)">Yarısını Yedi</option>
+                                            <option value="1" selected="@(snack.StatusType == 1)">Az Yedi</option>
+                                            <option value="0" selected="@(snack.StatusType == 0)">Hiç Yemedi</option>
+                                        </select>
+                                        <input type="text" id="meal-note-@student.StudentId-@snack.MealRecordId" class="note-input" value="@snack.StatusDescription" placeholder="Not ekleyin..." style="width: 100%; padding: 0.4rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.08); font-size: 0.8rem;" />
+                                        <button type="button" onclick="saveIndividualMeal('@student.StudentId', '@snack.MealRecordId', 'İkindi Kahvaltısı')" id="btn-save-@student.StudentId-@snack.MealRecordId" class="save-row-btn" style="width: 100%; padding: 0.4rem; font-size: 0.8rem; margin-top: 0.2rem; border-radius: 8px; border: none; background: #10b981; color: white; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">
+                                            Kaydet
+                                        </button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 1rem;">Öğün tanımlanmamış</div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function saveIndividualMeal(studentId, mealRecordId, mealName) {
+            const btn = document.getElementById(`btn-save-${studentId}-${mealRecordId}`);
+            const originalText = btn.innerText;
+            
+            btn.innerText = "Kaydediliyor...";
+            btn.disabled = true;
+            btn.style.opacity = "0.7";
+
+            const status = parseInt(document.getElementById(`meal-status-${studentId}-${mealRecordId}`).value);
+            const note = document.getElementById(`meal-note-${studentId}-${mealRecordId}`).value;
+
+            try {
+                const response = await fetch('/Teacher/UpdateMealRecord', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentId: studentId,
+                        mealRecordId: mealRecordId,
+                        mealName: mealName,
+                        statusType: status,
+                        statusDescription: note
+                    })
+                });
+                
+                const data = await response.json();
+
+                if (data.success) {
+                    btn.innerText = "✓ Kaydedildi!";
+                    btn.style.background = "#10b981";
+                    btn.style.color = "white";
+                    
+                    setTimeout(() => {
+                        btn.innerText = originalText;
+                        // Reset background color according to meal type
+                        if (mealName.includes("Kahvaltı")) {
+                            btn.style.background = "#fbbf24";
+                            btn.style.color = "#78350f";
+                        } else if (mealName.includes("Öğle")) {
+                            btn.style.background = "#3b82f6";
+                            btn.style.color = "white";
+                        } else {
+                            btn.style.background = "#10b981";
+                            btn.style.color = "white";
+                        }
+                        btn.disabled = false;
+                        btn.style.opacity = "1";
+                    }, 2000);
+                } else {
+                    alert("Öğün kaydedilirken bir hata oluştu: " + data.message);
+                    btn.innerText = "Hata! Tekrar Dene";
+                    btn.style.background = "#ef4444";
+                    btn.style.color = "white";
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
+                }
+            } catch (err) {
+                console.error(err);
+                alert("İletişim hatası oluştu!");
+                btn.innerText = "Tekrar Dene";
+                btn.disabled = false;
+                btn.style.opacity = "1";
+            }
+        }
+    </script>
+}

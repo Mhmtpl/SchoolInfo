@@ -1,0 +1,262 @@
+@using SchoolInfo.Web.Models
+@{
+    var classroom = ViewBag.Classroom as ClassroomDto;
+    var dailyRecords = ViewBag.DailyRecords as List<ClassroomDailyRecordDto> ?? new List<ClassroomDailyRecordDto>();
+    var mealRecords = ViewBag.MealRecords as List<StudentMealDto> ?? new List<StudentMealDto>();
+    var activities = ViewBag.Activities as List<ActivityDto> ?? new List<ActivityDto>();
+    
+    ViewData["Title"] = $"{classroom?.Name} Sınıf Defteri";
+}
+
+<div class="teacher-workspace">
+    <!-- Üst Başlık ve Geri Dönüş -->
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem;">
+        <div>
+            <a asp-action="Index" style="font-size: 0.85rem; color: var(--text-muted); display: inline-flex; align-items: center; gap: 0.25rem; margin-bottom: 0.5rem;">
+                &larr; Sınıflarıma Geri Dön
+            </a>
+            <h1 style="font-size: 2.2rem;">@classroom?.Name Sınıf Defteri</h1>
+            <p style="color: var(--text-secondary); font-size: 0.95rem; margin-top: 0.25rem;">
+                Bugün: <strong>@DateTime.UtcNow.ToLocalTime().ToString("dd MMMM yyyy")</strong>
+            </p>
+        </div>
+        <div style="display: flex; gap: 0.8rem; align-items: center;">
+            <a asp-action="MealTracking" asp-route-id="@classroom?.Id" class="btn-secondary" style="margin-top: 0; width: auto; padding: 0.6rem 1.2rem; display: inline-flex; align-items: center; gap: 0.4rem; border: 1px solid var(--border-color); border-radius: 12px; font-weight: 600; text-decoration: none; color: var(--text-primary); background: rgba(255,255,255,0.7); box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(240,242,245,0.9)'" onmouseout="this.style.background='rgba(255,255,255,0.7)'">
+                🍳 Detaylı Yemek Takibi
+            </a>
+            <button onclick="openModal()" class="btn-primary" style="margin-top: 0; width: auto; padding: 0.6rem 1.2rem;">
+                + Yeni Aktivite Ekle
+            </button>
+        </div>
+    </div>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="error-summary">@TempData["ErrorMessage"]</div>
+    }
+
+    <!-- ÖĞRENCİ GÜNLÜK KAYIT GRİDİ -->
+    <div class="glass-card">
+        <div class="section-card-header">
+            <h2>Öğrenci Günlük Gelişim Takibi</h2>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Değişiklik yaptıktan sonra sağdaki Kaydet butonuna tıklayın.</span>
+        </div>
+
+        <div class="grid-table-container">
+            <table class="grid-table">
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">Öğrenci</th>
+                        <th style="width: 15%;">Uyku Durumu</th>
+                        <th style="width: 15%;">Su (ml)</th>
+                        <th style="width: 15%;">Yemek</th>
+                        <th style="width: 25%;">Öğretmen Notu / Açıklama</th>
+                        <th style="width: 10%; text-align: center;">Aksiyon</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var record in dailyRecords)
+                    {
+                        var meal = mealRecords.FirstOrDefault(m => m.StudentId == record.StudentId);
+                        var rowId = record.StudentId.ToString();
+                        
+                        <tr id="row-@rowId">
+                            <td>
+                                <div class="student-info">@record.FirstName @record.LastName</div>
+                                <span style="font-size: 0.75rem; color: var(--text-muted);">
+                                    @(record.HasRecordToday ? "Kayıt girildi" : "Kayıt girilmedi")
+                                </span>
+                            </td>
+                            <td>
+                                <select id="sleep-@rowId" class="state-select">
+                                    <option value="2" selected="@(record.SleepStatus == 2)">Çok İyi Uyudu</option>
+                                    <option value="1" selected="@(record.SleepStatus == 1)">Az Uyudu</option>
+                                    <option value="0" selected="@(record.SleepStatus == 0)">Hiç Uyumadı</option>
+                                </select>
+                            </td>
+                            <td>
+                                <div class="water-input-wrapper">
+                                    <input type="number" id="water-@rowId" class="water-input" value="@(record.WaterIntake ?? 200)" step="50" min="0" />
+                                    <span style="font-size: 0.8rem; color: var(--text-muted);">ml</span>
+                                </div>
+                            </td>
+                            <td>
+                                <select id="meal-status-@rowId" class="state-select">
+                                    <option value="3" selected="@(meal?.Status == 3)">Hepsini Yedi</option>
+                                    <option value="2" selected="@(meal?.Status == 2)">Yarısını Yedi</option>
+                                    <option value="1" selected="@(meal?.Status == 1)">Az Yedi</option>
+                                    <option value="0" selected="@(meal?.Status == 0)">Hiç Yemedi</option>
+                                </select>
+                            </td>
+                            <td>
+                                <input type="text" id="note-@rowId" class="note-input" value="@(record.TeacherNotes ?? meal?.Notes ?? "")" placeholder="Gelişim ve yemek notları..." />
+                            </td>
+                            <td style="text-align: center;">
+                                <button type="button" onclick="saveRow('@rowId', '@(meal?.MealRecordId ?? Guid.Empty)')" id="btn-save-@rowId" class="save-row-btn">
+                                    Kaydet
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- AKTİVİTELER VE ZAMAN TÜNELİ -->
+    <div class="glass-card">
+        <div class="section-card-header">
+            <h2>Sınıf Aktivite Akışı</h2>
+        </div>
+
+        @if (activities.Count == 0)
+        {
+            <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Henüz eklenmiş bir sınıf aktivitesi bulunmuyor.</p>
+        }
+        else
+        {
+            <div class="timeline">
+                @foreach (var activity in activities)
+                {
+                    <div class="timeline-item">
+                        <div class="timeline-dot @(activity.CompletedAt.HasValue ? "completed" : "")">
+                            @(activity.CompletedAt.HasValue ? "✓" : "•")
+                        </div>
+                        <div class="timeline-content">
+                            <div class="timeline-title">
+                                <span>@activity.Title</span>
+                                @if (activity.CompletedAt.HasValue)
+                                {
+                                    <span class="badge-completed">Tamamlandı</span>
+                                }
+                            </div>
+                            <div class="timeline-desc">@activity.Description</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.4rem; display: flex; justify-content: space-between;">
+                                <span>Tarih: @activity.ActivityDate.ToString("dd.MM.yyyy")</span>
+                                @if (!activity.CompletedAt.HasValue)
+                                {
+                                    <form asp-action="CompleteActivity" method="post" style="display:inline;">
+                                        <input type="hidden" name="classroomId" value="@classroom?.Id" />
+                                        <input type="hidden" name="id" value="@activity.Id" />
+                                        <button type="submit" style="background:none; border:none; color:var(--accent-blue); cursor:pointer; font-weight:600;">
+                                            Tamamlandı Olarak İşaretle &rarr;
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span>Tamamlanma: @activity.CompletedAt.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<!-- YENİ AKTİVİTE EKLEME MODALI -->
+<div id="activityModal" class="simple-modal">
+    <div class="glass-card simple-modal-content">
+        <div class="section-card-header" style="margin-bottom: 2rem;">
+            <h2>Yeni Aktivite Oluştur</h2>
+            <button onclick="closeModal()" style="background:none; border:none; color:var(--text-muted); font-size:1.5rem; cursor:pointer;">&times;</button>
+        </div>
+
+        <form asp-action="CreateActivity" method="post">
+            <input type="hidden" name="classroomId" value="@classroom?.Id" />
+
+            <div class="form-group">
+                <label for="title">Aktivite Adı</label>
+                <input type="text" id="title" name="title" class="form-control" placeholder="Örn: Parmak Boyama" required />
+            </div>
+
+            <div class="form-group">
+                <label for="description">Açıklama</label>
+                <textarea id="description" name="description" class="form-control" style="height: 100px; resize: none;" placeholder="Aktivite detayları..." required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="activityDate">Etkinlik Tarihi</label>
+                <input type="date" id="activityDate" name="activityDate" class="form-control" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" required />
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="button" onclick="closeModal()" class="btn-secondary" style="flex: 1;">İptal</button>
+                <button type="submit" class="btn-primary" style="flex: 1; margin-top: 0;">Oluştur</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Modal Kontrolleri
+        function openModal() {
+            document.getElementById('activityModal').style.display = 'flex';
+        }
+        function closeModal() {
+            document.getElementById('activityModal').style.display = 'none';
+        }
+
+        // AJAX ile Günlük Gelişim ve Yemek Durumlarını Kaydetme
+        async function saveRow(studentId, mealRecordId) {
+            const btn = document.getElementById(`btn-save-${studentId}`);
+            btn.innerText = "Kaydediliyor...";
+            btn.disabled = true;
+
+            const sleepStatus = parseInt(document.getElementById(`sleep-${studentId}`).value);
+            const waterIntake = parseInt(document.getElementById(`water-${studentId}`).value);
+            const mealStatus = parseInt(document.getElementById(`meal-status-${studentId}`).value);
+            const note = document.getElementById(`note-${studentId}`).value;
+
+            try {
+                // 1. Günlük Özbakım Kaydını Güncelle
+                const dailyRes = await fetch('/Teacher/UpdateDailyRecord', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentId: studentId,
+                        sleepStatus: sleepStatus,
+                        waterConsumptionInMl: waterIntake,
+                        teacherNote: note
+                    })
+                });
+                const dailyData = await dailyRes.json();
+
+                // 2. Yemek Öğün Kaydını Güncelle
+                const mealRes = await fetch('/Teacher/UpdateMealRecord', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentId: studentId,
+                        mealRecordId: mealRecordId,
+                        statusType: mealStatus,
+                        statusDescription: note
+                    })
+                });
+                const mealData = await mealRes.json();
+
+                if (dailyData.success && mealData.success) {
+                    btn.innerText = "Kaydedildi!";
+                    btn.classList.add('success');
+                    setTimeout(() => {
+                        btn.innerText = "Kaydet";
+                        btn.classList.remove('success');
+                        btn.disabled = false;
+                    }, 2000);
+                } else {
+                    alert("Kayıt işlemi sırasında bir hata oluştu: " + (dailyData.message || mealData.message));
+                    btn.innerText = "Tekrar Dene";
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                console.error(err);
+                alert("İletişim hatası oluştu.");
+                btn.innerText = "Tekrar Dene";
+                btn.disabled = false;
+            }
+        }
+    </script>
+}
