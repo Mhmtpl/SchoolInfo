@@ -243,4 +243,72 @@ public class TeacherController : Controller
             return RedirectToAction("ClassroomDetails", new { id = classroomId });
         }
     }
+
+    [HttpPost]
+    public async Task<IActionResult> UpdateClassroomMealPlan([FromBody] UpdateClassroomMealPlanWebRequest request)
+    {
+        try
+        {
+            var apiRequest = new
+            {
+                Meals = request.Meals.Select(m => new
+                {
+                    MealName = m.MealName,
+                    PlannedCalories = m.PlannedCalories,
+                    FoodContent = m.FoodContent,
+                    ProteinGrams = m.ProteinGrams,
+                    CarbsGrams = m.CarbsGrams
+                }).ToList()
+            };
+
+            await _apiService.PutAsync($"api/classrooms/{request.ClassroomId}/meal-records/plan", apiRequest);
+            return Json(new { success = true });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetWeeklyMealPlans(Guid classroomId)
+    {
+        try
+        {
+            var plans = await _apiService.GetAsync<List<WeeklyMealPlanWebDto>>($"api/classrooms/{classroomId}/weekly-meal-plans");
+            return Json(new { success = true, plans = plans ?? new List<WeeklyMealPlanWebDto>() });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> UpdateClassroomWeeklyMealPlan([FromBody] UpdateClassroomWeeklyMealPlanWebRequest request)
+    {
+        try
+        {
+            var apiRequest = new
+            {
+                Plans = request.Plans.Select(p => new
+                {
+                    Id = p.Id,
+                    DayOfWeek = p.DayOfWeek,
+                    MealName = p.MealName,
+                    PlannedCalories = p.PlannedCalories,
+                    FoodContent = p.FoodContent,
+                    ProteinGrams = p.ProteinGrams,
+                    CarbsGrams = p.CarbsGrams
+                }).ToList()
+            };
+
+            await _apiService.PutAsync($"api/classrooms/{request.ClassroomId}/weekly-meal-plans", apiRequest);
+            return Json(new { success = true });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
 }

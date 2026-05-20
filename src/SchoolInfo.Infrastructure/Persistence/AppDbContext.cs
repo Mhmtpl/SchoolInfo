@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -24,6 +24,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<MealRecord> MealRecords => Set<MealRecord>();
     public DbSet<Activity> Activities => Set<Activity>();
     public DbSet<DailySummary> DailySummaries => Set<DailySummary>();
+    public DbSet<WeeklyMealPlan> WeeklyMealPlans => Set<WeeklyMealPlan>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options, IMediator mediator) : base(options)
     {
@@ -43,6 +44,7 @@ public class AppDbContext : DbContext, IAppDbContext
         modelBuilder.Entity<MealRecord>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<Activity>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<DailySummary>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<WeeklyMealPlan>().HasQueryFilter(e => !e.IsDeleted);
 
         base.OnModelCreating(modelBuilder);
     }

@@ -708,3 +708,256 @@ a:hover {
     width: 100%;
     max-width: 500px;
 }
+
+/* --- VELI PORTALI YENI PREMIMUM TASARIM SINIFLARI --- */
+.child-hero-card {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    color: #ffffff;
+    border-radius: 24px;
+    padding: 2.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.child-hero-info h1 {
+    color: #ffffff !important;
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: 800;
+}
+.child-hero-meta {
+    font-size: 1rem;
+    color: #94a3b8;
+    display: flex;
+    gap: 1.25rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.child-hero-meta strong {
+    color: #f1f5f9;
+}
+.child-hero-badge {
+    background: rgba(2, 132, 199, 0.25);
+    color: #38bdf8;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 1px solid rgba(2, 132, 199, 0.3);
+}
+.child-hero-date {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e2e8f0;
+    padding: 0.4rem 1rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+}
+
+.water-tracker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    width: 100%;
+}
+.water-glass-container {
+    position: relative;
+    width: 90px;
+    height: 120px;
+    border: 4px solid #0284c7;
+    border-top: none;
+    border-radius: 0 0 20px 20px;
+    overflow: hidden;
+    background: rgba(2, 132, 199, 0.05);
+    box-shadow: 0 8px 24px rgba(2, 132, 199, 0.08);
+}
+.water-glass-water {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(to top, #0284c7, #38bdf8);
+    transition: height 1.2s cubic-bezier(0.1, 0.8, 0.3, 1);
+}
+.water-glass-water::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -50%;
+    width: 200%;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    animation: water-wave 3s infinite linear;
+}
+@keyframes water-wave {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.sleep-card-premium {
+    background: linear-gradient(135deg, #1e1b4b 0%, #311042 100%);
+    color: #ffffff;
+    border-radius: 20px;
+    padding: 1.5rem;
+    border: 1px solid rgba(139, 92, 246, 0.25);
+    box-shadow: 0 10px 30px rgba(30, 27, 75, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+.sleep-card-premium h3, .sleep-card-premium p, .sleep-card-premium span {
+    color: #ffffff !important;
+}
+.sleep-card-premium::before {
+    content: '🌙';
+    position: absolute;
+    right: -10px;
+    bottom: -15px;
+    font-size: 5rem;
+    opacity: 0.08;
+    transform: rotate(-15deg);
+}
+.sleep-status-badge {
+    background: rgba(168, 85, 247, 0.25);
+    color: #e9d5ff !important;
+    border: 1px solid rgba(168, 85, 247, 0.4);
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: inline-block;
+    margin-top: 0.5rem;
+}
+
+.ai-story-card-premium {
+    background: linear-gradient(135deg, rgba(219, 39, 119, 0.05) 0%, rgba(139, 92, 246, 0.04) 50%, rgba(2, 132, 199, 0.03) 100%);
+    border: 1px solid rgba(219, 39, 119, 0.15);
+    border-radius: 24px;
+    padding: 2.2rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 15px 35px rgba(219, 39, 119, 0.03);
+}
+.ai-story-card-premium::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 6px;
+    height: 100%;
+    background: linear-gradient(to bottom, var(--accent-purple), var(--accent-blue));
+}
+.ai-story-title {
+    font-family: var(--font-heading);
+    font-weight: 800;
+    font-size: 1.4rem;
+    background: linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-blue) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.ai-story-text {
+    font-family: 'Outfit', 'Inter', var(--font-body);
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: #334155;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+}
+
+.premium-table-container {
+    overflow: hidden;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    background: #ffffff;
+    box-shadow: 0 10px 30px rgba(160, 140, 120, 0.03);
+    margin-top: 1.5rem;
+}
+.premium-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+.premium-table th {
+    background: rgba(220, 205, 190, 0.12);
+    padding: 1.2rem 1.5rem;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--border-color);
+}
+.premium-table td {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+.premium-table tr:last-child td {
+    border-bottom: none;
+}
+.meal-badge {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    border-radius: 100px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-align: center;
+    white-space: nowrap;
+}
+.meal-badge-all { background: rgba(16, 185, 129, 0.1); color: #047857; border: 1px solid rgba(16, 185, 129, 0.2); }
+.meal-badge-half { background: rgba(59, 130, 246, 0.1); color: #1d4ed8; border: 1px solid rgba(59, 130, 246, 0.2); }
+.meal-badge-little { background: rgba(245, 158, 11, 0.1); color: #b45309; border: 1px solid rgba(245, 158, 11, 0.2); }
+.meal-badge-none { background: rgba(239, 68, 68, 0.1); color: #b91c1c; border: 1px solid rgba(239, 68, 68, 0.2); }
+
+.teacher-bubble-card {
+    background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
+    border: 1px solid #fde68a;
+    border-radius: 20px;
+    padding: 1.5rem;
+    position: relative;
+    margin-top: 2rem;
+    box-shadow: 0 4px 15px rgba(251, 191, 36, 0.03);
+}
+.teacher-bubble-title {
+    font-size: 0.85rem;
+    color: #b45309;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+.teacher-bubble-text {
+    font-family: var(--font-body);
+    font-size: 0.98rem;
+    color: #78350f;
+    font-style: italic;
+    line-height: 1.6;
+}
+
+.chart-container-premium {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(160, 140, 120, 0.03);
+    margin-bottom: 2rem;
+}
