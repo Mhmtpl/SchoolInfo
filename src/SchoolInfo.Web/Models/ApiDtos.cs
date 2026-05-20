@@ -104,6 +104,10 @@ public class MealRecordDetailDto
     public string MealName { get; set; } = string.Empty;
     public int StatusType { get; set; }
     public string? StatusDescription { get; set; }
+    public int? PlannedCalories { get; set; }
+    public string? FoodContent { get; set; }
+    public double? ProteinGrams { get; set; }
+    public double? CarbsGrams { get; set; }
 }
 
 // --- DAILY SUMMARIES (AI REPORT) ---
@@ -115,3 +119,36 @@ public class DailySummaryDto
     public string SummaryText { get; set; } = string.Empty;
     public bool IsRead { get; set; }
 }
+
+public class UpdateClassroomMealPlanWebRequest
+{
+    public Guid ClassroomId { get; set; }
+    public List<ClassroomMealPlanWebDto> Meals { get; set; } = new();
+}
+
+public class ClassroomMealPlanWebDto
+{
+    public string MealName { get; set; } = string.Empty;
+    public int PlannedCalories { get; set; }
+    public string FoodContent { get; set; } = string.Empty;
+    public double ProteinGrams { get; set; }
+    public double CarbsGrams { get; set; }
+}
+
+public class WeeklyMealPlanWebDto
+{
+    public Guid Id { get; set; }
+    public int DayOfWeek { get; set; }
+    public string MealName { get; set; } = string.Empty;
+    public int PlannedCalories { get; set; }
+    public string FoodContent { get; set; } = string.Empty;
+    public double ProteinGrams { get; set; }
+    public double CarbsGrams { get; set; }
+}
+
+public class UpdateClassroomWeeklyMealPlanWebRequest
+{
+    public Guid ClassroomId { get; set; }
+    public List<WeeklyMealPlanWebDto> Plans { get; set; } = new();
+}
+

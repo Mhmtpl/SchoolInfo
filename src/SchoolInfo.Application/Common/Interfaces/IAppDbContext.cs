@@ -16,6 +16,7 @@ public interface IAppDbContext
     Microsoft.EntityFrameworkCore.DbSet<SchoolInfo.Domain.Entities.MealRecord> MealRecords { get; }
     Microsoft.EntityFrameworkCore.DbSet<SchoolInfo.Domain.Entities.Activity> Activities { get; }
     Microsoft.EntityFrameworkCore.DbSet<SchoolInfo.Domain.Entities.DailySummary> DailySummaries { get; }
+    Microsoft.EntityFrameworkCore.DbSet<SchoolInfo.Domain.Entities.WeeklyMealPlan> WeeklyMealPlans { get; }
     
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -28,6 +28,7 @@ public static class DatabaseInitializer
         await context.Database.MigrateAsync();
 
         // 2. Geliştirme ortamında seed kararlılığı için eski verileri temizle
+        context.Set<WeeklyMealPlan>().RemoveRange(context.Set<WeeklyMealPlan>());
         context.Set<DailySummary>().RemoveRange(context.Set<DailySummary>());
         context.Set<MealRecord>().RemoveRange(context.Set<MealRecord>());
         context.Set<DailyRecord>().RemoveRange(context.Set<DailyRecord>());
@@ -229,14 +230,17 @@ public static class DatabaseInitializer
 
             // Dünün Öğünleri
             var b1 = new MealRecord(recYesterday.Id, "Kahvaltı", new MealStatus(MealStatusType.All, "Tüm tabağını bitirdi."));
+            b1.SetNutrition(220, "Haşlanmış Yumurta, Beyaz Peynir, Zeytin, Bitki Çayı", 10.0, 15.0);
             b1.SchoolId = item.SchoolId;
             await context.Set<MealRecord>().AddAsync(b1);
 
             var l1 = new MealRecord(recYesterday.Id, "Öğle Yemeği", new MealStatus(MealStatusType.Half, "Çorbasını içti, köftenin yarısını yedi."));
+            l1.SetNutrition(480, "Mercimek Çorbası, Izgara Köfte, Tereyağlı Makarna", 22.0, 50.0);
             l1.SchoolId = item.SchoolId;
             await context.Set<MealRecord>().AddAsync(l1);
 
             var s1 = new MealRecord(recYesterday.Id, "İkindi Kahvaltısı", new MealStatus(MealStatusType.All, "Meyve salatasının tamamını afiyetle tüketti."));
+            s1.SetNutrition(190, "Ev Yapımı Havuçlu Kek, Süt", 6.0, 28.0);
             s1.SchoolId = item.SchoolId;
             await context.Set<MealRecord>().AddAsync(s1);
 
@@ -261,19 +265,47 @@ public static class DatabaseInitializer
 
             // Bugünün Öğünleri
             var b2 = new MealRecord(recToday.Id, "Kahvaltı", new MealStatus(MealStatusType.Little, "Ekmeğini yedi, peyniri bitirmedi."));
+            b2.SetNutrition(220, "Haşlanmış Yumurta, Beyaz Peynir, Zeytin, Bitki Çayı", 10.0, 15.0);
             b2.SchoolId = item.SchoolId;
             await context.Set<MealRecord>().AddAsync(b2);
 
             var l2 = new MealRecord(recToday.Id, "Öğle Yemeği", new MealStatus(MealStatusType.All, "Makarna ve yoğurdun hepsini yedi."));
+            l2.SetNutrition(480, "Mercimek Çorbası, Izgara Köfte, Tereyağlı Makarna", 22.0, 50.0);
             l2.SchoolId = item.SchoolId;
             await context.Set<MealRecord>().AddAsync(l2);
 
             var s2 = new MealRecord(recToday.Id, "İkindi Kahvaltısı", new MealStatus(MealStatusType.None, "Keki yemek istemedi."));
+            s2.SetNutrition(190, "Ev Yapımı Havuçlu Kek, Süt", 6.0, 28.0);
             s2.SchoolId = item.SchoolId;
             await context.Set<MealRecord>().AddAsync(s2);
         }
 
+        // --- Haftalık Yemek Planı Şablonları Tohumlama ---
+        await SeedWeeklyPlansForClassroomAsync(context, class1.Id, school1.Id);
+        await SeedWeeklyPlansForClassroomAsync(context, class2.Id, school1.Id);
+        await SeedWeeklyPlansForClassroomAsync(context, class3.Id, school2.Id);
+        await SeedWeeklyPlansForClassroomAsync(context, class4.Id, school2.Id);
+
         // 3. Değişiklikleri kaydet
         await context.SaveChangesAsync();
+    }
+
+    private static async Task SeedWeeklyPlansForClassroomAsync(AppDbContext context, Guid classroomId, Guid schoolId)
+    {
+        var days = new[]
+        {
+            new { Day = DayOfWeek.Monday, Breakfast = "Yumurtalı Ekmek, Peynir, Ihlamur", BfCal = 210, BfProt = 9.0, BfCarb = 18.0, Lunch = "Yayla Çorbası, Tavuk Sote, Bulgur Pilavı", LuCal = 520, LuProt = 28.0, LuCarb = 55.0, Snack = "Meyveli Yoğurt, Grissini", SnCal = 180, SnProt = 5.0, SnCarb = 25.0 },
+            new { Day = DayOfWeek.Tuesday, Breakfast = "Haşlanmış Yumurta, Beyaz Peynir, Zeytin, Bitki Çayı", BfCal = 220, BfProt = 10.0, BfCarb = 15.0, Lunch = "Mercimek Çorbası, Izgara Köfte, Tereyağlı Makarna", LuCal = 480, LuProt = 22.0, LuCarb = 50.0, Snack = "Ev Yapımı Havuçlu Kek, Süt", SnCal = 190, SnProt = 6.0, SnCarb = 28.0 },
+            new { Day = DayOfWeek.Wednesday, Breakfast = "Pankek, Bal, Labne Peyniri, Süt", BfCal = 250, BfProt = 8.0, BfCarb = 32.0, Lunch = "Domates Çorbası, Fırın Mücver, Yoğurt", LuCal = 420, LuProt = 15.0, LuCarb = 40.0, Snack = "Muz, Kuruyemiş", SnCal = 170, SnProt = 4.0, SnCarb = 22.0 },
+            new { Day = DayOfWeek.Thursday, Breakfast = "Kaşarlı Tost, Domates, Salatalık, Ihlamur", BfCal = 240, BfProt = 11.0, BfCarb = 28.0, Lunch = "Tarhana Çorbası, Kıymalı Bezelye, Pirinç Pilavı", LuCal = 500, LuProt = 24.0, LuCarb = 58.0, Snack = "Elmalı Tart, Meyve Suyu", SnCal = 200, SnProt = 3.0, SnCarb = 35.0 },
+            new { Day = DayOfWeek.Friday, Breakfast = "Simit, Üçgen Peynir, Zeytin, Açık Çay", BfCal = 230, BfProt = 7.0, BfCarb = 34.0, Lunch = "Sebze Çorbası, Fırın Somon, Patates Püresi", LuCal = 490, LuProt = 26.0, LuCarb = 45.0, Snack = "Yulaflı Kurabiye, Süt", SnCal = 180, SnProt = 6.0, SnCarb = 24.0 }
+        };
+
+        foreach (var d in days)
+        {
+            await context.Set<WeeklyMealPlan>().AddAsync(new WeeklyMealPlan(classroomId, d.Day, "Kahvaltı", d.BfCal, d.Breakfast, d.BfProt, d.BfCarb, schoolId));
+            await context.Set<WeeklyMealPlan>().AddAsync(new WeeklyMealPlan(classroomId, d.Day, "Öğle Yemeği", d.LuCal, d.Lunch, d.LuProt, d.LuCarb, schoolId));
+            await context.Set<WeeklyMealPlan>().AddAsync(new WeeklyMealPlan(classroomId, d.Day, "İkindi Kahvaltısı", d.SnCal, d.Snack, d.SnProt, d.SnCarb, schoolId));
+        }
     }
 }

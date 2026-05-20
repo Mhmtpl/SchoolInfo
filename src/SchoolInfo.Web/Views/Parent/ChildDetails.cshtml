@@ -6,18 +6,100 @@
     var aiSummary = ViewBag.AiSummary as string;
     
     ViewData["Title"] = $"{ViewBag.StudentName} Gelişim Kartı";
+
+    // Beslenme Hesaplamaları
+    var detailedMeals = ViewBag.DetailedMeals as StudentDetailedMealsResponse;
+    var breakfast = detailedMeals?.Meals?.FirstOrDefault(m => m.MealName.Contains("Kahvaltı", StringComparison.OrdinalIgnoreCase) && !m.MealName.Contains("İkindi", StringComparison.OrdinalIgnoreCase));
+    var lunch = detailedMeals?.Meals?.FirstOrDefault(m => m.MealName.Contains("Öğle", StringComparison.OrdinalIgnoreCase));
+    var snack = detailedMeals?.Meals?.FirstOrDefault(m => m.MealName.Contains("İkindi", StringComparison.OrdinalIgnoreCase));
+
+    int totalPlannedCalories = 0;
+    double totalConsumedCalories = 0;
+    double totalPlannedProtein = 0;
+    double totalConsumedProtein = 0;
+    double totalPlannedCarbs = 0;
+    double totalConsumedCarbs = 0;
+
+    if (breakfast != null)
+    {
+        var cal = breakfast.PlannedCalories ?? 0;
+        var prot = breakfast.ProteinGrams ?? 0;
+        var carb = breakfast.CarbsGrams ?? 0;
+
+        totalPlannedCalories += cal;
+        totalPlannedProtein += prot;
+        totalPlannedCarbs += carb;
+
+        double ratio = breakfast.StatusType switch
+        {
+            3 => 1.0,
+            2 => 0.5,
+            1 => 0.25,
+            _ => 0.0
+        };
+        totalConsumedCalories += cal * ratio;
+        totalConsumedProtein += prot * ratio;
+        totalConsumedCarbs += carb * ratio;
+    }
+
+    if (lunch != null)
+    {
+        var cal = lunch.PlannedCalories ?? 0;
+        var prot = lunch.ProteinGrams ?? 0;
+        var carb = lunch.CarbsGrams ?? 0;
+
+        totalPlannedCalories += cal;
+        totalPlannedProtein += prot;
+        totalPlannedCarbs += carb;
+
+        double ratio = lunch.StatusType switch
+        {
+            3 => 1.0,
+            2 => 0.5,
+            1 => 0.25,
+            _ => 0.0
+        };
+        totalConsumedCalories += cal * ratio;
+        totalConsumedProtein += prot * ratio;
+        totalConsumedCarbs += carb * ratio;
+    }
+
+    if (snack != null)
+    {
+        var cal = snack.PlannedCalories ?? 0;
+        var prot = snack.ProteinGrams ?? 0;
+        var carb = snack.CarbsGrams ?? 0;
+
+        totalPlannedCalories += cal;
+        totalPlannedProtein += prot;
+        totalPlannedCarbs += carb;
+
+        double ratio = snack.StatusType switch
+        {
+            3 => 1.0,
+            2 => 0.5,
+            1 => 0.25,
+            _ => 0.0
+        };
+        totalConsumedCalories += cal * ratio;
+        totalConsumedProtein += prot * ratio;
+        totalConsumedCarbs += carb * ratio;
+    }
+
+    int caloriePercentage = totalPlannedCalories > 0 ? (int)Math.Round((totalConsumedCalories / totalPlannedCalories) * 100) : 0;
+    int waterIntake = dailyRecord?.WaterIntake ?? 0;
+    int waterPercentage = Math.Min(100, (int)Math.Round((waterIntake / 2000.0) * 100));
 }
 
+<!-- Chart.js CDN inclusion -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <div class="teacher-workspace">
-    <!-- Üst Başlık ve Geri Dönüş -->
-    <div style="border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem;">
-        <a asp-action="Index" style="font-size: 0.85rem; color: var(--text-muted); display: inline-flex; align-items: center; gap: 0.25rem; margin-bottom: 0.5rem;">
+    <!-- Geri Dönüş Linki -->
+    <div style="margin-bottom: 0.5rem;">
+        <a asp-action="Index" style="font-size: 0.9rem; color: var(--text-muted); display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 500;">
             &larr; Çocuklarıma Geri Dön
         </a>
-        <h1 style="font-size: 2.2rem;">@ViewBag.StudentName</h1>
-        <p style="color: var(--text-secondary); font-size: 0.95rem; margin-top: 0.25rem;">
-            Sınıf: <strong>@ViewBag.ClassroomName</strong> | Bugün: <strong>@DateTime.UtcNow.ToLocalTime().ToString("dd MMMM yyyy")</strong>
-        </p>
     </div>
 
     @if (ViewBag.ErrorMessage != null)
@@ -25,170 +107,256 @@
         <div class="error-summary">@ViewBag.ErrorMessage</div>
     }
 
-    <!-- ÇİFT KOLONLU DÜZEN -->
+    <!-- ÇOCUK KAHRAMAN KARTI (Child Hero Card) -->
+    <div class="child-hero-card">
+        <div style="display: flex; align-items: center; gap: 1.5rem;">
+            <!-- Profil Baş Harfleri Avatarı -->
+            <div style="width: 70px; height: 70px; background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 800; color: white; border: 3px solid rgba(255,255,255,0.15); box-shadow: 0 8px 20px rgba(2, 132, 199, 0.25);">
+                @{
+                    string initials = "";
+                    string fullName = ViewBag.StudentName as string ?? "";
+                    var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length > 0) initials += parts[0][0];
+                    if (parts.Length > 1) initials += parts[parts.Length - 1][0];
+                }
+                @initials
+            </div>
+            <div class="child-hero-info">
+                <h1>@ViewBag.StudentName</h1>
+                <div class="child-hero-meta">
+                    <span>Sınıf: <strong>@ViewBag.ClassroomName</strong></span>
+                    <span style="opacity: 0.5;">|</span>
+                    <span class="child-hero-badge">Öğrenci Kartı</span>
+                </div>
+            </div>
+        </div>
+        <div class="child-hero-date">
+            📅 @DateTime.UtcNow.ToLocalTime().ToString("dd MMMM yyyy, dddd")
+        </div>
+    </div>
+
+    <!-- İKİ KOLONLU PANORAMİK DÜZEN -->
     <div class="parent-dashboard">
-        <!-- SOL KOLON: GÜNLÜK DURUM VE AI ÖZETİ -->
+        <!-- SOL KOLON: GÜNLÜK HİKAYE VE SAĞLIK VERİLERİ -->
         <div class="child-main-panel">
             
-            <!-- AI GÜNLÜK ÖZETİ -->
-            <div class="glass-card ai-summary-card">
-                <span class="ai-badge">Yapay Zeka Gün Sonu Özeti</span>
-                <p class="ai-text">
+            <!-- AI GÜNLÜK ÖZETİ (Günün Hikayesi) -->
+            <div class="ai-story-card-premium">
+                <div class="ai-story-title">
+                    <span>✨ Günün Hikayesi</span>
+                </div>
+                <div class="ai-story-text">
                     @aiSummary
-                </p>
+                </div>
             </div>
 
-            <!-- GÜNLÜK ÖZBAKIM VE BESLENME -->
-            <div class="glass-card">
-                <h2 style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800;">Bugünkü Özbakım & Beslenme Durumu</h2>
-
-                <div class="child-stats-cards" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
+            <!-- SAĞLIK GÖSTERGELERİ (Su Tüketimi & Uyku Düzeni) -->
+            <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
+                <!-- Su Tüketimi (Görsel Su Bardağı) ve Uyku Kartı Grid -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+                    
                     <!-- SU TÜKETİMİ -->
-                    <div class="glass-card stat-item" style="padding: 1.2rem; display: flex; align-items: center; gap: 1rem;">
-                        <div class="stat-icon" style="font-size: 2.2rem; color: var(--accent-blue);">💧</div>
-                        <div>
-                            <div class="stat-value" style="font-size: 1.3rem; font-weight: 700;">
-                                @(dailyRecord != null ? $"{dailyRecord.WaterIntake} ml" : "Girilmedi")
+                    <div class="glass-card" style="display: flex; align-items: center; gap: 2rem; padding: 1.8rem;">
+                        <div class="water-tracker">
+                            <div class="water-glass-container">
+                                <div class="water-glass-water" style="height: @(waterPercentage)%;"></div>
                             </div>
-                            <div class="stat-label" style="font-size: 0.85rem; color: var(--text-muted);">Su Tüketimi</div>
+                            <span class="water-amount-badge">@waterIntake ml</span>
+                        </div>
+                        <div style="flex: 1;">
+                            <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);">💧 Hidrasyon Durumu</h3>
+                            <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5;">
+                                Çocuğunuz bugün günlük <strong>2000 ml</strong> su hedefinin <strong>%@waterPercentage</strong> kadarını tüketti.
+                            </p>
                         </div>
                     </div>
 
-                    <!-- UYKU DURUMU -->
-                    <div class="glass-card stat-item" style="padding: 1.2rem; display: flex; align-items: center; gap: 1rem;">
-                        <div class="stat-icon" style="font-size: 2.2rem; color: var(--accent-amber);">🌙</div>
+                    <!-- UYKU DÜZENİ -->
+                    <div class="sleep-card-premium">
                         <div>
-                            <div class="stat-value" style="font-size: 1.3rem; font-weight: 700;">
-                                @{
-                                    var sleepText = dailyRecord?.SleepStatus switch
+                            <span style="font-size: 2.2rem;">🌙</span>
+                            <h3 style="font-size: 1.25rem; font-weight: 700; margin-top: 0.5rem; margin-bottom: 0.25rem;">Uyku Karnesi</h3>
+                            <p style="font-size: 0.88rem; color: #cbd5e1; line-height: 1.5; margin-bottom: 0.5rem;">
+                                Öğle uykusu ve dinlenme durumu.
+                            </p>
+                            @{
+                                var sleepLabel = dailyRecord?.SleepStatus switch
+                                {
+                                    2 => "Çok İyi Uyudu",
+                                    1 => "Az Uyudu",
+                                    0 => "Hiç Uyumadı",
+                                    _ => "Giriş Yapılmadı"
+                                };
+                            }
+                            <span class="sleep-status-badge">@sleepLabel</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- BESLENME VE ENERJİ ANALİZİ -->
+            <div class="glass-card" style="padding: 2rem;">
+                <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    🍳 Beslenme & Enerji Karnesi
+                </h2>
+
+                <!-- Grafik Alanı (Chart.js) -->
+                @if (totalPlannedCalories > 0)
+                {
+                    <div class="chart-container-premium">
+                        <canvas id="nutritionChart" style="max-height: 250px; width: 100%;"></canvas>
+                    </div>
+                }
+                else
+                {
+                    <div style="background: rgba(0,0,0,0.01); border: 1px dashed var(--border-color); border-radius: 12px; padding: 1.5rem; text-align: center; color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;">
+                        Bugün için beslenme planı girilmemiştir.
+                    </div>
+                }
+
+                <!-- Detaylı Öğün Tablosu -->
+                <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin-top: 2rem; margin-bottom: 0.75rem;">📋 Detaylı Günlük Öğün Listesi</h3>
+                
+                <div class="premium-table-container">
+                    <table class="premium-table">
+                        <thead>
+                            <tr>
+                                <th>Öğün</th>
+                                <th>Yemek İçeriği</th>
+                                <th>Tüketim Durumu</th>
+                                <th>Besin Değerleri</th>
+                                <th>Açıklama</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- KAHVALTI ROW -->
+                            <tr>
+                                <td style="font-weight: 700;">🍳 Kahvaltı</td>
+                                <td style="font-size: 0.85rem; max-width: 200px;">
+                                    @(breakfast != null && !string.IsNullOrEmpty(breakfast.FoodContent) ? breakfast.FoodContent : "Girilmedi")
+                                </td>
+                                <td>
+                                    @if (breakfast != null)
                                     {
-                                        2 => "Çok İyi Uyudu",
-                                        1 => "Az Uyudu",
-                                        0 => "Hiç Uyumadı",
-                                        _ => "Girilmedi"
-                                    };
-                                }
-                                @sleepText
-                            </div>
-                            <div class="stat-label" style="font-size: 0.85rem; color: var(--text-muted);">Uyku Düzeni</div>
-                        </div>
-                    </div>
+                                        var badgeClass = breakfast.StatusType switch
+                                        {
+                                            3 => "meal-badge-all",
+                                            2 => "meal-badge-half",
+                                            1 => "meal-badge-little",
+                                            _ => "meal-badge-none"
+                                        };
+                                        var statusText = breakfast.StatusType switch
+                                        {
+                                            3 => "Hepsini Yedi",
+                                            2 => "Yarısını Yedi",
+                                            1 => "Az Yedi",
+                                            _ => "Hiç Yemedi"
+                                        };
+                                        <span class="meal-badge @badgeClass">@statusText</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="meal-badge" style="background: var(--border-color); color: var(--text-muted);">Girilmedi</span>
+                                    }
+                                </td>
+                                <td style="font-size: 0.85rem; font-weight: 500;">
+                                    @(breakfast != null ? $"{breakfast.PlannedCalories ?? 0} kcal | {breakfast.ProteinGrams ?? 0}g P | {breakfast.CarbsGrams ?? 0}g K" : "-")
+                                </td>
+                                <td style="font-size: 0.85rem; color: var(--text-secondary); font-style: italic;">
+                                    @(breakfast != null && !string.IsNullOrEmpty(breakfast.StatusDescription) ? breakfast.StatusDescription : "-")
+                                </td>
+                            </tr>
+
+                            <!-- ÖĞLE YEMEĞİ ROW -->
+                            <tr>
+                                <td style="font-weight: 700;">🍲 Öğle Yemeği</td>
+                                <td style="font-size: 0.85rem; max-width: 200px;">
+                                    @(lunch != null && !string.IsNullOrEmpty(lunch.FoodContent) ? lunch.FoodContent : "Girilmedi")
+                                </td>
+                                <td>
+                                    @if (lunch != null)
+                                    {
+                                        var badgeClass = lunch.StatusType switch
+                                        {
+                                            3 => "meal-badge-all",
+                                            2 => "meal-badge-half",
+                                            1 => "meal-badge-little",
+                                            _ => "meal-badge-none"
+                                        };
+                                        var statusText = lunch.StatusType switch
+                                        {
+                                            3 => "Hepsini Yedi",
+                                            2 => "Yarısını Yedi",
+                                            1 => "Az Yedi",
+                                            _ => "Hiç Yemedi"
+                                        };
+                                        <span class="meal-badge @badgeClass">@statusText</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="meal-badge" style="background: var(--border-color); color: var(--text-muted);">Girilmedi</span>
+                                    }
+                                </td>
+                                <td style="font-size: 0.85rem; font-weight: 500;">
+                                    @(lunch != null ? $"{lunch.PlannedCalories ?? 0} kcal | {lunch.ProteinGrams ?? 0}g P | {lunch.CarbsGrams ?? 0}g K" : "-")
+                                </td>
+                                <td style="font-size: 0.85rem; color: var(--text-secondary); font-style: italic;">
+                                    @(lunch != null && !string.IsNullOrEmpty(lunch.StatusDescription) ? lunch.StatusDescription : "-")
+                                </td>
+                            </tr>
+
+                            <!-- İKİNDİ KAHVALTISI ROW -->
+                            <tr>
+                                <td style="font-weight: 700;">🧁 İkindi Kahvaltısı</td>
+                                <td style="font-size: 0.85rem; max-width: 200px;">
+                                    @(snack != null && !string.IsNullOrEmpty(snack.FoodContent) ? snack.FoodContent : "Girilmedi")
+                                </td>
+                                <td>
+                                    @if (snack != null)
+                                    {
+                                        var badgeClass = snack.StatusType switch
+                                        {
+                                            3 => "meal-badge-all",
+                                            2 => "meal-badge-half",
+                                            1 => "meal-badge-little",
+                                            _ => "meal-badge-none"
+                                        };
+                                        var statusText = snack.StatusType switch
+                                        {
+                                            3 => "Hepsini Yedi",
+                                            2 => "Yarısını Yedi",
+                                            1 => "Az Yedi",
+                                            _ => "Hiç Yemedi"
+                                        };
+                                        <span class="meal-badge @badgeClass">@statusText</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="meal-badge" style="background: var(--border-color); color: var(--text-muted);">Girilmedi</span>
+                                    }
+                                </td>
+                                <td style="font-size: 0.85rem; font-weight: 500;">
+                                    @(snack != null ? $"{snack.PlannedCalories ?? 0} kcal | {snack.ProteinGrams ?? 0}g P | {snack.CarbsGrams ?? 0}g K" : "-")
+                                </td>
+                                <td style="font-size: 0.85rem; color: var(--text-secondary); font-style: italic;">
+                                    @(snack != null && !string.IsNullOrEmpty(snack.StatusDescription) ? snack.StatusDescription : "-")
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
-                <!-- YEMEK TAKİP KARTLARI -->
-                <h3 style="margin-top: 1.5rem; margin-bottom: 1rem; font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">🍳 Günlük Öğün Tüketim Raporu</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
-                    @{
-                        var detailedMeals = ViewBag.DetailedMeals as StudentDetailedMealsResponse;
-                        var breakfast = detailedMeals?.Meals?.FirstOrDefault(m => m.MealName.Contains("Kahvaltı", StringComparison.OrdinalIgnoreCase));
-                        var lunch = detailedMeals?.Meals?.FirstOrDefault(m => m.MealName.Contains("Öğle", StringComparison.OrdinalIgnoreCase));
-                        var snack = detailedMeals?.Meals?.FirstOrDefault(m => m.MealName.Contains("İkindi", StringComparison.OrdinalIgnoreCase));
-                    }
-
-                    <!-- KAHVALTI -->
-                    <div class="glass-card" style="padding: 1rem; border-radius: 12px; border: 1px solid rgba(251, 191, 36, 0.15); background: rgba(254, 243, 199, 0.2); display: flex; flex-direction: column; justify-content: space-between; gap: 0.5rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-weight: 700; font-size: 0.9rem; color: #78350f;">🍳 Kahvaltı</span>
-                            @if (breakfast != null)
-                            {
-                                var badgeColor = breakfast.StatusType switch
-                                {
-                                    3 => "#10b981", // Hepsini Yedi
-                                    2 => "#3b82f6", // Yarısını Yedi
-                                    1 => "#fbbf24", // Az Yedi
-                                    _ => "#ef4444"  // Hiç Yemedi
-                                };
-                                var statusLabel = breakfast.StatusType switch
-                                {
-                                    3 => "Hepsini Yedi",
-                                    2 => "Yarısını Yedi",
-                                    1 => "Az Yedi",
-                                    _ => "Hiç Yemedi"
-                                };
-                                <span style="background: @badgeColor; color: white; font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 20px; font-weight: 700;">@statusLabel</span>
-                            }
-                            else
-                            {
-                                <span style="background: var(--border-color); color: var(--text-muted); font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 20px; font-weight: 700;">Girilmedi</span>
-                            }
-                        </div>
-                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.4rem; font-style: italic;">
-                            @(breakfast != null && !string.IsNullOrEmpty(breakfast.StatusDescription) ? $"\"{breakfast.StatusDescription}\"" : "Açıklama girilmemiş.")
-                        </p>
-                    </div>
-
-                    <!-- ÖĞLE YEMEĞİ -->
-                    <div class="glass-card" style="padding: 1rem; border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.15); background: rgba(219, 234, 254, 0.2); display: flex; flex-direction: column; justify-content: space-between; gap: 0.5rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-weight: 700; font-size: 0.9rem; color: #1e3a8a;">🍲 Öğle</span>
-                            @if (lunch != null)
-                            {
-                                var badgeColor = lunch.StatusType switch
-                                {
-                                    3 => "#10b981",
-                                    2 => "#3b82f6",
-                                    1 => "#fbbf24",
-                                    _ => "#ef4444"
-                                };
-                                var statusLabel = lunch.StatusType switch
-                                {
-                                    3 => "Hepsini Yedi",
-                                    2 => "Yarısını Yedi",
-                                    1 => "Az Yedi",
-                                    _ => "Hiç Yemedi"
-                                };
-                                <span style="background: @badgeColor; color: white; font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 20px; font-weight: 700;">@statusLabel</span>
-                            }
-                            else
-                            {
-                                <span style="background: var(--border-color); color: var(--text-muted); font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 20px; font-weight: 700;">Girilmedi</span>
-                            }
-                        </div>
-                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.4rem; font-style: italic;">
-                            @(lunch != null && !string.IsNullOrEmpty(lunch.StatusDescription) ? $"\"{lunch.StatusDescription}\"" : "Açıklama girilmemiş.")
-                        </p>
-                    </div>
-
-                    <!-- İKİNDİ KAHVALTISI -->
-                    <div class="glass-card" style="padding: 1rem; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.15); background: rgba(209, 250, 229, 0.2); display: flex; flex-direction: column; justify-content: space-between; gap: 0.5rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-weight: 700; font-size: 0.9rem; color: #065f46;">🧁 İkindi</span>
-                            @if (snack != null)
-                            {
-                                var badgeColor = snack.StatusType switch
-                                {
-                                    3 => "#10b981",
-                                    2 => "#3b82f6",
-                                    1 => "#fbbf24",
-                                    _ => "#ef4444"
-                                };
-                                var statusLabel = snack.StatusType switch
-                                {
-                                    3 => "Hepsini Yedi",
-                                    2 => "Yarısını Yedi",
-                                    1 => "Az Yedi",
-                                    _ => "Hiç Yemedi"
-                                };
-                                <span style="background: @badgeColor; color: white; font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 20px; font-weight: 700;">@statusLabel</span>
-                            }
-                            else
-                            {
-                                <span style="background: var(--border-color); color: var(--text-muted); font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 20px; font-weight: 700;">Girilmedi</span>
-                            }
-                        </div>
-                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.4rem; font-style: italic;">
-                            @(snack != null && !string.IsNullOrEmpty(snack.StatusDescription) ? $"\"{snack.StatusDescription}\"" : "Açıklama girilmemiş.")
-                        </p>
-                    </div>
-                </div>
-
+                <!-- ÖĞRETMEN NOTU KONUŞMA BALONU -->
                 @if (dailyRecord != null && !string.IsNullOrEmpty(dailyRecord.TeacherNotes))
                 {
-                    <div style="margin-top: 2rem; padding: 1rem; background: rgba(255,255,255,0.01); border-left: 3px solid var(--accent-blue); border-radius: 4px;">
-                        <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase;">Öğretmen Notu</span>
-                        <p style="margin-top: 0.25rem; font-size: 0.95rem; color: var(--text-primary);">
+                    <div class="teacher-bubble-card">
+                        <div class="teacher-bubble-title">
+                            👩‍🏫 Öğretmenin Kaleminden Not
+                        </div>
+                        <div class="teacher-bubble-text">
                             "@dailyRecord.TeacherNotes"
-                        </p>
+                        </div>
                     </div>
                 }
             </div>
@@ -196,12 +364,14 @@
 
         <!-- SAĞ KOLON: AKTİVİTELER VE PROGRAM -->
         <div class="child-main-panel">
-            <div class="glass-card">
-                <h2 style="margin-bottom: 1.5rem;">Sınıf İçi Aktiviteler</h2>
+            <div class="glass-card" style="padding: 2rem;">
+                <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    🎨 Sınıf İçi Aktiviteler
+                </h2>
 
                 @if (activities.Count == 0)
                 {
-                    <p style="color: var(--text-secondary); text-align: center; padding: 1rem; font-size: 0.9rem;">
+                    <p style="color: var(--text-secondary); text-align: center; padding: 2rem; font-size: 0.9rem; font-style: italic;">
                         Bugün henüz bir aktivite yapılmadı.
                     </p>
                 }
@@ -215,12 +385,21 @@
                                     @(activity.CompletedAt.HasValue ? "✓" : "•")
                                 </div>
                                 <div class="timeline-content">
-                                    <div class="timeline-title" style="font-size: 0.95rem;">
+                                    <div class="timeline-title" style="font-size: 0.95rem; font-weight: 700;">
                                         <span>@activity.Title</span>
                                     </div>
-                                    <div class="timeline-desc" style="font-size: 0.8rem;">@activity.Description</div>
-                                    <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.2rem;">
-                                        @(activity.CompletedAt.HasValue ? "Tamamlandı" : "Planlandı")
+                                    <div class="timeline-desc" style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                                        @activity.Description
+                                    </div>
+                                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.35rem; font-weight: 600; display: inline-flex; align-items: center;">
+                                        @if (activity.CompletedAt.HasValue)
+                                        {
+                                            <span class="badge-completed">Tamamlandı</span>
+                                        }
+                                        else
+                                        {
+                                            <span style="background: #e2e8f0; color: #475569; padding: 0.1rem 0.4rem; border-radius: 4px; border: 1px solid #cbd5e1;">Planlandı</span>
+                                        }
                                     </div>
                                 </div>
                             </div>
@@ -231,3 +410,110 @@
         </div>
     </div>
 </div>
+
+<!-- Chart.js initialization script -->
+@if (totalPlannedCalories > 0)
+{
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var ctx = document.getElementById('nutritionChart').getContext('2d');
+            
+            // Veri serisini alalim
+            var plannedCal = @totalPlannedCalories;
+            var consumedCal = @((int)Math.Round(totalConsumedCalories));
+            var plannedProt = @totalPlannedProtein.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+            var consumedProt = @totalConsumedProtein.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+            var plannedCarb = @totalPlannedCarbs.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+            var consumedCarb = @totalConsumedCarbs.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+
+            var myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Enerji (kcal / 10)', 'Protein (gram)', 'Karbonhidrat (gram)'],
+                    datasets: [
+                        {
+                            label: 'Planlanan Hedef',
+                            data: [plannedCal / 10, plannedProt, plannedCarb],
+                            backgroundColor: 'rgba(71, 85, 105, 0.15)',
+                            borderColor: 'rgba(71, 85, 105, 0.4)',
+                            borderWidth: 1.5,
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Tüketilen Miktar',
+                            data: [consumedCal / 10, consumedProt, consumedCarb],
+                            backgroundColor: [
+                                'rgba(2, 132, 199, 0.75)', // Sky blue for energy
+                                'rgba(16, 185, 129, 0.75)', // Green for protein
+                                'rgba(245, 158, 11, 0.75)'  // Amber for carbs
+                            ],
+                            borderColor: [
+                                '#0284c7',
+                                '#10b981',
+                                '#f59e0b'
+                            ],
+                            borderWidth: 1.5,
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(220, 205, 190, 0.25)'
+                            },
+                            ticks: {
+                                font: {
+                                    family: 'Inter',
+                                    size: 11
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: {
+                                    family: 'Outfit',
+                                    weight: 'bold',
+                                    size: 12
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                font: {
+                                    family: 'Outfit',
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    var label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.dataIndex === 0) {
+                                        label += Math.round(context.raw * 10) + ' kcal';
+                                    } else {
+                                        label += context.raw.toFixed(1) + ' g';
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+}
