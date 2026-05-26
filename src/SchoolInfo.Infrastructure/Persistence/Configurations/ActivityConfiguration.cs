@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SchoolInfo.Domain.Entities;
 
@@ -15,5 +15,8 @@ public class ActivityConfiguration : IEntityTypeConfiguration<Activity>
         builder.Property(a => a.Title).IsRequired().HasMaxLength(200);
         builder.Property(a => a.Description).HasMaxLength(2000);
         builder.Property(a => a.ActivityDate).IsRequired();
+        builder.Property(a => a.StartTime).IsRequired();
+        builder.Property(a => a.EndTime).IsRequired();
+        builder.Property(a => a.Type).IsRequired();
     }
 }

@@ -18,6 +18,9 @@ public record ActivityDto(
     string Title,
     string Description,
     DateTime ActivityDate,
+    TimeSpan StartTime,
+    TimeSpan EndTime,
+    SchoolInfo.Domain.Enums.ActivityType Type,
     Guid ClassroomId,
     DateTime? CompletedAt
 );
@@ -47,6 +50,9 @@ public class GetActivityQueryHandler : IRequestHandler<GetActivityQuery, Activit
             activity.Title,
             activity.Description,
             activity.ActivityDate,
+            activity.StartTime,
+            activity.EndTime,
+            activity.Type,
             activity.ClassroomId,
             activity.CompletedAt
         );

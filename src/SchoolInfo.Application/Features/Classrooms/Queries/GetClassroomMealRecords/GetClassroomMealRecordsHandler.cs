@@ -49,10 +49,10 @@ public class GetClassroomMealRecordsHandler : IRequestHandler<GetClassroomMealRe
             if (dailyRecord != null)
             {
                 var meal = mealRecords.FirstOrDefault(m => m.DailyRecordId == dailyRecord.Id);
-                return new StudentMealDto(student.Id, student.FirstName, student.LastName, meal?.Id, meal?.Status.Type, meal?.Status.Description);
+                return new StudentMealDto(student.Id, student.FirstName, student.LastName, meal?.Id, meal?.Status.Type, meal?.Status.Description ?? "");
             }
             
-            return new StudentMealDto(student.Id, student.FirstName, student.LastName, null, null, null);
+            return new StudentMealDto(student.Id, student.FirstName, student.LastName, null, null, "");
         }).ToList();
 
         return result;

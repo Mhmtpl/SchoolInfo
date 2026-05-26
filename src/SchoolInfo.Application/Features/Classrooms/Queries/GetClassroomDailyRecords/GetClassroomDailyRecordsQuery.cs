@@ -12,7 +12,8 @@ public record ClassroomDailyRecordDto(
     bool HasRecordToday,
     SleepStatus? SleepStatus,
     int? WaterIntake,
-    string TeacherNotes
+    string TeacherNotes,
+    bool IsAbsent
 );
 
 public record GetClassroomDailyRecordsQuery(Guid ClassroomId) : IRequest<List<ClassroomDailyRecordDto>>;

@@ -4,9 +4,13 @@
     var dailyRecords = ViewBag.DailyRecords as List<ClassroomDailyRecordDto> ?? new List<ClassroomDailyRecordDto>();
     var mealRecords = ViewBag.MealRecords as List<StudentMealDto> ?? new List<StudentMealDto>();
     var activities = ViewBag.Activities as List<ActivityDto> ?? new List<ActivityDto>();
+    var newsletters = ViewBag.Newsletters as List<NewsletterDto> ?? new List<NewsletterDto>();
     
     ViewData["Title"] = $"{classroom?.Name} Sınıf Defteri";
 }
+
+<!-- html2pdf.js for PDF export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <div class="teacher-workspace">
     <!-- Üst Başlık ve Geri Dönüş -->
@@ -21,9 +25,9 @@
             </p>
         </div>
         <div style="display: flex; gap: 0.8rem; align-items: center;">
-            <a asp-action="MealTracking" asp-route-id="@classroom?.Id" class="btn-secondary" style="margin-top: 0; width: auto; padding: 0.6rem 1.2rem; display: inline-flex; align-items: center; gap: 0.4rem; border: 1px solid var(--border-color); border-radius: 12px; font-weight: 600; text-decoration: none; color: var(--text-primary); background: rgba(255,255,255,0.7); box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: background 0.2s;" onmouseover="this.style.background='rgba(240,242,245,0.9)'" onmouseout="this.style.background='rgba(255,255,255,0.7)'">
-                🍳 Detaylı Yemek Takibi
-            </a>
+            <button onclick="openNewsletterModal()" class="btn-secondary" style="margin-top: 0; width: auto; padding: 0.6rem 1.2rem;">
+                📝 Yeni Bülten
+            </button>
             <button onclick="openModal()" class="btn-primary" style="margin-top: 0; width: auto; padding: 0.6rem 1.2rem;">
                 + Yeni Aktivite Ekle
             </button>
@@ -35,11 +39,27 @@
         <div class="error-summary">@TempData["ErrorMessage"]</div>
     }
 
+    <!-- MODERN TAB NAVIGATION -->
+    <div class="modern-tabs">
+        <button class="modern-tab-btn active" onclick="switchMainTab('tab-daily', this)">📅 Günlük Kayıtlar</button>
+        <button class="modern-tab-btn" onclick="switchMainTab('tab-schedule', this)">🗓️ Haftalık Program</button>
+        <button class="modern-tab-btn" onclick="switchMainTab('tab-newsletters', this)">📰 Veli Bültenleri</button>
+        <a asp-action="MealTracking" asp-route-id="@classroom?.Id" class="modern-tab-btn" style="text-decoration: none; color: var(--accent-orange);">🍳 Detaylı Yemek Takibi ↗</a>
+    </div>
+
+    <!-- TAB 1: GÜNLÜK KAYITLAR VE AKTİVİTELER -->
+    <div id="tab-daily" class="modern-tab-content active">
+
     <!-- ÖĞRENCİ GÜNLÜK KAYIT GRİDİ -->
     <div class="glass-card">
-        <div class="section-card-header">
-            <h2>Öğrenci Günlük Gelişim Takibi</h2>
-            <span style="font-size: 0.8rem; color: var(--text-muted);">Değişiklik yaptıktan sonra sağdaki Kaydet butonuna tıklayın.</span>
+        <div class="section-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h2>Öğrenci Günlük Gelişim Takibi</h2>
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Değişiklik yaptıktan sonra sağdaki Kaydet butonuna tıklayın.</span>
+            </div>
+            <button type="button" onclick="saveAllRows()" class="btn-primary" style="margin-top: 0; padding: 0.5rem 1rem; font-size: 0.85rem;">
+                💾 Tümünü Kaydet
+            </button>
         </div>
 
         <div class="grid-table-container">
@@ -47,9 +67,35 @@
                 <thead>
                     <tr>
                         <th style="width: 20%;">Öğrenci</th>
-                        <th style="width: 15%;">Uyku Durumu</th>
-                        <th style="width: 15%;">Su (ml)</th>
-                        <th style="width: 15%;">Yemek</th>
+                        <th style="width: 15%;">
+                            <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                                <span>Uyku Durumu</span>
+                                <select onchange="bulkUpdate('sleep', this.value)" style="font-size: 0.75rem; padding: 0.2rem; font-weight: normal; border-radius: 4px; border: 1px solid var(--border-color); background: #f9fafb; cursor: pointer;">
+                                    <option value="">Toplu Seçim...</option>
+                                    <option value="2">Çok İyi Uyudu</option>
+                                    <option value="1">Az Uyudu</option>
+                                    <option value="0">Hiç Uyumadı</option>
+                                </select>
+                            </div>
+                        </th>
+                        <th style="width: 15%;">
+                            <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                                <span>Su (ml)</span>
+                                <input type="number" onchange="bulkUpdate('water', this.value)" step="50" min="0" placeholder="Toplu giriş..." style="font-size: 0.75rem; padding: 0.2rem; font-weight: normal; border-radius: 4px; border: 1px solid var(--border-color); background: #f9fafb; width: 100%;" />
+                            </div>
+                        </th>
+                        <th style="width: 15%;">
+                            <div style="display: flex; flex-direction: column; gap: 0.2rem;">
+                                <span>Yemek</span>
+                                <select onchange="bulkUpdate('meal', this.value)" style="font-size: 0.75rem; padding: 0.2rem; font-weight: normal; border-radius: 4px; border: 1px solid var(--border-color); background: #f9fafb; cursor: pointer;">
+                                    <option value="">Toplu Seçim...</option>
+                                    <option value="3">Hepsini Yedi</option>
+                                    <option value="2">Yarısını Yedi</option>
+                                    <option value="1">Az Yedi</option>
+                                    <option value="0">Hiç Yemedi</option>
+                                </select>
+                            </div>
+                        </th>
                         <th style="width: 25%;">Öğretmen Notu / Açıklama</th>
                         <th style="width: 10%; text-align: center;">Aksiyon</th>
                     </tr>
@@ -60,15 +106,21 @@
                         var meal = mealRecords.FirstOrDefault(m => m.StudentId == record.StudentId);
                         var rowId = record.StudentId.ToString();
                         
-                        <tr id="row-@rowId">
+                        <tr id="row-@rowId" class="@(record.IsAbsent ? "absent-row" : "")">
                             <td>
-                                <div class="student-info">@record.FirstName @record.LastName</div>
+                                <div class="student-info">
+                                    @record.FirstName @record.LastName
+                                    @if (record.IsAbsent)
+                                    {
+                                        <span style="display:inline-block; margin-left: 0.5rem; font-size: 0.7rem; color: #dc2626; background: #fee2e2; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight:600;">Devamsız</span>
+                                    }
+                                </div>
                                 <span style="font-size: 0.75rem; color: var(--text-muted);">
                                     @(record.HasRecordToday ? "Kayıt girildi" : "Kayıt girilmedi")
                                 </span>
                             </td>
                             <td>
-                                <select id="sleep-@rowId" class="state-select">
+                                <select id="sleep-@rowId" class="state-select" @(record.IsAbsent ? "disabled" : "")>
                                     <option value="2" selected="@(record.SleepStatus == 2)">Çok İyi Uyudu</option>
                                     <option value="1" selected="@(record.SleepStatus == 1)">Az Uyudu</option>
                                     <option value="0" selected="@(record.SleepStatus == 0)">Hiç Uyumadı</option>
@@ -76,12 +128,12 @@
                             </td>
                             <td>
                                 <div class="water-input-wrapper">
-                                    <input type="number" id="water-@rowId" class="water-input" value="@(record.WaterIntake ?? 200)" step="50" min="0" />
+                                    <input type="number" id="water-@rowId" class="water-input" value="@(record.WaterIntake ?? 200)" step="50" min="0" @(record.IsAbsent ? "disabled" : "") />
                                     <span style="font-size: 0.8rem; color: var(--text-muted);">ml</span>
                                 </div>
                             </td>
                             <td>
-                                <select id="meal-status-@rowId" class="state-select">
+                                <select id="meal-status-@rowId" class="state-select" @(record.IsAbsent ? "disabled" : "")>
                                     <option value="3" selected="@(meal?.Status == 3)">Hepsini Yedi</option>
                                     <option value="2" selected="@(meal?.Status == 2)">Yarısını Yedi</option>
                                     <option value="1" selected="@(meal?.Status == 1)">Az Yedi</option>
@@ -89,12 +141,19 @@
                                 </select>
                             </td>
                             <td>
-                                <input type="text" id="note-@rowId" class="note-input" value="@(record.TeacherNotes ?? meal?.Notes ?? "")" placeholder="Gelişim ve yemek notları..." />
+                                <input type="text" id="note-@rowId" class="note-input" value="@(record.TeacherNotes ?? meal?.Notes ?? "")" placeholder="@(record.IsAbsent ? "Öğrenci devamsız" : "Gelişim ve yemek notları...")" @(record.IsAbsent ? "disabled" : "") />
                             </td>
                             <td style="text-align: center;">
-                                <button type="button" onclick="saveRow('@rowId', '@(meal?.MealRecordId ?? Guid.Empty)')" id="btn-save-@rowId" class="save-row-btn">
-                                    Kaydet
-                                </button>
+                                @if (record.IsAbsent)
+                                {
+                                    <span style="font-size: 0.8rem; color: var(--text-muted);">İşlem Yok</span>
+                                }
+                                else
+                                {
+                                    <button type="button" onclick="saveRow('@rowId', '@(meal?.MealRecordId ?? Guid.Empty)')" id="btn-save-@rowId" class="save-row-btn">
+                                        Kaydet
+                                    </button>
+                                }
                             </td>
                         </tr>
                     }
@@ -103,50 +162,47 @@
         </div>
     </div>
 
-    <!-- AKTİVİTELER VE ZAMAN TÜNELİ -->
+    <!-- AKTİVİTELER VE ZAMAN TÜNELİ (BUGÜN) -->
     <div class="glass-card">
         <div class="section-card-header">
-            <h2>Sınıf Aktivite Akışı</h2>
+            <h2>Bugünün Aktivite Akışı</h2>
         </div>
 
-        @if (activities.Count == 0)
+        @{
+            var todayActivities = activities.Where(a => a.ActivityDate.Date == DateTime.UtcNow.Date).ToList();
+            var currentTime = DateTime.UtcNow.ToLocalTime().TimeOfDay;
+        }
+
+        @if (todayActivities.Count == 0)
         {
-            <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Henüz eklenmiş bir sınıf aktivitesi bulunmuyor.</p>
+            <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Bugün için planlanmış bir sınıf aktivitesi bulunmuyor.</p>
         }
         else
         {
             <div class="timeline">
-                @foreach (var activity in activities)
+                @foreach (var activity in todayActivities.OrderBy(a => a.StartTime))
                 {
-                    <div class="timeline-item">
-                        <div class="timeline-dot @(activity.CompletedAt.HasValue ? "completed" : "")">
-                            @(activity.CompletedAt.HasValue ? "✓" : "•")
+                    bool isPast = activity.EndTime <= currentTime;
+                    bool isCurrent = activity.StartTime <= currentTime && activity.EndTime > currentTime;
+                    bool isFuture = activity.StartTime > currentTime;
+
+                    string dotClass = isPast ? "completed" : isCurrent ? "current" : "pending";
+                    string dotIcon = isPast ? "✓" : isCurrent ? "▶" : "•";
+                    string badgeClass = isPast ? "badge-completed" : isCurrent ? "badge-current" : "badge-pending";
+                    string badgeText = isPast ? "Tamamlandı" : isCurrent ? "Şu An İşleniyor" : "Bekliyor";
+
+                    <div class="timeline-item" style="opacity: @(isPast ? "0.7" : "1");">
+                        <div class="timeline-dot @dotClass">
+                            @dotIcon
                         </div>
-                        <div class="timeline-content">
+                        <div class="timeline-content" style="@(isCurrent ? "border-left: 3px solid #059669; padding-left: 1rem; background: rgba(209, 250, 229, 0.3); border-radius: 4px;" : "")">
                             <div class="timeline-title">
-                                <span>@activity.Title</span>
-                                @if (activity.CompletedAt.HasValue)
-                                {
-                                    <span class="badge-completed">Tamamlandı</span>
-                                }
+                                <span>@activity.StartTime.ToString(@"hh\:mm") - @activity.EndTime.ToString(@"hh\:mm") | @activity.Title</span>
+                                <span class="@badgeClass" style="@(isCurrent ? "background: #10b981; color: white; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem;" : isPast ? "background: #d1fae5; color: #065f46; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem;" : "background: #f3f4f6; color: #6b7280; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem;")">@badgeText</span>
                             </div>
                             <div class="timeline-desc">@activity.Description</div>
-                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.4rem; display: flex; justify-content: space-between;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.4rem;">
                                 <span>Tarih: @activity.ActivityDate.ToString("dd.MM.yyyy")</span>
-                                @if (!activity.CompletedAt.HasValue)
-                                {
-                                    <form asp-action="CompleteActivity" method="post" style="display:inline;">
-                                        <input type="hidden" name="classroomId" value="@classroom?.Id" />
-                                        <input type="hidden" name="id" value="@activity.Id" />
-                                        <button type="submit" style="background:none; border:none; color:var(--accent-blue); cursor:pointer; font-weight:600;">
-                                            Tamamlandı Olarak İşaretle &rarr;
-                                        </button>
-                                    </form>
-                                }
-                                else
-                                {
-                                    <span>Tamamlanma: @activity.CompletedAt.Value.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</span>
-                                }
                             </div>
                         </div>
                     </div>
@@ -154,6 +210,259 @@
             </div>
         }
     </div>
+    </div> <!-- END TAB 1 -->
+
+    <!-- TAB 2: HAFTALIK PROGRAM -->
+    <div id="tab-schedule" class="modern-tab-content">
+    <!-- HAFTALIK DERS PROGRAMI GÖRÜNÜMÜ -->
+    <div class="glass-card">
+        <div class="section-card-header" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+            <h2>Haftalık Ders Programı</h2>
+            <div style="display: flex; gap: 0.5rem;">
+                <button onclick="applyWeeklyScheduleToWeek()" class="btn-primary" style="background-color: #059669; border-color: #059669; margin-top: 0; width: auto; padding: 0.4rem 0.8rem; font-size: 0.85rem;" title="Sabit şablonu bu haftaya otomatik olarak doldurur">
+                    ⬇️ Şablonu Uygula
+                </button>
+                <button onclick="openWeeklyScheduleModal()" class="btn-secondary" style="margin-top: 0; width: auto; padding: 0.4rem 0.8rem; font-size: 0.85rem;" title="Sabit haftalık ders şablonunu düzenle">
+                    ⚙️ Şablonu Düzenle
+                </button>
+                <button onclick="openModal()" class="btn-primary" style="margin-top: 0; width: auto; padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                    + Manuel Ekle
+                </button>
+            </div>
+        </div>
+        
+        @{
+            var currentDayOfWeek = (int)DateTime.UtcNow.DayOfWeek;
+            if (currentDayOfWeek == 0) currentDayOfWeek = 7; // Pazar
+            var monday = DateTime.UtcNow.Date.AddDays(-(currentDayOfWeek - 1));
+            
+            var weekDays = new[] {
+                new { Id = 1, Name = "Pazartesi", Date = monday },
+                new { Id = 2, Name = "Salı", Date = monday.AddDays(1) },
+                new { Id = 3, Name = "Çarşamba", Date = monday.AddDays(2) },
+                new { Id = 4, Name = "Perşembe", Date = monday.AddDays(3) },
+                new { Id = 5, Name = "Cuma", Date = monday.AddDays(4) }
+            };
+        }
+
+        <div style="background: rgba(255, 255, 255, 0.45); border: 1px solid var(--border-color); border-radius: 20px; padding: 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.03); margin-top: 1rem;">
+            
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem;">
+                @foreach (var day in weekDays)
+                {
+                    var dayActs = activities.Where(a => a.ActivityDate.Date == day.Date).OrderBy(a => a.StartTime).ToList();
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                        <!-- Gün Başlığı -->
+                        <div style="background: linear-gradient(135deg, rgba(30, 60, 114, 0.05) 0%, rgba(42, 82, 152, 0.05) 100%); border: 1px solid rgba(0,0,0,0.05); padding: 0.8rem; text-align: center; border-radius: 12px;">
+                            <div style="font-weight: 800; color: #1e3c72; font-size: 1rem;">@day.Name</div>
+                            <div style="font-size: 0.75rem; font-weight: 500; color: var(--text-muted); margin-top: 0.2rem;">@day.Date.ToString("dd MMM")</div>
+                        </div>
+
+                        <!-- Etkinlik Listesi -->
+                        @if (dayActs.Any())
+                        {
+                            foreach (var act in dayActs)
+                            {
+                                // İkon ve Renk belirleme
+                                string icon = "⭐";
+                                string bgColor = "rgba(243, 244, 246, 0.6)";
+                                string borderColor = "rgba(156, 163, 175, 0.2)";
+                                string textColor = "#374151";
+
+                                switch (act.Type)
+                                {
+                                    case 0: // Ders (Mavi tonlar - Öğle yemeği gibi)
+                                        icon = "📚";
+                                        bgColor = "rgba(219, 234, 254, 0.4)";
+                                        borderColor = "rgba(59, 130, 246, 0.2)";
+                                        textColor = "#1e3a8a";
+                                        break;
+                                    case 1: // Oyun/Serbest (Sarı tonlar - Kahvaltı gibi)
+                                        icon = "🎨";
+                                        bgColor = "rgba(254, 243, 199, 0.4)";
+                                        borderColor = "rgba(251, 191, 36, 0.2)";
+                                        textColor = "#78350f";
+                                        break;
+                                    case 2: // Yemek (Yeşil tonlar - İkindi gibi)
+                                        icon = "🍲";
+                                        bgColor = "rgba(209, 250, 229, 0.4)";
+                                        borderColor = "rgba(16, 185, 129, 0.2)";
+                                        textColor = "#065f46";
+                                        break;
+                                    case 3: // Uyku (Mor/Gri tonlar)
+                                        icon = "😴";
+                                        bgColor = "rgba(243, 232, 255, 0.4)";
+                                        borderColor = "rgba(168, 85, 247, 0.2)";
+                                        textColor = "#581c87";
+                                        break;
+                                    case 4: // Sanat (Pembe tonlar)
+                                        icon = "🖌️";
+                                        bgColor = "rgba(252, 231, 243, 0.4)";
+                                        borderColor = "rgba(236, 72, 153, 0.2)";
+                                        textColor = "#831843";
+                                        break;
+                                }
+
+                                <div onclick="openModal()" title="@act.Description" style="background: @bgColor; border: 1px solid @borderColor; border-radius: 12px; padding: 1rem; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.05)'" onmouseout="this.style.transform='none'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.02)'">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem;">
+                                        <span style="font-size: 1.2rem;">@icon</span>
+                                        <span style="font-weight: 700; color: @textColor; font-size: 0.9rem; line-height: 1.2;">@act.Title</span>
+                                    </div>
+                                    <div style="font-size: 0.75rem; font-weight: 500; color: @textColor; opacity: 0.8; display: flex; align-items: center; gap: 0.4rem;">
+                                        <i class="fas fa-clock"></i> @act.StartTime.ToString(@"hh\:mm") - @act.EndTime.ToString(@"hh\:mm")
+                                    </div>
+                                </div>
+                            }
+                        }
+                        
+                        <!-- Yeni Ekle Butonu -->
+                        <div onclick="openModal()" style="border: 2px dashed rgba(156, 163, 175, 0.3); border-radius: 12px; padding: 0.8rem; text-align: center; cursor: pointer; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.02)'; this.style.borderColor='var(--primary-color)'; this.style.color='var(--primary-color)'" onmouseout="this.style.background='transparent'; this.style.borderColor='rgba(156, 163, 175, 0.3)'; this.style.color='var(--text-muted)'">
+                            + Ekle
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    </div> <!-- END TAB 2 -->
+
+    <!-- TAB 3: VELİ BÜLTENLERİ -->
+    <div id="tab-newsletters" class="modern-tab-content">
+    <!-- BÜLTEN YÖNETİMİ -->
+    <div class="glass-card">
+        <div class="section-card-header" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+            <h2>Veli Bültenleri</h2>
+            <button onclick="openNewsletterModal()" class="btn-primary" style="margin-top: 0; width: auto; padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                + Yeni Bülten
+            </button>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem;">
+            <button type="button" onclick="switchNewsletterTab('draft')" id="btn-nl-draft" style="background: none; border: none; font-weight: 700; color: var(--primary-color); border-bottom: 3px solid var(--primary-color); padding: 0.5rem 1rem; cursor: pointer; font-size: 1.05rem; transition: all 0.2s;">Taslaklar</button>
+            <button type="button" onclick="switchNewsletterTab('published')" id="btn-nl-published" style="background: none; border: none; font-weight: 700; color: var(--text-muted); border-bottom: 3px solid transparent; padding: 0.5rem 1rem; cursor: pointer; font-size: 1.05rem; transition: all 0.2s;">Yayınlananlar</button>
+        </div>
+
+        @if (newsletters.Count == 0)
+        {
+            <div style="text-align: center; padding: 4rem 2rem; background: rgba(255, 255, 255, 0.5); border-radius: 20px; border: 2px dashed var(--border-color);">
+                <div style="font-size: 4rem; margin-bottom: 1rem; opacity: 0.5;">📰</div>
+                <h3 style="color: var(--text-secondary); font-size: 1.25rem; margin-bottom: 0.5rem;">Henüz hiç bülten oluşturmadınız.</h3>
+                <p style="color: var(--text-muted);">Velilerinizi bilgilendirmek için yeni bir bülten hazırlayabilirsiniz.</p>
+            </div>
+        }
+        else
+        {
+            <!-- TASLAKLAR -->
+            <div id="nl-draft-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem;">
+                @{ var draftNewsletters = newsletters.Where(n => n.Status == 0).ToList(); }
+                @if(!draftNewsletters.Any()) { <div style="color: var(--text-muted); grid-column: 1 / -1;">Taslak bülten bulunmuyor.</div> }
+                
+                @foreach (var newsletter in draftNewsletters)
+                {
+                    <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; background: rgba(255,255,255,0.7); box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 1rem;">
+                            <div>
+                                <h3 style="font-size: 1.25rem; margin-bottom: 0.2rem; color: var(--primary-color);">@newsletter.Title</h3>
+                                <div style="font-size: 0.85rem; color: var(--text-muted);">@newsletter.WeekName</div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <button type="button" onclick="deleteNewsletter('@newsletter.Id')" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.2rem; padding: 0.2rem;" title="Sil">🗑️</button>
+                                @{ var nJson = System.Text.Json.JsonSerializer.Serialize(newsletter, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }); }
+                                <button type="button" onclick="openEditNewsletterModal(JSON.parse(this.getAttribute('data-newsletter')))" data-newsletter="@nJson" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; border: none; background: #e5e7eb; color: #4b5563; border-radius: 4px; cursor: pointer;">Düzenle</button>
+                            </div>
+                        </div>
+                        
+                        @if (!string.IsNullOrEmpty(newsletter.ImageUrl))
+                        {
+                            <div style="margin-bottom: 1rem; border-radius: 8px; overflow: hidden; max-height: 200px; display: flex; align-items: center; justify-content: center; background: #f3f4f6;">
+                                <img src="@newsletter.ImageUrl" alt="Bülten Görseli" style="width: 100%; height: auto; object-fit: cover;" />
+                            </div>
+                        }
+
+                        <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1.5rem; line-height:1.5; flex-grow: 1;">@newsletter.Content</p>
+
+                        @if(newsletter.Sections != null && newsletter.Sections.Any())
+                        {
+                            <div style="margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem;">
+                                @foreach (var sec in newsletter.Sections)
+                                {
+                                    <div style="background: rgba(240, 242, 245, 0.5); padding: 0.8rem; border-radius: 8px; border-left: 3px solid var(--accent-blue);">
+                                        <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.4rem; color: var(--text-primary);">@sec.Subject</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.3rem;"><strong>Bu Hafta:</strong> @sec.ThisWeekSummary</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);"><strong>Gelecek Hafta:</strong> @sec.NextWeekTopic</div>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: auto;">
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">Henüz yayınlanmadı</span>
+                            <form asp-controller="Newsletter" asp-action="PublishNewsletter" method="post" style="display:inline;">
+                                <input type="hidden" name="classroomId" value="@classroom?.Id" />
+                                <input type="hidden" name="id" value="@newsletter.Id" />
+                                <button type="submit" class="btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Yayınla</button>
+                            </form>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- YAYINLANANLAR -->
+            <div id="nl-published-container" style="display: none; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem;">
+                @{ var publishedNewsletters = newsletters.Where(n => n.Status == 1).ToList(); }
+                @if(!publishedNewsletters.Any()) { <div style="color: var(--text-muted); grid-column: 1 / -1;">Yayınlanmış bülten bulunmuyor.</div> }
+                
+                @foreach (var newsletter in publishedNewsletters)
+                {
+                    <div id="newsletter-pdf-@newsletter.Id" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; background: rgba(255,255,255,0.7); box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 1rem;">
+                            <div>
+                                <h3 style="font-size: 1.25rem; margin-bottom: 0.2rem; color: var(--primary-color);">@newsletter.Title</h3>
+                                <div style="font-size: 0.85rem; color: var(--text-muted);">@newsletter.WeekName</div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;" data-html2canvas-ignore>
+                                <button type="button" onclick="downloadNewsletterPdf('@newsletter.Id', '@newsletter.Title')" class="btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.8rem; display: flex; align-items: center; gap: 0.3rem;" title="PDF İndir">
+                                    <span>📥</span> PDF
+                                </button>
+                                <button type="button" onclick="deleteNewsletter('@newsletter.Id')" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.2rem; padding: 0.2rem;" title="Sil">🗑️</button>
+                                <span style="font-size: 0.75rem; color: #059669; background: #d1fae5; padding: 0.2rem 0.6rem; border-radius: 12px; font-weight:600;">Yayında</span>
+                            </div>
+                        </div>
+                        
+                        @if (!string.IsNullOrEmpty(newsletter.ImageUrl))
+                        {
+                            <div style="margin-bottom: 1rem; border-radius: 8px; overflow: hidden; max-height: 200px; display: flex; align-items: center; justify-content: center; background: #f3f4f6;">
+                                <img src="@newsletter.ImageUrl" alt="Bülten Görseli" style="width: 100%; height: auto; object-fit: cover;" />
+                            </div>
+                        }
+
+                        <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1.5rem; line-height:1.5; flex-grow: 1;">@newsletter.Content</p>
+
+                        @if(newsletter.Sections != null && newsletter.Sections.Any())
+                        {
+                            <div style="margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem;">
+                                @foreach (var sec in newsletter.Sections)
+                                {
+                                    <div style="background: rgba(240, 242, 245, 0.5); padding: 0.8rem; border-radius: 8px; border-left: 3px solid var(--accent-blue);">
+                                        <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.4rem; color: var(--text-primary);">@sec.Subject</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.3rem;"><strong>Bu Hafta:</strong> @sec.ThisWeekSummary</div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary);"><strong>Gelecek Hafta:</strong> @sec.NextWeekTopic</div>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: auto;">
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">Yayınlanma: @newsletter.PublishedAt?.ToString("dd.MM.yyyy")</span>
+                            <button type="button" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" disabled>Yayınlandı</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+    </div> <!-- END TAB 3 -->
 </div>
 
 <!-- YENİ AKTİVİTE EKLEME MODALI -->
@@ -169,7 +478,19 @@
 
             <div class="form-group">
                 <label for="title">Aktivite Adı</label>
-                <input type="text" id="title" name="title" class="form-control" placeholder="Örn: Parmak Boyama" required />
+                <select id="title" name="title" class="form-control" required>
+                    <option value="Fen ve Doğa Etkinliği">Fen ve Doğa Etkinliği</option>
+                    <option value="Sanat Etkinliği">Sanat Etkinliği</option>
+                    <option value="Oyun Etkinliği">Oyun Etkinliği</option>
+                    <option value="Türkçe Etkinliği">Türkçe Etkinliği</option>
+                    <option value="Müzik Etkinliği">Müzik Etkinliği</option>
+                    <option value="Drama Etkinliği">Drama Etkinliği</option>
+                    <option value="Serbest Zaman">Serbest Zaman</option>
+                    <option value="Kahvaltı">Kahvaltı</option>
+                    <option value="Öğle Yemeği">Öğle Yemeği</option>
+                    <option value="İkindi Kahvaltısı">İkindi Kahvaltısı</option>
+                    <option value="Uyku / Dinlenme">Uyku / Dinlenme</option>
+                </select>
             </div>
 
             <div class="form-group">
@@ -182,6 +503,28 @@
                 <input type="date" id="activityDate" name="activityDate" class="form-control" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" required />
             </div>
 
+            <div class="form-group" style="display: flex; gap: 1rem;">
+                <div style="flex: 1;">
+                    <label for="startTime">Başlangıç</label>
+                    <input type="time" id="startTime" name="startTime" class="form-control" required />
+                </div>
+                <div style="flex: 1;">
+                    <label for="endTime">Bitiş</label>
+                    <input type="time" id="endTime" name="endTime" class="form-control" required />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="type">Aktivite Tipi</label>
+                <select id="type" name="type" class="form-control" required>
+                    <option value="0">Ders/Eğitim</option>
+                    <option value="1">Oyun/Serbest Zaman</option>
+                    <option value="2">Yemek</option>
+                    <option value="3">Uyku/Dinlenme</option>
+                    <option value="4">Sanat/Atölye</option>
+                </select>
+            </div>
+
             <div style="display: flex; gap: 1rem; margin-top: 2rem;">
                 <button type="button" onclick="closeModal()" class="btn-secondary" style="flex: 1;">İptal</button>
                 <button type="submit" class="btn-primary" style="flex: 1; margin-top: 0;">Oluştur</button>
@@ -190,14 +533,255 @@
     </div>
 </div>
 
+<!-- HAFTALIK ŞABLON MODAL -->
+<div id="weeklyScheduleModal" class="simple-modal">
+    <div class="glass-card simple-modal-content" style="max-width: 900px;">
+        <div class="section-card-header" style="margin-bottom: 1.5rem;">
+            <h2>Sabit Haftalık Ders Şablonu</h2>
+            <button onclick="closeWeeklyScheduleModal()" style="background:none; border:none; color:var(--text-muted); font-size:1.5rem; cursor:pointer;">&times;</button>
+        </div>
+        <div>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">
+                Bu şablon, "Şablonu Uygula" dediğinizde ilgili haftanın tüm günlerine otomatik olarak eklenecek olan dersleri belirler.
+            </p>
+            
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; overflow-x: auto;">
+                <button type="button" onclick="switchTemplateDay(1)" id="btn-tmpl-1" class="tmpl-tab-btn active" style="background: none; border: none; font-weight: 700; color: var(--primary-color); border-bottom: 3px solid var(--primary-color); padding: 0.5rem 1rem; cursor: pointer; transition: all 0.2s;">Pazartesi</button>
+                <button type="button" onclick="switchTemplateDay(2)" id="btn-tmpl-2" class="tmpl-tab-btn" style="background: none; border: none; font-weight: 700; color: var(--text-muted); border-bottom: 3px solid transparent; padding: 0.5rem 1rem; cursor: pointer; transition: all 0.2s;">Salı</button>
+                <button type="button" onclick="switchTemplateDay(3)" id="btn-tmpl-3" class="tmpl-tab-btn" style="background: none; border: none; font-weight: 700; color: var(--text-muted); border-bottom: 3px solid transparent; padding: 0.5rem 1rem; cursor: pointer; transition: all 0.2s;">Çarşamba</button>
+                <button type="button" onclick="switchTemplateDay(4)" id="btn-tmpl-4" class="tmpl-tab-btn" style="background: none; border: none; font-weight: 700; color: var(--text-muted); border-bottom: 3px solid transparent; padding: 0.5rem 1rem; cursor: pointer; transition: all 0.2s;">Perşembe</button>
+                <button type="button" onclick="switchTemplateDay(5)" id="btn-tmpl-5" class="tmpl-tab-btn" style="background: none; border: none; font-weight: 700; color: var(--text-muted); border-bottom: 3px solid transparent; padding: 0.5rem 1rem; cursor: pointer; transition: all 0.2s;">Cuma</button>
+            </div>
+            
+            <div id="weeklyScheduleContainer" style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1rem;">
+                <!-- JS ile satırlar buraya eklenecek -->
+            </div>
+            
+            <button type="button" onclick="addWeeklyScheduleRow()" class="btn-secondary" style="margin-bottom: 1rem; width: 100%; border: 2px dashed var(--primary-color); color: var(--primary-color); background: rgba(245, 158, 11, 0.05);">+ Bu Güne Yeni Ders Ekle</button>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                <button type="button" onclick="closeWeeklyScheduleModal()" class="btn-secondary">İptal</button>
+                <button type="button" onclick="saveWeeklySchedule()" class="btn-primary">Şablonu Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- YENİ BÜLTEN MODALI -->
+<div id="newsletterModal" class="simple-modal">
+    <div class="glass-card simple-modal-content">
+        <div class="section-card-header" style="margin-bottom: 2rem;">
+            <h2 id="newsletterModalTitle">Yeni Bülten Oluştur</h2>
+            <button onclick="closeNewsletterModal()" style="background:none; border:none; color:var(--text-muted); font-size:1.5rem; cursor:pointer;">&times;</button>
+        </div>
+
+        <form asp-controller="Newsletter" asp-action="CreateNewsletter" method="post" id="newsletterForm" enctype="multipart/form-data">
+            <input type="hidden" name="classroomId" value="@classroom?.Id" />
+            <input type="hidden" id="newsletterId" name="id" value="" />
+
+            <div style="display: flex; gap: 1rem;">
+                <div class="form-group" style="flex: 2;">
+                    <label for="newsletterTitle">Bülten Başlığı</label>
+                    <input type="text" id="newsletterTitle" name="title" class="form-control" placeholder="Örn: Ekim 2. Hafta Bülteni" required />
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label for="newsletterWeekName">Hafta (Opsiyonel)</label>
+                    <input type="text" id="newsletterWeekName" name="weekName" class="form-control" placeholder="Örn: 9-13 Ekim" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="coverImage">Görsel Yükle (PC/Mobil)</label>
+                <input type="hidden" id="imageUrl" name="imageUrl" />
+                <input type="file" id="coverImage" name="CoverImage" class="form-control" accept="image/*" />
+                <small style="color: var(--text-muted); display: block; margin-top: 0.3rem;">Yeni görsel seçerseniz eski görselin üzerine yazılır.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="newsletterContent">Genel Özet / Mesaj</label>
+                <textarea id="newsletterContent" name="content" class="form-control" style="height: 80px; resize: none;" placeholder="Velilerimize genel notlar..." required></textarea>
+            </div>
+
+            <div class="section-card-header" style="margin-top: 1.5rem; margin-bottom: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                <h3 style="font-size: 1.1rem;">Bülten Konuları (Aktivite Raporları)</h3>
+                <button type="button" onclick="addNewsletterSection()" style="background: none; border: none; color: var(--primary-color); font-weight: 600; cursor: pointer; font-size: 0.85rem;">+ Konu Ekle</button>
+            </div>
+
+            <div id="newsletterSectionsContainer">
+                <!-- Dinamik Bölümler Buraya Gelecek -->
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="button" onclick="closeNewsletterModal()" class="btn-secondary" style="flex: 1;">İptal</button>
+                <button type="submit" class="btn-primary" style="flex: 1; margin-top: 0;">Taslak Olarak Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @section Scripts {
     <script>
+        const classroomId = '@classroom?.Id';
+
+        // Modern Tab Navigation
+        function switchMainTab(tabId, btnElement) {
+            // Remove active class from all buttons and contents
+            document.querySelectorAll('.modern-tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.modern-tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked button and target content
+            if (btnElement) {
+                btnElement.classList.add('active');
+            } else {
+                const btn = document.querySelector(`.modern-tab-btn[onclick*="${tabId}"]`);
+                if (btn) btn.classList.add('active');
+            }
+            document.getElementById(tabId).classList.add('active');
+            
+            // Save active tab
+            localStorage.setItem('activeClassroomTab', tabId);
+        }
+
+        // Restore active tab on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTab = localStorage.getItem('activeClassroomTab');
+            if (savedTab && document.getElementById(savedTab)) {
+                switchMainTab(savedTab, null);
+            }
+        });
+        
+        // Haftalık Ders Programı Sekmeleri
+        function selectScheduleDay(dayId) {
+            // Buton sınıflarını sıfırla
+            document.querySelectorAll('.schedule-tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            // Seçili butona active sınıfı ekle
+            document.getElementById('btn-schedule-day-' + dayId).classList.add('active');
+
+            // Tüm içerikleri gizle
+            for(let i=1; i<=5; i++) {
+                const el = document.getElementById('schedule-content-day-' + i);
+                if (el) el.style.display = 'none';
+            }
+            // Seçili içeriği göster
+            const targetEl = document.getElementById('schedule-content-day-' + dayId);
+            if (targetEl) targetEl.style.display = 'block';
+        }
+
         // Modal Kontrolleri
         function openModal() {
             document.getElementById('activityModal').style.display = 'flex';
         }
         function closeModal() {
             document.getElementById('activityModal').style.display = 'none';
+        }
+        function openNewsletterModal() {
+            document.getElementById('newsletterModalTitle').innerText = "Yeni Bülten Oluştur";
+            document.getElementById('newsletterForm').action = "/Newsletter/CreateNewsletter";
+            document.getElementById('newsletterId').value = "";
+            document.getElementById('newsletterTitle').value = "";
+            document.getElementById('newsletterWeekName').value = "";
+            document.getElementById('imageUrl').value = "";
+            document.getElementById('newsletterContent').value = "";
+            document.getElementById('newsletterSectionsContainer').innerHTML = "";
+            sectionIndex = 0;
+            document.getElementById('newsletterModal').style.display = 'flex';
+        }
+        function closeNewsletterModal() {
+            document.getElementById('newsletterModal').style.display = 'none';
+        }
+        
+        function openEditNewsletterModal(newsletter) {
+            document.getElementById('newsletterModalTitle').innerText = "Bülteni Düzenle";
+            document.getElementById('newsletterForm').action = "/Newsletter/UpdateNewsletter";
+            document.getElementById('newsletterId').value = newsletter.id;
+            document.getElementById('newsletterTitle').value = newsletter.title || "";
+            document.getElementById('newsletterWeekName').value = newsletter.weekName || "";
+            document.getElementById('imageUrl').value = newsletter.imageUrl || "";
+            document.getElementById('newsletterContent').value = newsletter.content || "";
+            
+            document.getElementById('newsletterSectionsContainer').innerHTML = "";
+            sectionIndex = 0;
+            
+            if (newsletter.sections && newsletter.sections.length > 0) {
+                newsletter.sections.forEach(sec => {
+                    addNewsletterSectionWithValues(sec);
+                });
+            }
+            
+            document.getElementById('newsletterModal').style.display = 'flex';
+        }
+
+        let sectionIndex = 0;
+        function addNewsletterSectionWithValues(sec) {
+            const container = document.getElementById('newsletterSectionsContainer');
+            const sectionHtml = `
+                <div class="newsletter-section-item" style="border: 1px dashed var(--border-color); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; position: relative;">
+                    <button type="button" onclick="removeNewsletterSection(this)" style="position: absolute; right: 0.5rem; top: 0.5rem; background: none; border: none; color: #dc2626; cursor: pointer; font-size: 1.2rem;">&times;</button>
+                    
+                    <div class="form-group" style="margin-bottom: 0.8rem;">
+                        <label>Konu / Ders (Örn: Fen ve Doğa)</label>
+                        <input type="text" name="Sections[${sectionIndex}].Subject" class="form-control" value="${sec ? (sec.subject || '') : ''}" required />
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 0.8rem;">
+                        <label>Bu Hafta Neler Yaptık?</label>
+                        <textarea name="Sections[${sectionIndex}].ThisWeekSummary" class="form-control" style="height: 60px; resize: none;" required>${sec ? (sec.thisWeekSummary || '') : ''}</textarea>
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Gelecek Haftanın Konusu</label>
+                        <input type="text" name="Sections[${sectionIndex}].NextWeekTopic" class="form-control" value="${sec ? (sec.nextWeekTopic || '') : ''}" required />
+                    </div>
+                    
+                    <input type="hidden" name="Sections[${sectionIndex}].InstructorName" value="Sınıf Öğretmeni" />
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', sectionHtml);
+            sectionIndex++;
+        }
+
+        function addNewsletterSection() {
+            addNewsletterSectionWithValues(null);
+        }
+
+        function removeNewsletterSection(btn) {
+            btn.closest('.newsletter-section-item').remove();
+        }
+
+        // Toplu Güncelleme (Bulk Update) İşlemi
+        function bulkUpdate(type, value) {
+            if (value === "") return;
+            let selector = "";
+            if (type === 'sleep') selector = "select[id^='sleep-']";
+            if (type === 'meal') selector = "select[id^='meal-status-']";
+            if (type === 'water') selector = "input[id^='water-']";
+            
+            if (!selector) return;
+
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(el => {
+                if (!el.disabled) {
+                    el.value = value;
+                }
+            });
+        }
+
+        // Tümünü Kaydet Butonu
+        async function saveAllRows() {
+            const btns = document.querySelectorAll('.save-row-btn');
+            if(btns.length === 0) return;
+            
+            // Kullanıcıyı bilgilendir
+            if(!confirm("Ekranda görünen aktif tüm öğrencilerin kayıtları aynı anda kaydedilecek. Onaylıyor musunuz?")) return;
+
+            // Sırayla butonların tıklanma işlevini tetikle
+            btns.forEach(btn => {
+                if(!btn.disabled) {
+                    btn.click();
+                }
+            });
         }
 
         // AJAX ile Günlük Gelişim ve Yemek Durumlarını Kaydetme
@@ -256,6 +840,240 @@
                 alert("İletişim hatası oluştu.");
                 btn.innerText = "Tekrar Dene";
                 btn.disabled = false;
+            }
+        }
+        // Bülten Sekme Kontrolü
+        function downloadNewsletterPdf(id, title) {
+            var element = document.getElementById('newsletter-pdf-' + id);
+            var opt = {
+                margin:       [15, 15, 15, 15],
+                filename:     title + '.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            
+            // html2pdf will ignore elements with data-html2canvas-ignore
+            html2pdf().set(opt).from(element).save();
+        }
+
+        function switchNewsletterTab(tabName) {
+            const btnDraft = document.getElementById('btn-nl-draft');
+            const btnPublished = document.getElementById('btn-nl-published');
+            const containerDraft = document.getElementById('nl-draft-container');
+            const containerPublished = document.getElementById('nl-published-container');
+
+            if (tab === 'draft') {
+                btnDraft.style.color = 'var(--primary-color)';
+                btnDraft.style.borderBottomColor = 'var(--primary-color)';
+                btnPublished.style.color = 'var(--text-muted)';
+                btnPublished.style.borderBottomColor = 'transparent';
+                containerDraft.style.display = 'grid';
+                containerPublished.style.display = 'none';
+            } else {
+                btnPublished.style.color = 'var(--primary-color)';
+                btnPublished.style.borderBottomColor = 'var(--primary-color)';
+                btnDraft.style.color = 'var(--text-muted)';
+                btnDraft.style.borderBottomColor = 'transparent';
+                containerPublished.style.display = 'grid';
+                containerDraft.style.display = 'none';
+            }
+            localStorage.setItem('activeNewsletterTab', tab);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedNlTab = localStorage.getItem('activeNewsletterTab');
+            if (savedNlTab) {
+                switchNewsletterTab(savedNlTab);
+            }
+        });
+
+        // Bülten Silme
+        async function deleteNewsletter(id) {
+            if (!confirm("Bu bülteni kalıcı olarak silmek istediğinize emin misiniz?")) return;
+            
+            try {
+                const res = await fetch(`/api/newsletters/${id}`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    // Sayfayı yenile veya elementi kaldır
+                    window.location.reload();
+                } else {
+                    alert("Silme işlemi başarısız oldu.");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("İletişim hatası.");
+            }
+        }
+        // Sabit Haftalık Şablon İşlemleri
+        async function openWeeklyScheduleModal() {
+            try {
+                const res = await fetch(`/api/classrooms/${classroomId}/weekly-schedule`);
+                if (res.ok) {
+                    const data = await res.json();
+                    renderWeeklyScheduleTable(data);
+                } else {
+                    renderWeeklyScheduleTable([]);
+                }
+                document.getElementById('weeklyScheduleModal').style.display = 'flex';
+            } catch (err) {
+                console.error(err);
+                alert("Şablon yüklenemedi.");
+            }
+        }
+
+        function closeWeeklyScheduleModal() {
+            document.getElementById('weeklyScheduleModal').style.display = 'none';
+        }
+
+        function renderWeeklyScheduleTable(data) {
+            const container = document.getElementById('weeklyScheduleContainer');
+            container.innerHTML = '';
+            switchTemplateDay(1); // Default Monday
+            if (data && data.length > 0) {
+                data.forEach(item => addWeeklyScheduleRow(item));
+            } else {
+                addWeeklyScheduleRow(); // En az 1 boş satır Pazartesi için
+            }
+        }
+
+        let currentTemplateDay = 1;
+        function switchTemplateDay(dayId) {
+            currentTemplateDay = dayId;
+            document.querySelectorAll('.tmpl-tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                btn.style.color = 'var(--text-muted)';
+                btn.style.borderColor = 'transparent';
+            });
+            const activeBtn = document.getElementById('btn-tmpl-' + dayId);
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+                activeBtn.style.color = 'var(--primary-color)';
+                activeBtn.style.borderColor = 'var(--primary-color)';
+            }
+            
+            document.querySelectorAll('.weekly-schedule-row').forEach(row => {
+                if (parseInt(row.getAttribute('data-day')) === dayId) {
+                    row.style.display = 'block';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function addWeeklyScheduleRow(item = null) {
+            const dayId = item ? item.dayOfWeek : currentTemplateDay;
+            const container = document.getElementById('weeklyScheduleContainer');
+            const row = document.createElement('div');
+            row.className = 'weekly-schedule-row';
+            row.setAttribute('data-day', dayId);
+            row.style = `background: #fff; padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.02); margin-bottom: 1rem; position: relative; display: ${dayId === currentTemplateDay ? 'block' : 'none'};`;
+            
+            row.innerHTML = `
+                <button type="button" onclick="this.closest('.weekly-schedule-row').remove()" style="position: absolute; right: 0.5rem; top: 0.5rem; background:none; border:none; color:#ef4444; cursor:pointer; font-size:1.5rem; line-height:1;" title="Sil">&times;</button>
+                
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 0.8rem; margin-bottom: 0.8rem; padding-right: 1.5rem;">
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #6b7280; display: block; margin-bottom: 0.2rem;">AKTİVİTE / DERS ADI</label>
+                        <select class="ws-title" style="width: 100%; padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 6px; background-color: #f9fafb;">
+                            <option value="Fen ve Doğa Etkinliği" ${item?.title === 'Fen ve Doğa Etkinliği' ? 'selected' : ''}>Fen ve Doğa Etkinliği</option>
+                            <option value="Sanat Etkinliği" ${item?.title === 'Sanat Etkinliği' ? 'selected' : ''}>Sanat Etkinliği</option>
+                            <option value="Oyun Etkinliği" ${item?.title === 'Oyun Etkinliği' ? 'selected' : ''}>Oyun Etkinliği</option>
+                            <option value="Türkçe Etkinliği" ${item?.title === 'Türkçe Etkinliği' ? 'selected' : ''}>Türkçe Etkinliği</option>
+                            <option value="Müzik Etkinliği" ${item?.title === 'Müzik Etkinliği' ? 'selected' : ''}>Müzik Etkinliği</option>
+                            <option value="Drama Etkinliği" ${item?.title === 'Drama Etkinliği' ? 'selected' : ''}>Drama Etkinliği</option>
+                            <option value="Serbest Zaman" ${item?.title === 'Serbest Zaman' ? 'selected' : ''}>Serbest Zaman</option>
+                            <option value="Kahvaltı" ${item?.title === 'Kahvaltı' ? 'selected' : ''}>Kahvaltı</option>
+                            <option value="Öğle Yemeği" ${item?.title === 'Öğle Yemeği' ? 'selected' : ''}>Öğle Yemeği</option>
+                            <option value="İkindi Kahvaltısı" ${item?.title === 'İkindi Kahvaltısı' ? 'selected' : ''}>İkindi Kahvaltısı</option>
+                            <option value="Uyku / Dinlenme" ${item?.title === 'Uyku / Dinlenme' ? 'selected' : ''}>Uyku / Dinlenme</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #6b7280; display: block; margin-bottom: 0.2rem;">BAŞLANGIÇ</label>
+                        <input type="time" class="ws-start" value="${item?.startTime || '09:00:00'}" style="width: 100%; padding: 0.4rem; border: 1px solid #e5e7eb; border-radius: 6px; background-color: #f9fafb;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #6b7280; display: block; margin-bottom: 0.2rem;">BİTİŞ</label>
+                        <input type="time" class="ws-end" value="${item?.endTime || '09:45:00'}" style="width: 100%; padding: 0.4rem; border: 1px solid #e5e7eb; border-radius: 6px; background-color: #f9fafb;">
+                    </div>
+                </div>
+                
+                <div>
+                    <label style="font-size: 0.75rem; font-weight: 600; color: #6b7280; display: block; margin-bottom: 0.2rem;">AÇIKLAMA (Opsiyonel)</label>
+                    <input type="text" class="ws-desc" placeholder="Örn: Parmak boyası ile maske yapımı..." value="${item?.description || ''}" style="width: 100%; padding: 0.4rem 0.6rem; border: 1px solid #e5e7eb; border-radius: 6px; background-color: #f9fafb;">
+                </div>
+            `;
+            container.appendChild(row);
+        }
+
+        async function saveWeeklySchedule() {
+            const rows = document.querySelectorAll('.weekly-schedule-row');
+            const schedules = [];
+
+            function inferType(title) {
+                if (title === 'Oyun Etkinliği' || title === 'Serbest Zaman') return 1;
+                if (title === 'Kahvaltı' || title === 'Öğle Yemeği' || title === 'İkindi Kahvaltısı') return 2;
+                if (title === 'Uyku / Dinlenme') return 3;
+                if (title === 'Sanat Etkinliği' || title === 'Drama Etkinliği' || title === 'Müzik Etkinliği') return 4;
+                return 0; // Default: Ders
+            }
+
+            rows.forEach(row => {
+                let sTime = row.querySelector('.ws-start').value;
+                if (sTime.length === 5) sTime += ':00';
+                let eTime = row.querySelector('.ws-end').value;
+                if (eTime.length === 5) eTime += ':00';
+                let title = row.querySelector('.ws-title').value;
+
+                schedules.push({
+                    dayOfWeek: parseInt(row.getAttribute('data-day')),
+                    title: title,
+                    description: row.querySelector('.ws-desc').value,
+                    startTime: sTime,
+                    endTime: eTime,
+                    type: inferType(title)
+                });
+            });
+
+            try {
+                const res = await fetch(`/api/classrooms/${classroomId}/weekly-schedule`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ schedules: schedules })
+                });
+
+                if (res.ok) {
+                    alert("Haftalık şablon kaydedildi!");
+                    closeWeeklyScheduleModal();
+                } else {
+                    alert("Şablon kaydedilirken bir hata oluştu.");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("İletişim hatası.");
+            }
+        }
+
+        async function applyWeeklyScheduleToWeek() {
+            if (!confirm("Dikkat! Bu işlem, bu haftadaki mevcut tüm dersleri SİLİP şablondakileri baştan yazacaktır. Devam etmek istiyor musunuz?")) return;
+
+            try {
+                const res = await fetch(`/api/classrooms/${classroomId}/weekly-schedule/apply`, {
+                    method: 'POST'
+                });
+
+                if (res.ok) {
+                    alert("Şablon başarıyla bu haftaya uygulandı!");
+                    window.location.reload();
+                } else {
+                    alert("Şablon uygulanamadı. (Şablon boş olabilir)");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("İletişim hatası.");
             }
         }
     </script>

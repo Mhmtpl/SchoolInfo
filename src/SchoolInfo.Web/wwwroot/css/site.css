@@ -707,6 +707,8 @@ a:hover {
 .simple-modal-content {
     width: 100%;
     max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 /* --- VELI PORTALI YENI PREMIMUM TASARIM SINIFLARI --- */
@@ -960,4 +962,51 @@ a:hover {
     padding: 2rem;
     box-shadow: 0 10px 30px rgba(160, 140, 120, 0.03);
     margin-bottom: 2rem;
+}
+
+/* --- MODERN TABS FOR CLASSROOM DETAILS --- */
+.modern-tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+    overflow-x: auto;
+}
+
+.modern-tab-btn {
+    background: none;
+    border: none;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--text-muted);
+    padding: 0.75rem 1.25rem;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease-in-out;
+    white-space: nowrap;
+}
+
+.modern-tab-btn:hover {
+    color: var(--text-primary);
+}
+
+.modern-tab-btn.active {
+    color: var(--accent-blue);
+    border-bottom-color: var(--accent-blue);
+}
+
+.modern-tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.modern-tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
 }

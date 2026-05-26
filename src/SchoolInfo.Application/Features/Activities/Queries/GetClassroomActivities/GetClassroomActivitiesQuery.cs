@@ -45,6 +45,9 @@ public class GetClassroomActivitiesQueryHandler : IRequestHandler<GetClassroomAc
                 a.Title,
                 a.Description,
                 a.ActivityDate,
+                a.StartTime,
+                a.EndTime,
+                a.Type,
                 a.ClassroomId,
                 a.CompletedAt
             ))

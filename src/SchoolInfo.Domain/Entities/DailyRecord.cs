@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using SchoolInfo.Domain.Common;
 using SchoolInfo.Domain.ValueObjects;
 using SchoolInfo.Domain.Events;
@@ -16,6 +16,7 @@ public class DailyRecord : BaseEntity
     public SleepData SleepInfo { get; private set; }
     public WaterIntake WaterConsumption { get; private set; }
     public string? TeacherNote { get; private set; }
+    public bool IsAbsent { get; private set; }
 
     public DailyRecord(Guid studentId, DateTime date)
     {
@@ -23,6 +24,7 @@ public class DailyRecord : BaseEntity
         Date = date.Date;
         SleepInfo = new SleepData(Enums.SleepStatus.DidNotSleep, null, null);
         WaterConsumption = new WaterIntake(0);
+        IsAbsent = false;
 
         AddDomainEvent(new DailyRecordCreatedEvent(Id, StudentId));
     }
@@ -51,6 +53,15 @@ public class DailyRecord : BaseEntity
     public void SetTeacherNote(string note)
     {
         TeacherNote = note;
+        UpdateTimestamp();
+    }
+
+    /// <summary>
+    /// Ã–ÄŸrencinin devamsÄ±zlÄ±k durumunu gÃ¼nceller.
+    /// </summary>
+    public void SetAbsentStatus(bool isAbsent)
+    {
+        IsAbsent = isAbsent;
         UpdateTimestamp();
     }
 }
