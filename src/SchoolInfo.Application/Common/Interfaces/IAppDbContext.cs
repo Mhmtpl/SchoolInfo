@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 namespace SchoolInfo.Application.Common.Interfaces;
 
 /// <summary>
-/// VeritabanÄ± iÅŸlemlerini UnitOfWork kullanmadan gerÃ§ekleÅŸtirmek iÃ§in AppDbContext arayÃ¼zÃ¼.
+/// Veritabanı işlemlerini UnitOfWork kullanmadan gerçekleştirmek için AppDbContext arayüzü.
 /// </summary>
 public interface IAppDbContext
 {
@@ -15,8 +15,12 @@ public interface IAppDbContext
     Microsoft.EntityFrameworkCore.DbSet<SchoolInfo.Domain.Entities.DailyRecord> DailyRecords { get; }
     Microsoft.EntityFrameworkCore.DbSet<SchoolInfo.Domain.Entities.MealRecord> MealRecords { get; }
     Microsoft.EntityFrameworkCore.DbSet<SchoolInfo.Domain.Entities.Activity> Activities { get; }
+    Microsoft.EntityFrameworkCore.DbSet<SchoolInfo.Domain.Entities.Newsletter> Newsletters { get; }
+    Microsoft.EntityFrameworkCore.DbSet<SchoolInfo.Domain.Entities.NewsletterSection> NewsletterSections { get; }
+    Microsoft.EntityFrameworkCore.DbSet<SchoolInfo.Domain.Entities.ActivityTemplate> ActivityTemplates { get; }
     Microsoft.EntityFrameworkCore.DbSet<SchoolInfo.Domain.Entities.DailySummary> DailySummaries { get; }
     Microsoft.EntityFrameworkCore.DbSet<SchoolInfo.Domain.Entities.WeeklyMealPlan> WeeklyMealPlans { get; }
+    Microsoft.EntityFrameworkCore.DbSet<SchoolInfo.Domain.Entities.ClassroomWeeklySchedule> ClassroomWeeklySchedules { get; }
     
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

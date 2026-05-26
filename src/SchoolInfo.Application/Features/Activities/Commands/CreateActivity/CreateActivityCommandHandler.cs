@@ -34,7 +34,7 @@ public class CreateActivityCommandHandler : IRequestHandler<CreateActivityComman
             throw new UnauthorizedAccessException("Aktivite oluÅŸturmak iÃ§in yetkiniz bulunmamaktadÄ±r.");
         }
 
-        var activity = new Activity(request.Title, request.Description, request.ActivityDate, request.ClassroomId);
+        var activity = new Activity(request.Title, request.Description, request.ActivityDate, request.StartTime, request.EndTime, request.Type, request.ClassroomId);
         activity.SchoolId = _currentUserService.SchoolId;
         
         await _activityRepository.AddAsync(activity);

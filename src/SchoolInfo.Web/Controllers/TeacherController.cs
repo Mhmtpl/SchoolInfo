@@ -48,11 +48,13 @@ public class TeacherController : Controller
             var dailyRecords = await _apiService.GetAsync<List<ClassroomDailyRecordDto>>($"api/classrooms/{id}/daily-records/today");
             var mealRecords = await _apiService.GetAsync<List<StudentMealDto>>($"api/classrooms/{id}/meal-records/today");
             var activities = await _apiService.GetAsync<List<ActivityDto>>($"api/activities/classroom/{id}");
+            var newsletters = await _apiService.GetAsync<List<NewsletterDto>>($"api/newsletters/classroom/{id}");
 
             ViewBag.Classroom = classroom;
             ViewBag.DailyRecords = dailyRecords ?? new List<ClassroomDailyRecordDto>();
             ViewBag.MealRecords = mealRecords ?? new List<StudentMealDto>();
             ViewBag.Activities = activities ?? new List<ActivityDto>();
+            ViewBag.Newsletters = newsletters ?? new List<NewsletterDto>();
 
             return View();
         }
@@ -207,15 +209,18 @@ public class TeacherController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateActivity(Guid classroomId, string title, string description, DateTime activityDate)
+    public async Task<IActionResult> CreateActivity(Guid classroomId, string title, string description, DateTime activityDate, TimeSpan startTime, TimeSpan endTime, int type)
     {
         try
         {
-            var command = new CreateActivityCommand
+            var command = new 
             {
                 Title = title,
                 Description = description,
                 ActivityDate = activityDate,
+                StartTime = startTime,
+                EndTime = endTime,
+                Type = type,
                 ClassroomId = classroomId
             };
 
@@ -309,6 +314,48 @@ public class TeacherController : Controller
         catch (Exception ex)
         {
             return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpGet("api/classrooms/{classroomId}/weekly-schedule")]
+    public async Task<IActionResult> GetWeeklySchedule(Guid classroomId)
+    {
+        try
+        {
+            var schedule = await _apiService.GetAsync<List<object>>($"api/classrooms/{classroomId}/weekly-schedule");
+            return Ok(schedule ?? new List<object>());
+        }
+        catch (Exception)
+        {
+            return Ok(new List<object>());
+        }
+    }
+
+    [HttpPut("api/classrooms/{classroomId}/weekly-schedule")]
+    public async Task<IActionResult> UpdateWeeklySchedule(Guid classroomId, [FromBody] object request)
+    {
+        try
+        {
+            await _apiService.PutAsync($"api/classrooms/{classroomId}/weekly-schedule", request);
+            return Ok(new { success = true });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPost("api/classrooms/{classroomId}/weekly-schedule/apply")]
+    public async Task<IActionResult> ApplyWeeklySchedule(Guid classroomId)
+    {
+        try
+        {
+            await _apiService.PostAsync($"api/classrooms/{classroomId}/weekly-schedule/apply", new { });
+            return Ok(new { success = true });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
         }
     }
 }

@@ -26,22 +26,21 @@ public class ParentController : Controller
             var userEmail = User.Identity?.Name;
             var children = new List<ClassroomStudentDto>();
 
-            // Veli Hasan Yıldız ise, onun seed edilmiş çocuğu Efe Şahin'i (ID: 60c04a00-333e-42ef-9f3b-fa14c330f81d)
-            // orijinal API üzerinden çekiyoruz. API'de GetMyChildren listeleme endpoint'i olmadığı için
-            // bu eşleştirmeyi güvenli ve seed verilerle uyumlu olarak yapıyoruz.
-            if (!string.IsNullOrEmpty(userEmail) && userEmail.Equals("hasan@yildiz.com", StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrEmpty(userEmail))
             {
-                var studentId = Guid.Parse("60c04a00-333e-42ef-9f3b-fa14c330f81d");
-                var studentInfo = await _apiService.GetAsync<Dictionary<string, object>>($"api/students/{studentId}");
+                var myStudents = await _apiService.GetAsync<List<Dictionary<string, object>>>("api/students/my-children");
                 
-                if (studentInfo != null)
+                if (myStudents != null)
                 {
-                    children.Add(new ClassroomStudentDto
+                    foreach (var studentInfo in myStudents)
                     {
-                        Id = studentId,
-                        FirstName = studentInfo["firstName"].ToString()!,
-                        LastName = studentInfo["lastName"].ToString()!
-                    });
+                        children.Add(new ClassroomStudentDto
+                        {
+                            Id = Guid.Parse(studentInfo["id"].ToString()!),
+                            FirstName = studentInfo["firstName"].ToString()!,
+                            LastName = studentInfo["lastName"].ToString()!
+                        });
+                    }
                 }
             }
 
@@ -138,12 +137,24 @@ public class ParentController : Controller
                 // Sessizce yut
             }
 
+            // 5. Sınıf Bültenlerini çekelim
+            var newsletters = new List<NewsletterDto>();
+            try
+            {
+                newsletters = await _apiService.GetAsync<List<NewsletterDto>>($"api/newsletters/classroom/{classroomId}") ?? new List<NewsletterDto>();
+            }
+            catch
+            {
+                // Sessizce yut
+            }
+
             ViewBag.StudentName = $"{studentInfo["firstName"]} {studentInfo["lastName"]}";
             ViewBag.ClassroomName = classroomName;
             ViewBag.DailyRecord = myDailyRecord;
             ViewBag.DetailedMeals = detailedMeals;
             ViewBag.Activities = activities ?? new List<ActivityDto>();
             ViewBag.AiSummary = aiSummaryText;
+            ViewBag.Newsletters = newsletters;
 
             return View();
         }

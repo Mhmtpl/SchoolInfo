@@ -3,6 +3,7 @@
     var dailyRecord = ViewBag.DailyRecord as ClassroomDailyRecordDto;
     var mealRecord = ViewBag.MealRecord as StudentMealDto;
     var activities = ViewBag.Activities as List<ActivityDto> ?? new List<ActivityDto>();
+    var newsletters = ViewBag.Newsletters as List<NewsletterDto> ?? new List<NewsletterDto>();
     var aiSummary = ViewBag.AiSummary as string;
     
     ViewData["Title"] = $"{ViewBag.StudentName} Gelişim Kartı";
@@ -93,6 +94,9 @@
 
 <!-- Chart.js CDN inclusion -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- html2pdf.js for PDF export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <div class="teacher-workspace">
     <!-- Geri Dönüş Linki -->
@@ -378,7 +382,7 @@
                 else
                 {
                     <div class="timeline">
-                        @foreach (var activity in activities)
+                        @foreach (var activity in activities.OrderBy(a => a.StartTime))
                         {
                             <div class="timeline-item">
                                 <div class="timeline-dot @(activity.CompletedAt.HasValue ? "completed" : "")">
@@ -386,7 +390,7 @@
                                 </div>
                                 <div class="timeline-content">
                                     <div class="timeline-title" style="font-size: 0.95rem; font-weight: 700;">
-                                        <span>@activity.Title</span>
+                                        <span>@activity.StartTime.ToString(@"hh\:mm") - @activity.EndTime.ToString(@"hh\:mm") | @activity.Title</span>
                                     </div>
                                     <div class="timeline-desc" style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.25rem;">
                                         @activity.Description
@@ -401,6 +405,44 @@
                                             <span style="background: #e2e8f0; color: #475569; padding: 0.1rem 0.4rem; border-radius: 4px; border: 1px solid #cbd5e1;">Planlandı</span>
                                         }
                                     </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- BÜLTENLER BÖLÜMÜ -->
+            <div class="glass-card" style="padding: 2rem; margin-top: 1.5rem;">
+                <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    📰 Haftalık Sınıf Bültenleri
+                </h2>
+
+                @if (newsletters.Count == 0)
+                {
+                    <p style="color: var(--text-secondary); text-align: center; padding: 2rem; font-size: 0.9rem; font-style: italic;">
+                        Henüz yayınlanmış bir bülten bulunmuyor.
+                    </p>
+                }
+                else
+                {
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        @foreach (var newsletter in newsletters)
+                        {
+                            <div id="newsletter-pdf-@newsletter.Id" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.2rem; background: rgba(255,255,255,0.6); box-shadow: 0 4px 15px rgba(0,0,0,0.02); position: relative;">
+                                <div data-html2canvas-ignore style="position: absolute; right: 1rem; top: 1rem;">
+                                    <button onclick="downloadNewsletterPdf('@newsletter.Id', '@newsletter.Title')" class="btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem; display: flex; align-items: center; gap: 0.3rem;" title="Bülteni PDF Olarak İndir">
+                                        <span>📥</span> PDF İndir
+                                    </button>
+                                </div>
+                                <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem; color: var(--accent-blue); padding-right: 6rem;">@newsletter.Title</h3>
+                                <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.5;">@newsletter.Content</p>
+                                @if (!string.IsNullOrEmpty(newsletter.ImageUrl))
+                                {
+                                    <a href="@newsletter.ImageUrl" target="_blank" style="display: inline-block; margin-bottom: 1rem; font-size: 0.85rem; color: var(--accent-purple); font-weight: 600;">🔗 İlgili Görsele/Dosyaya Git</a>
+                                }
+                                <div style="font-size: 0.75rem; color: var(--text-muted); text-align: right;">
+                                    Yayınlanma: @newsletter.PublishedAt?.ToString("dd MMMM yyyy")
                                 </div>
                             </div>
                         }
@@ -515,5 +557,19 @@
                 }
             });
         });
+
+        function downloadNewsletterPdf(id, title) {
+            var element = document.getElementById('newsletter-pdf-' + id);
+            var opt = {
+                margin:       [15, 15, 15, 15],
+                filename:     title + '.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            
+            // html2pdf will ignore elements with data-html2canvas-ignore
+            html2pdf().set(opt).from(element).save();
+        }
     </script>
 }

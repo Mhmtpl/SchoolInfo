@@ -27,7 +27,7 @@ public static class DatabaseInitializer
         // 1. Bekleyen migration'ları uygula (Veritabanı yoksa oluşturulur)
         await context.Database.MigrateAsync();
 
-        // 2. Geliştirme ortamında seed kararlılığı için eski verileri temizle
+        context.Set<ClassroomWeeklySchedule>().RemoveRange(context.Set<ClassroomWeeklySchedule>());
         context.Set<WeeklyMealPlan>().RemoveRange(context.Set<WeeklyMealPlan>());
         context.Set<DailySummary>().RemoveRange(context.Set<DailySummary>());
         context.Set<MealRecord>().RemoveRange(context.Set<MealRecord>());
@@ -78,52 +78,14 @@ public static class DatabaseInitializer
         teacher1_2.SchoolId = school1.Id;
         await context.Set<User>().AddAsync(teacher1_2);
 
-        var parent1_1 = new User("Hasan", "Şahin", "hasan@yildiz.com", UserRole.Parent);
-        parent1_1.PasswordHash = defaultPasswordHash;
-        parent1_1.SchoolId = school1.Id;
-        await context.Set<User>().AddAsync(parent1_1);
-
-        var parent1_2 = new User("Ayşe", "Çelik", "ayse@yildiz.com", UserRole.Parent);
-        parent1_2.PasswordHash = defaultPasswordHash;
-        parent1_2.SchoolId = school1.Id;
-        await context.Set<User>().AddAsync(parent1_2);
-
-        // --- Öğretmen-Sınıf Atamaları (Çoktan Çoğa) ---
         class1.AddTeacher(teacher1_1);
         class2.AddTeacher(teacher1_2);
 
-        // --- Öğrenciler ---
-        var student1_1 = new Student("Efe", "Şahin", new DateTime(2018, 4, 12, 0, 0, 0, DateTimeKind.Utc), class1.Id);
-        SetId(student1_1, "60c04a00-333e-42ef-9f3b-fa14c330f81d");
-        student1_1.SchoolId = school1.Id;
-        student1_1.AddParent(parent1_1);
-        await context.Set<Student>().AddAsync(student1_1);
-
-        var student1_2 = new Student("Zeynep", "Çelik", new DateTime(2019, 9, 23, 0, 0, 0, DateTimeKind.Utc), class2.Id);
-        SetId(student1_2, "70c04a00-333e-42ef-9f3b-fa14c330f81d");
-        student1_2.SchoolId = school1.Id;
-        student1_2.AddParent(parent1_2);
-        await context.Set<Student>().AddAsync(student1_2);
-
-        // --- Aktiviteler (Yıldız Anaokulu) ---
-        var activity1_1_yesterday = new Activity("Parmak Boyama", "Sulu boyalar ile el becerilerini geliştirici boyama yapıldı.", yesterday, class1.Id);
-        activity1_1_yesterday.SchoolId = school1.Id;
-        activity1_1_yesterday.Complete();
-        await context.Set<Activity>().AddAsync(activity1_1_yesterday);
-
-        var activity1_1_today = new Activity("Drama Etkinliği", "Ormandaki hayvanlar konulu canlandırma ve drama çalışması yapıldı.", today, class1.Id);
-        activity1_1_today.SchoolId = school1.Id;
-        await context.Set<Activity>().AddAsync(activity1_1_today);
-
-        var activity1_2_yesterday = new Activity("İngilizce Şarkılar", "İngilizce renkler ve hayvanlar konulu ritmik şarkılar söylendi.", yesterday, class2.Id);
-        activity1_2_yesterday.SchoolId = school1.Id;
-        activity1_2_yesterday.Complete();
-        await context.Set<Activity>().AddAsync(activity1_2_yesterday);
-
-        var activity1_2_today = new Activity("Origami Katlama", "Kağıttan kurbağa ve uçak yapımı ile ince motor kasları çalıştırıldı.", today, class2.Id);
-        activity1_2_today.SchoolId = school1.Id;
-        await context.Set<Activity>().AddAsync(activity1_2_today);
-
+        // --- Kullanıcılar (Veliler & Öğrenciler Döngüsü) ---
+        var studentsData = new List<dynamic>();
+        var random = new Random(42);
+        var firstNames = new[] { "Ali", "Ayşe", "Mehmet", "Fatma", "Ahmet", "Zeynep", "Mustafa", "Elif", "Emre", "Defne", "Can", "Eylül", "Burak", "Ceren", "Deniz", "Ece", "Kaan", "Melis", "Mert", "Selin" };
+        var lastNames = new[] { "Yılmaz", "Kaya", "Demir", "Şahin", "Çelik", "Yıldız", "Öztürk", "Aydın", "Özdemir", "Arslan" };
 
         // ==========================================
         // 🏫 OKUL 2: GÜNEŞ KREŞİ
@@ -158,101 +120,147 @@ public static class DatabaseInitializer
         teacher2_2.SchoolId = school2.Id;
         await context.Set<User>().AddAsync(teacher2_2);
 
-        var parent2_1 = new User("Murat", "Koç", "murat@gunes.com", UserRole.Parent);
-        parent2_1.PasswordHash = defaultPasswordHash;
-        parent2_1.SchoolId = school2.Id;
-        await context.Set<User>().AddAsync(parent2_1);
-
-        var parent2_2 = new User("Derya", "Aslan", "derya@gunes.com", UserRole.Parent);
-        parent2_2.PasswordHash = defaultPasswordHash;
-        parent2_2.SchoolId = school2.Id;
-        await context.Set<User>().AddAsync(parent2_2);
-
-        // --- Öğretmen-Sınıf Atamaları ---
         class3.AddTeacher(teacher2_1);
         class4.AddTeacher(teacher2_2);
 
-        // --- Öğrenciler ---
-        var student2_1 = new Student("Can", "Koç", new DateTime(2017, 2, 10, 0, 0, 0, DateTimeKind.Utc), class3.Id);
-        SetId(student2_1, "60c04a00-333e-42ef-9f3b-fa14c330f82d");
-        student2_1.SchoolId = school2.Id;
-        student2_1.AddParent(parent2_1);
-        await context.Set<Student>().AddAsync(student2_1);
+        var allClassrooms = new[] 
+        { 
+            new { Class = class1, SchoolId = school1.Id }, 
+            new { Class = class2, SchoolId = school1.Id }, 
+            new { Class = class3, SchoolId = school2.Id }, 
+            new { Class = class4, SchoolId = school2.Id } 
+        };
 
-        var student2_2 = new Student("Eylül", "Aslan", new DateTime(2018, 11, 3, 0, 0, 0, DateTimeKind.Utc), class4.Id);
-        SetId(student2_2, "70c04a00-333e-42ef-9f3b-fa14c330f82d");
-        student2_2.SchoolId = school2.Id;
-        student2_2.AddParent(parent2_2);
-        await context.Set<Student>().AddAsync(student2_2);
+        foreach (var c in allClassrooms)
+        {
+            for (int i = 1; i <= 10; i++)
+            {
+                // Sabit Test Öğrencisi ve Velisi: Papatyalar sınıfının ilk öğrencisi Efe Şahin olsun.
+                bool isTestStudent = (c.Class.Id == Guid.Parse("80b06b00-349f-4318-97be-fb14c330f81d") && i == 1);
+
+                var fName = isTestStudent ? "Efe" : firstNames[random.Next(firstNames.Length)];
+                var lName = isTestStudent ? "Şahin" : lastNames[random.Next(lastNames.Length)];
+                var student = new Student(fName, lName, new DateTime(2018, random.Next(1, 13), random.Next(1, 28), 0, 0, 0, DateTimeKind.Utc), c.Class.Id);
+                student.SchoolId = c.SchoolId;
+
+                if (isTestStudent)
+                {
+                    SetId(student, "60c04a00-333e-42ef-9f3b-fa14c330f81d"); // Efe Şahin'e sabit ID veriyoruz
+                }
+                
+                // Hasan Yıldız (Sabit Test Velisi)
+                var parentEmail1 = isTestStudent ? "hasan@yildiz.com" : $"baba_{c.Class.Id.ToString().Substring(0,4)}_{i}@test.com";
+                var parentName1 = isTestStudent ? "Hasan Yıldız" : $"{fName} Babası";
+                
+                var parent1 = new User(parentName1, lName, parentEmail1, UserRole.Parent);
+                parent1.PasswordHash = defaultPasswordHash;
+                parent1.SchoolId = c.SchoolId;
+                
+                var parent2 = new User($"{fName} Annesi", lName, $"anne_{c.Class.Id.ToString().Substring(0,4)}_{i}@test.com", UserRole.Parent);
+                parent2.PasswordHash = defaultPasswordHash;
+                parent2.SchoolId = c.SchoolId;
+
+                await context.Set<User>().AddAsync(parent1);
+                await context.Set<User>().AddAsync(parent2);
+
+                student.AddParent(parent1);
+                student.AddParent(parent2);
+
+                await context.Set<Student>().AddAsync(student);
+
+                studentsData.Add(new { Entity = student, SchoolId = c.SchoolId, Parent = parent1 });
+            }
+        }
+
+        // --- Aktiviteler (Yıldız Anaokulu) ---
+        var activity1_1_yesterday = new Activity("Parmak Boyama", "Sulu boyalar ile el becerilerini geliştirici boyama yapıldı.", yesterday, new TimeSpan(10, 0, 0), new TimeSpan(11, 0, 0), ActivityType.Art, class1.Id);
+        activity1_1_yesterday.SchoolId = school1.Id;
+        activity1_1_yesterday.Complete();
+        await context.Set<Activity>().AddAsync(activity1_1_yesterday);
+
+        var activity1_1_today = new Activity("Drama Etkinliği", "Ormandaki hayvanlar konulu canlandırma ve drama çalışması yapıldı.", today, new TimeSpan(14, 0, 0), new TimeSpan(15, 0, 0), ActivityType.Art, class1.Id);
+        activity1_1_today.SchoolId = school1.Id;
+        await context.Set<Activity>().AddAsync(activity1_1_today);
+
+        var activity1_2_yesterday = new Activity("İngilizce Şarkılar", "İngilizce renkler ve hayvanlar konulu ritmik şarkılar söylendi.", yesterday, new TimeSpan(9, 30, 0), new TimeSpan(10, 30, 0), ActivityType.Music, class2.Id);
+        activity1_2_yesterday.SchoolId = school1.Id;
+        activity1_2_yesterday.Complete();
+        await context.Set<Activity>().AddAsync(activity1_2_yesterday);
+
+        var activity1_2_today = new Activity("Origami Katlama", "Kağıttan kurbağa ve uçak yapımı ile ince motor kasları çalıştırıldı.", today, new TimeSpan(11, 0, 0), new TimeSpan(12, 0, 0), ActivityType.Art, class2.Id);
+        activity1_2_today.SchoolId = school1.Id;
+        await context.Set<Activity>().AddAsync(activity1_2_today);
 
         // --- Aktiviteler (Güneş Kreşi) ---
-        var activity2_1_yesterday = new Activity("Legolarla Tasarım", "Lego blokları kullanarak çeşitli geometrik kuleler inşa edildi.", yesterday, class3.Id);
+        var activity2_1_yesterday = new Activity("Legolarla Tasarım", "Lego blokları kullanarak çeşitli geometrik kuleler inşa edildi.", yesterday, new TimeSpan(10, 0, 0), new TimeSpan(11, 0, 0), ActivityType.FreePlay, class3.Id);
         activity2_1_yesterday.SchoolId = school2.Id;
         activity2_1_yesterday.Complete();
         await context.Set<Activity>().AddAsync(activity2_1_yesterday);
 
-        var activity2_1_today = new Activity("Bahçe Oyunları", "Açık havada saklambaç ve yakalamaç oynanarak fiziksel aktivite sağlandı.", today, class3.Id);
+        var activity2_1_today = new Activity("Bahçe Oyunları", "Açık havada saklambaç ve yakalamaç oynanarak fiziksel aktivite sağlandı.", today, new TimeSpan(15, 0, 0), new TimeSpan(16, 0, 0), ActivityType.Outdoor, class3.Id);
         activity2_1_today.SchoolId = school2.Id;
         await context.Set<Activity>().AddAsync(activity2_1_today);
 
-        var activity2_2_yesterday = new Activity("Müzik ve Ritim", "Ritim aletleri (tef, marakas) eşliğinde ses ve ritim çalışmaları yapıldı.", yesterday, class4.Id);
+        var activity2_2_yesterday = new Activity("Müzik ve Ritim", "Ritim aletleri (tef, marakas) eşliğinde ses ve ritim çalışmaları yapıldı.", yesterday, new TimeSpan(11, 0, 0), new TimeSpan(12, 0, 0), ActivityType.Music, class4.Id);
         activity2_2_yesterday.SchoolId = school2.Id;
         activity2_2_yesterday.Complete();
         await context.Set<Activity>().AddAsync(activity2_2_yesterday);
 
-        var activity2_2_today = new Activity("Doğa Keşfi", "Okul bahçesindeki yapraklar ve böcekler büyüteçle incelenerek gözlem yapıldı.", today, class4.Id);
+        var activity2_2_today = new Activity("Doğa Keşfi", "Okul bahçesindeki yapraklar ve böcekler büyüteçle incelenerek gözlem yapıldı.", today, new TimeSpan(14, 0, 0), new TimeSpan(15, 0, 0), ActivityType.Science, class4.Id);
         activity2_2_today.SchoolId = school2.Id;
         await context.Set<Activity>().AddAsync(activity2_2_today);
-
 
         // ======================================================================
         // 📝 GÜNLÜK KAYITLAR (DAILY RECORDS), ÖĞÜNLER VE AI ÖZETLERİ (SEED)
         // ======================================================================
-        
-        // Liste şeklinde tüm öğrencileri toplayalım ki döngüyle kayıt oluşturalım
-        var students = new[]
-        {
-            new { Entity = student1_1, SchoolId = school1.Id, Parent = parent1_1 },
-            new { Entity = student1_2, SchoolId = school1.Id, Parent = parent1_2 },
-            new { Entity = student2_1, SchoolId = school2.Id, Parent = parent2_1 },
-            new { Entity = student2_2, SchoolId = school2.Id, Parent = parent2_2 }
-        };
 
-        foreach (var item in students)
+        foreach (var item in studentsData)
         {
             // --- 1. DÜNÜN KAYDI (YESTERDAY DAILY RECORD) ---
             var recYesterday = new DailyRecord(item.Entity.Id, yesterday);
             recYesterday.SchoolId = item.SchoolId;
-            recYesterday.UpdateSleepInfo(new SleepData(SleepStatus.SleptWell, yesterday.AddHours(13), yesterday.AddHours(15)));
-            recYesterday.UpdateWaterConsumption(new WaterIntake(600));
-            recYesterday.SetTeacherNote($"{item.Entity.FirstName} dün arkadaşlarıyla çok uyumluydu ve tüm grup aktivitelerine neşeyle katıldı.");
-            await context.Set<DailyRecord>().AddAsync(recYesterday);
+            
+            // Can Koç (student2_1) için dün devamsızdı diyelim test amaçlı
+            if (item.Entity.FirstName == "Can")
+            {
+                recYesterday.SetAbsentStatus(true);
+                recYesterday.SetTeacherNote("Öğrencimiz bugün rahatsızlığı nedeniyle okula katılamadı.");
+                await context.Set<DailyRecord>().AddAsync(recYesterday);
+            }
+            else
+            {
+                recYesterday.UpdateSleepInfo(new SleepData(SleepStatus.SleptWell, yesterday.AddHours(13), yesterday.AddHours(15)));
+                recYesterday.UpdateWaterConsumption(new WaterIntake(600));
+                recYesterday.SetTeacherNote($"{item.Entity.FirstName} dün arkadaşlarıyla çok uyumluydu ve tüm grup aktivitelerine neşeyle katıldı.");
+                await context.Set<DailyRecord>().AddAsync(recYesterday);
 
-            // Dünün Öğünleri
-            var b1 = new MealRecord(recYesterday.Id, "Kahvaltı", new MealStatus(MealStatusType.All, "Tüm tabağını bitirdi."));
-            b1.SetNutrition(220, "Haşlanmış Yumurta, Beyaz Peynir, Zeytin, Bitki Çayı", 10.0, 15.0);
-            b1.SchoolId = item.SchoolId;
-            await context.Set<MealRecord>().AddAsync(b1);
+                // Dünün Öğünleri
+                var b1 = new MealRecord(recYesterday.Id, "Kahvaltı", new MealStatus(MealStatusType.All, "Tüm tabağını bitirdi."));
+                b1.SetNutrition(220, "Haşlanmış Yumurta, Beyaz Peynir, Zeytin, Bitki Çayı", 10.0, 15.0);
+                b1.SchoolId = item.SchoolId;
+                await context.Set<MealRecord>().AddAsync(b1);
 
-            var l1 = new MealRecord(recYesterday.Id, "Öğle Yemeği", new MealStatus(MealStatusType.Half, "Çorbasını içti, köftenin yarısını yedi."));
-            l1.SetNutrition(480, "Mercimek Çorbası, Izgara Köfte, Tereyağlı Makarna", 22.0, 50.0);
-            l1.SchoolId = item.SchoolId;
-            await context.Set<MealRecord>().AddAsync(l1);
+                var l1 = new MealRecord(recYesterday.Id, "Öğle Yemeği", new MealStatus(MealStatusType.Half, "Çorbasını içti, köftenin yarısını yedi."));
+                l1.SetNutrition(480, "Mercimek Çorbası, Izgara Köfte, Tereyağlı Makarna", 22.0, 50.0);
+                l1.SchoolId = item.SchoolId;
+                await context.Set<MealRecord>().AddAsync(l1);
 
-            var s1 = new MealRecord(recYesterday.Id, "İkindi Kahvaltısı", new MealStatus(MealStatusType.All, "Meyve salatasının tamamını afiyetle tüketti."));
-            s1.SetNutrition(190, "Ev Yapımı Havuçlu Kek, Süt", 6.0, 28.0);
-            s1.SchoolId = item.SchoolId;
-            await context.Set<MealRecord>().AddAsync(s1);
+                var s1 = new MealRecord(recYesterday.Id, "İkindi Kahvaltısı", new MealStatus(MealStatusType.All, "Meyve salatasının tamamını afiyetle tüketti."));
+                s1.SetNutrition(190, "Ev Yapımı Havuçlu Kek, Süt", 6.0, 28.0);
+                s1.SchoolId = item.SchoolId;
+                await context.Set<MealRecord>().AddAsync(s1);
 
-            // Dünün Yapay Zeka Özeti (DailySummary)
-            var summaryYesterday = new DailySummary(
-                item.Entity.Id, 
-                yesterday, 
-                $"Bugün {item.Entity.FirstName} okulda harika bir gün geçirdi! Sabah kahvaltısını iştahla bitirdikten sonra arkadaşlarıyla ritim çalışmalarına katıldı. Öğle uykusunda mışıl mışıl çok tatlı uyudu ve dinlenmiş bir şekilde uyandı. Gün boyu neşesi yerindeydi, arkadaşlarına çok yardımcı oldu."
-            );
-            summaryYesterday.SchoolId = item.SchoolId;
-            summaryYesterday.MarkAsRead(); // Dün okundu olarak işaretleyelim
-            await context.Set<DailySummary>().AddAsync(summaryYesterday);
+                // Dünün Yapay Zeka Özeti (DailySummary)
+                var summaryYesterday = new DailySummary(
+                    item.Entity.Id, 
+                    yesterday, 
+                    $"Bugün {item.Entity.FirstName} okulda harika bir gün geçirdi! Sabah kahvaltısını iştahla bitirdikten sonra arkadaşlarıyla ritim çalışmalarına katıldı. Öğle uykusunda mışıl mışıl çok tatlı uyudu ve dinlenmiş bir şekilde uyandı. Gün boyu neşesi yerindeydi, arkadaşlarına çok yardımcı oldu."
+                );
+                summaryYesterday.SchoolId = item.SchoolId;
+                summaryYesterday.MarkAsRead(); // Dün okundu olarak işaretleyelim
+                await context.Set<DailySummary>().AddAsync(summaryYesterday);
+            }
+
 
 
             // --- 2. BUGÜNÜN KAYDI (TODAY DAILY RECORD) ---
@@ -286,6 +294,32 @@ public static class DatabaseInitializer
         await SeedWeeklyPlansForClassroomAsync(context, class3.Id, school2.Id);
         await SeedWeeklyPlansForClassroomAsync(context, class4.Id, school2.Id);
 
+        // --- Haftalık Ders Programı Şablonları Tohumlama ---
+        await SeedWeeklyScheduleForClassroomAsync(context, class1.Id, school1.Id);
+        await SeedWeeklyScheduleForClassroomAsync(context, class2.Id, school1.Id);
+        await SeedWeeklyScheduleForClassroomAsync(context, class3.Id, school2.Id);
+        await SeedWeeklyScheduleForClassroomAsync(context, class4.Id, school2.Id);
+
+        // --- Bülten Tohumlama ---
+        var n1 = new Newsletter(
+            "Ekim 2. Hafta Bülteni",
+            "Bu hafta çocuklarımızla harika deneyimler yaşadık.",
+            "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=2022&auto=format&fit=crop",
+            "2-6 Ekim 2026",
+            class1.Id);
+        n1.SchoolId = school1.Id;
+        n1.AddSection("Fen ve Doğa", "Sonbahar yapraklarını inceledik ve yaprak baskısı yaptık.", "Hava olayları (Yağmur nasıl oluşur?)", "Fatma Öğretmen");
+        n1.AddSection("Matematik", "1'den 10'a kadar ritmik sayma çalışmaları ve eşleştirme oyunları.", "Basit toplama işlemlerine giriş", "Fatma Öğretmen");
+        n1.AddSection("İngilizce", "Colors (Renkler) şarkısı öğrenildi ve oyunlarla pekiştirildi.", "Animals (Hayvanlar)", "Ms. Sarah");
+        
+        // Reflection ile Published yapalım ki veliler görsün
+        var statusProp = typeof(Newsletter).GetProperty("Status");
+        statusProp?.SetValue(n1, NewsletterStatus.Published);
+        var pubProp = typeof(Newsletter).GetProperty("PublishedAt");
+        pubProp?.SetValue(n1, DateTime.UtcNow.AddDays(-2));
+
+        await context.Set<Newsletter>().AddAsync(n1);
+
         // 3. Değişiklikleri kaydet
         await context.SaveChangesAsync();
     }
@@ -306,6 +340,38 @@ public static class DatabaseInitializer
             await context.Set<WeeklyMealPlan>().AddAsync(new WeeklyMealPlan(classroomId, d.Day, "Kahvaltı", d.BfCal, d.Breakfast, d.BfProt, d.BfCarb, schoolId));
             await context.Set<WeeklyMealPlan>().AddAsync(new WeeklyMealPlan(classroomId, d.Day, "Öğle Yemeği", d.LuCal, d.Lunch, d.LuProt, d.LuCarb, schoolId));
             await context.Set<WeeklyMealPlan>().AddAsync(new WeeklyMealPlan(classroomId, d.Day, "İkindi Kahvaltısı", d.SnCal, d.Snack, d.SnProt, d.SnCarb, schoolId));
+        }
+    }
+
+    private static async Task SeedWeeklyScheduleForClassroomAsync(AppDbContext context, Guid classroomId, Guid schoolId)
+    {
+        for (int day = 1; day <= 5; day++)
+        {
+            // Sabah Sporu / Serbest Oyun (Oyun: 5)
+            await context.Set<ClassroomWeeklySchedule>().AddAsync(new ClassroomWeeklySchedule(
+                classroomId, schoolId, day, "Serbest Oyun ve Sabah Sporu", "Güne enerjik bir başlangıç için bahçede veya sınıfta oyun.", 
+                new TimeSpan(9, 0, 0), new TimeSpan(9, 45, 0), ActivityType.FreePlay));
+            
+            // Eğitim / Ders (Ders: 0)
+            string dersAdi = day == 1 ? "Türkçe Dil Etkinliği" : day == 2 ? "Matematik" : day == 3 ? "Fen ve Doğa" : day == 4 ? "İngilizce" : "Okuma Yazmaya Hazırlık";
+            await context.Set<ClassroomWeeklySchedule>().AddAsync(new ClassroomWeeklySchedule(
+                classroomId, schoolId, day, dersAdi, "Temel kavramları öğrenme ve pekiştirme çalışmaları.", 
+                new TimeSpan(10, 0, 0), new TimeSpan(10, 45, 0), ActivityType.General));
+
+            // Sanat (Sanat: 6)
+            await context.Set<ClassroomWeeklySchedule>().AddAsync(new ClassroomWeeklySchedule(
+                classroomId, schoolId, day, "Sanat Atölyesi", "Boyama, kesme ve yapıştırma ile ince motor gelişimi.", 
+                new TimeSpan(11, 0, 0), new TimeSpan(11, 45, 0), ActivityType.Art));
+
+            // Öğle Yemeği (Yemek: 2)
+            await context.Set<ClassroomWeeklySchedule>().AddAsync(new ClassroomWeeklySchedule(
+                classroomId, schoolId, day, "Öğle Yemeği", "Sıcak ve besleyici öğle yemeği saati.", 
+                new TimeSpan(12, 0, 0), new TimeSpan(13, 0, 0), ActivityType.Lunch));
+
+            // Uyku (Uyku: 4)
+            await context.Set<ClassroomWeeklySchedule>().AddAsync(new ClassroomWeeklySchedule(
+                classroomId, schoolId, day, "Öğle Uykusu", "Çocukların günün yorgunluğunu attığı dinlenme saati.", 
+                new TimeSpan(13, 30, 0), new TimeSpan(15, 0, 0), ActivityType.Sleep));
         }
     }
 }

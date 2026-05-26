@@ -80,5 +80,14 @@ public class StudentEndpoints : IEndpoint
         .WithName("GetStudentParents")
         .WithSummary("Öğrencinin kayıtlı velilerini listeler.")
         .WithDescription("Öğrenciye atanmış tüm velilerin Id, ad, soyad ve email bilgilerini döner.");
+
+        group.MapGet("/my-children", async (IMediator mediator, SchoolInfo.Application.Common.Interfaces.ICurrentUserService currentUserService) =>
+        {
+            var result = await mediator.Send(new SchoolInfo.Application.Features.Students.Queries.GetParentStudents.GetParentStudentsQuery(currentUserService.UserId));
+            return Results.Ok(result);
+        })
+        .WithName("GetMyChildren")
+        .WithSummary("Giriş yapan velinin çocuklarını listeler.")
+        .RequireAuthorization(policy => policy.RequireRole(SchoolInfo.Domain.Enums.UserRole.Parent.ToString()));
     }
 }

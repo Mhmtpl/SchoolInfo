@@ -350,6 +350,34 @@ public class ClassroomEndpoints : IEndpoint
         .WithName("UpdateClassroomWeeklyMealPlans")
         .WithSummary("Sınıfın haftalık yemek şablonlarını günceller veya yeni ekler.")
         .RequireAuthorization();
+
+        group.MapGet("/{id:guid}/weekly-schedule", async (System.Guid id, IMediator mediator) =>
+        {
+            var result = await mediator.Send(new SchoolInfo.Application.Features.Classrooms.Queries.GetClassroomWeeklySchedule.GetClassroomWeeklyScheduleQuery(id));
+            return Results.Ok(result);
+        })
+        .WithName("GetClassroomWeeklySchedule")
+        .WithSummary("Sınıfın sabit haftalık ders programı şablonunu döner.")
+        .RequireAuthorization();
+
+        group.MapPut("/{id:guid}/weekly-schedule", async (System.Guid id, SchoolInfo.Application.Features.Classrooms.Commands.UpdateClassroomWeeklySchedule.UpdateClassroomWeeklyScheduleCommand command, IMediator mediator) =>
+        {
+            var cmd = new SchoolInfo.Application.Features.Classrooms.Commands.UpdateClassroomWeeklySchedule.UpdateClassroomWeeklyScheduleCommand(id, command.Schedules);
+            await mediator.Send(cmd);
+            return Results.NoContent();
+        })
+        .WithName("UpdateClassroomWeeklySchedule")
+        .WithSummary("Sınıfın sabit haftalık ders programı şablonunu günceller.")
+        .RequireAuthorization();
+
+        group.MapPost("/{id:guid}/weekly-schedule/apply", async (System.Guid id, IMediator mediator) =>
+        {
+            var success = await mediator.Send(new SchoolInfo.Application.Features.Classrooms.Commands.ApplyWeeklySchedule.ApplyWeeklyScheduleCommand(id));
+            return success ? Results.Ok() : Results.BadRequest("Şablon uygulanamadı veya şablon boş.");
+        })
+        .WithName("ApplyWeeklyScheduleToWeek")
+        .WithSummary("Sınıfın şablonunu geçerli haftaya aktarır.")
+        .RequireAuthorization();
     }
 }
 

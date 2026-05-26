@@ -44,9 +44,10 @@ public class GetClassroomDailyRecordsHandler : IRequestHandler<GetClassroomDaily
                 student.FirstName,
                 student.LastName,
                 hasRecord,
-                hasRecord ? record.SleepInfo.Status : null,
-                hasRecord ? record.WaterConsumption.AmountInMilliliters : null,
-                hasRecord ? record.TeacherNote : null
+                hasRecord ? record?.SleepInfo?.Status : null,
+                hasRecord ? record?.WaterConsumption?.AmountInMilliliters : null,
+                hasRecord ? (record?.TeacherNote ?? "") : "",
+                hasRecord && (record?.IsAbsent ?? false)
             );
         }).ToList();
 
