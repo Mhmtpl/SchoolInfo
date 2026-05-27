@@ -863,7 +863,7 @@
             const containerDraft = document.getElementById('nl-draft-container');
             const containerPublished = document.getElementById('nl-published-container');
 
-            if (tab === 'draft') {
+            if (tabName === 'draft') {
                 btnDraft.style.color = 'var(--primary-color)';
                 btnDraft.style.borderBottomColor = 'var(--primary-color)';
                 btnPublished.style.color = 'var(--text-muted)';
@@ -878,7 +878,7 @@
                 containerPublished.style.display = 'grid';
                 containerDraft.style.display = 'none';
             }
-            localStorage.setItem('activeNewsletterTab', tab);
+            localStorage.setItem('activeNewsletterTab', tabName);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
