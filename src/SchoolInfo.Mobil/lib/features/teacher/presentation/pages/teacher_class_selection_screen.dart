@@ -52,7 +52,6 @@ class TeacherClassSelectionScreen extends ConsumerWidget {
     }
 
     final totalStudents = classrooms.fold<int>(0, (sum, item) => sum + item.studentCount);
-    final totalReports = classrooms.fold<int>(0, (sum, item) => sum + item.reportSent);
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -82,7 +81,6 @@ class TeacherClassSelectionScreen extends ConsumerWidget {
                   children: [
                     _dashboardMetric('Sınıf', classrooms.length.toString()),
                     _dashboardMetric('Öğrenci', totalStudents.toString()),
-                    _dashboardMetric('Rapor', totalReports.toString()),
                   ],
                 ),
               ],
@@ -107,9 +105,7 @@ class TeacherClassSelectionScreen extends ConsumerWidget {
                   classroom.name,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                subtitle: Text(
-                  '${classroom.studentCount} öğrenci • ${classroom.reportSent} rapor',
-                ),
+                subtitle: Text('${classroom.studentCount} öğrenci'),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 18),
                 onTap: () {
                   Navigator.of(context).push(
@@ -449,10 +445,6 @@ class _TeacherClassroomDetailScreenState
                 style: const TextStyle(color: Colors.grey),
               ),
             ],
-          ),
-          Chip(
-            label: Text('${widget.classroom.reportSent} rapor'),
-            backgroundColor: Colors.blue.shade50,
           ),
         ],
       ),
