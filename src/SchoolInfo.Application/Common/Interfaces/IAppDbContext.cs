@@ -14,6 +14,7 @@ public interface IAppDbContext
     Microsoft.EntityFrameworkCore.DbSet<SchoolInfo.Domain.Entities.User> Users { get; }
     Microsoft.EntityFrameworkCore.DbSet<SchoolInfo.Domain.Entities.DailyRecord> DailyRecords { get; }
     Microsoft.EntityFrameworkCore.DbSet<SchoolInfo.Domain.Entities.MealRecord> MealRecords { get; }
+    Microsoft.EntityFrameworkCore.DbSet<SchoolInfo.Domain.Entities.MedicationRecord> MedicationRecords { get; }
     Microsoft.EntityFrameworkCore.DbSet<SchoolInfo.Domain.Entities.Activity> Activities { get; }
     Microsoft.EntityFrameworkCore.DbSet<SchoolInfo.Domain.Entities.Newsletter> Newsletters { get; }
     Microsoft.EntityFrameworkCore.DbSet<SchoolInfo.Domain.Entities.NewsletterSection> NewsletterSections { get; }
