@@ -42,6 +42,7 @@
     <!-- MODERN TAB NAVIGATION -->
     <div class="modern-tabs">
         <button class="modern-tab-btn active" onclick="switchMainTab('tab-daily', this)">📅 Günlük Kayıtlar</button>
+        <button class="modern-tab-btn" onclick="switchMainTab('tab-medication', this)">💊 İlaç Takibi</button>
         <button class="modern-tab-btn" onclick="switchMainTab('tab-schedule', this)">🗓️ Haftalık Program</button>
         <button class="modern-tab-btn" onclick="switchMainTab('tab-newsletters', this)">📰 Veli Bültenleri</button>
         <a asp-action="MealTracking" asp-route-id="@classroom?.Id" class="modern-tab-btn" style="text-decoration: none; color: var(--accent-orange);">🍳 Detaylı Yemek Takibi ↗</a>
@@ -211,6 +212,124 @@
         }
     </div>
     </div> <!-- END TAB 1 -->
+
+    <!-- TAB: İLAÇ TAKİBİ -->
+    <div id="tab-medication" class="modern-tab-content">
+        @{
+            var medicationRecords = ViewBag.MedicationRecords as List<MedicationRecordDto> ?? new List<MedicationRecordDto>();
+        }
+
+        <div class="glass-card">
+            <div class="section-card-header">
+                <div>
+                    <h2>Bugünkü İlaç Takip Defteri</h2>
+                    <span style="font-size: 0.8rem; color: var(--text-muted);">Öğrencilerin bugün alması gereken ilaçları ekleyebilir, verildi durumunu güncelleyebilir veya silebilirsiniz.</span>
+                </div>
+            </div>
+
+            <div class="grid-table-container">
+                <table class="grid-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%;">Öğrenci</th>
+                            <th style="width: 50%;">Kayıtlı İlaçlar (Bugün)</th>
+                            <th style="width: 25%; text-align: right;">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var record in dailyRecords)
+                        {
+                            var studentMeds = medicationRecords.Where(m => m.StudentId == record.StudentId).ToList();
+                            var sId = record.StudentId.ToString();
+                            
+                            <tr id="med-student-row-@sId">
+                                <td>
+                                    <div class="student-info" style="font-weight: 700;">
+                                        @record.FirstName @record.LastName
+                                    </div>
+                                    @if (record.IsAbsent)
+                                    {
+                                        <span style="display:inline-block; font-size: 0.7rem; color: #dc2626; background: #fee2e2; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight:600; margin-top: 0.25rem;">Devamsız</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div id="med-list-@sId" style="display: flex; flex-direction: column; gap: 0.6rem;">
+                                        @if (!studentMeds.Any())
+                                        {
+                                            <span class="no-meds-label" style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">Bugün için ilaç kaydı bulunmuyor.</span>
+                                        }
+                                        else
+                                        {
+                                            @foreach (var med in studentMeds)
+                                            {
+                                                <div id="med-row-@med.Id" style="display: flex; align-items: center; justify-content: space-between; background: rgba(30, 60, 114, 0.03); padding: 0.6rem; border-radius: 8px; border: 1px solid rgba(30, 60, 114, 0.08);">
+                                                    <div>
+                                                        <span style="font-weight: 600; font-size: 0.95rem; color: #1e3c72;">💊 @med.MedicineName</span>
+                                                        <span style="font-size: 0.8rem; color: var(--text-secondary); margin-left: 0.4rem;">(@med.Dosage)</span>
+                                                        <span style="font-size: 0.75rem; background: #e0f2fe; padding: 0.1rem 0.4rem; border-radius: 4px; color: #0369a1; margin-left: 0.5rem; font-weight: 600;">⏰ @med.AdministrationTime</span>
+                                                        @if (!string.IsNullOrEmpty(med.Note))
+                                                        {
+                                                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; font-style: italic;">Not: @med.Note</div>
+                                                        }
+                                                    </div>
+                                                    <div style="display: flex; align-items: center; gap: 0.8rem;">
+                                                        <label style="display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.85rem; cursor: pointer; font-weight: 600; color: @(med.Taken ? "#059669" : "var(--text-secondary)");">
+                                                            <input type="checkbox" id="chk-med-@med.Id" @(med.Taken ? "checked" : "") onchange="toggleMedicationTaken('@med.Id', '@med.StudentId', '@med.MedicineName.Replace("'", "\\'")', '@med.Dosage.Replace("'", "\\'")', '@med.AdministrationTime', '@(med.Note?.Replace("'", "\\'") ?? "")')" style="cursor: pointer;" />
+                                                            Verildi
+                                                        </label>
+                                                        <button type="button" onclick="deleteMedication('@med.Id')" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 0.2rem;" title="Sil">🗑️</button>
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                    </div>
+                                </td>
+                                <td>
+                                    <button type="button" onclick="openAddMedicationModal('@sId', '@record.FirstName.Replace("'", "\\'") @record.LastName.Replace("'", "\\'")')" class="btn-secondary" style="margin-top: 0; padding: 0.4rem 0.8rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.25rem;" @(record.IsAbsent ? "disabled" : "")>
+                                        ➕ İlaç Ekle
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- YENİ İLAÇ EKLEME MODALI -->
+    <div id="medicationModal" class="simple-modal">
+        <div class="glass-card simple-modal-content" style="max-width: 450px;">
+            <div class="section-card-header" style="margin-bottom: 1.5rem;">
+                <h2 id="medModalTitle">İlaç Ekle</h2>
+                <button onclick="closeMedicationModal()" style="background:none; border:none; color:var(--text-muted); font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+            <div>
+                <p id="medModalStudentName" style="font-weight: 700; color: var(--primary-color); margin-bottom: 1rem;"></p>
+                <input type="hidden" id="medStudentId" />
+                <div class="form-group">
+                    <label for="medName">İlaç Adı</label>
+                    <input type="text" id="medName" class="form-control" placeholder="Örn: Calpol, Parol Şurup" required />
+                </div>
+                <div class="form-group">
+                    <label for="medDosage">Dozaj / Miktar</label>
+                    <input type="text" id="medDosage" class="form-control" placeholder="Örn: 1 ölçek, 5 ml, 1 tablet" required />
+                </div>
+                <div class="form-group">
+                    <label for="medTime">Veriliş Saati</label>
+                    <input type="time" id="medTime" class="form-control" required />
+                </div>
+                <div class="form-group">
+                    <label for="medNote">Öğretmene Notlar (Opsiyonel)</label>
+                    <textarea id="medNote" class="form-control" style="height: 80px; resize: none;" placeholder="Örn: Yemeklerden sonra tok karna verilecek..."></textarea>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="button" onclick="closeMedicationModal()" class="btn-secondary" style="flex: 1;">İptal</button>
+                    <button type="button" onclick="saveNewMedication()" class="btn-primary" style="flex: 1; margin-top: 0;">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- TAB 2: HAFTALIK PROGRAM -->
     <div id="tab-schedule" class="modern-tab-content">
@@ -1050,6 +1169,119 @@
                     closeWeeklyScheduleModal();
                 } else {
                     alert("Şablon kaydedilirken bir hata oluştu.");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("İletişim hatası.");
+            }
+        }
+
+        // İlaç Modali ve İşlemleri
+        function openAddMedicationModal(studentId, studentName) {
+            document.getElementById('medStudentId').value = studentId;
+            document.getElementById('medModalStudentName').innerText = studentName + " için İlaç Ekle";
+            document.getElementById('medName').value = '';
+            document.getElementById('medDosage').value = '';
+            document.getElementById('medTime').value = '08:00';
+            document.getElementById('medNote').value = '';
+            document.getElementById('medicationModal').style.display = 'flex';
+        }
+
+        function closeMedicationModal() {
+            document.getElementById('medicationModal').style.display = 'none';
+        }
+
+        async function saveNewMedication() {
+            const studentId = document.getElementById('medStudentId').value;
+            const name = document.getElementById('medName').value.trim();
+            const dosage = document.getElementById('medDosage').value.trim();
+            const time = document.getElementById('medTime').value;
+            const note = document.getElementById('medNote').value.trim();
+
+            if (!name || !dosage || !time) {
+                alert("Lütfen ilaç adı, dozajı ve veriliş saatini giriniz.");
+                return;
+            }
+
+            try {
+                const res = await fetch('/Teacher/AddMedicationRecord', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentId: studentId,
+                        medicineName: name,
+                        dosage: dosage,
+                        administrationTime: time,
+                        taken: false,
+                        note: note || null
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert("İlaç kaydedilirken hata oluştu: " + data.message);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("İletişim hatası.");
+            }
+        }
+
+        async function toggleMedicationTaken(id, studentId, medicineName, dosage, time, note) {
+            const chk = document.getElementById('chk-med-' + id);
+            const taken = chk.checked;
+
+            try {
+                const res = await fetch('/Teacher/UpdateMedicationRecord', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: id,
+                        medicineName: medicineName,
+                        dosage: dosage,
+                        administrationTime: time,
+                        taken: taken,
+                        note: note || null
+                    })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    alert("İlaç durumu güncellenirken hata oluştu: " + data.message);
+                    chk.checked = !taken; // geri al
+                } else {
+                    // Kutunun yanındaki yazının rengini güncelle
+                    const label = chk.closest('label');
+                    if (label) {
+                        label.style.color = taken ? '#059669' : 'var(--text-secondary)';
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                alert("İletişim hatası.");
+                chk.checked = !taken;
+            }
+        }
+
+        async function deleteMedication(id) {
+            if (!confirm("Bu ilaç kaydını silmek istediğinize emin misiniz?")) return;
+
+            try {
+                const res = await fetch(`/Teacher/DeleteMedicationRecord?id=${id}`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const row = document.getElementById('med-row-' + id);
+                    if (row) {
+                        const parent = row.parentElement;
+                        row.remove();
+                        if (parent && parent.children.length === 0) {
+                            parent.innerHTML = '<span class="no-meds-label" style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">Bugün için ilaç kaydı bulunmuyor.</span>';
+                        }
+                    }
+                } else {
+                    alert("İlaç kaydı silinirken hata oluştu: " + data.message);
                 }
             } catch (err) {
                 console.error(err);

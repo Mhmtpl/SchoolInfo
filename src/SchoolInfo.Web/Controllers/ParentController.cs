@@ -148,6 +148,17 @@ public class ParentController : Controller
                 // Sessizce yut
             }
 
+            // 6. Çocuğun bugünkü ilaç kayıtlarını çekelim
+            var medicationRecords = new List<MedicationRecordDto>();
+            try
+            {
+                medicationRecords = await _apiService.GetAsync<List<MedicationRecordDto>>($"api/medication-records/student/{id}/today") ?? new List<MedicationRecordDto>();
+            }
+            catch
+            {
+                // Sessizce yut
+            }
+
             ViewBag.StudentName = $"{studentInfo["firstName"]} {studentInfo["lastName"]}";
             ViewBag.ClassroomName = classroomName;
             ViewBag.DailyRecord = myDailyRecord;
@@ -155,6 +166,7 @@ public class ParentController : Controller
             ViewBag.Activities = activities ?? new List<ActivityDto>();
             ViewBag.AiSummary = aiSummaryText;
             ViewBag.Newsletters = newsletters;
+            ViewBag.MedicationRecords = medicationRecords;
 
             return View();
         }

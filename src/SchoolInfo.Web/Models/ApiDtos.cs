@@ -202,3 +202,36 @@ public class ActivityTemplateDto
     public string AgeGroup { get; set; } = string.Empty;
 }
 
+// --- MEDICATION RECORDS ---
+public class MedicationRecordDto
+{
+    public Guid Id { get; set; }
+    public Guid DailyRecordId { get; set; }
+    public Guid StudentId { get; set; }
+    public string MedicineName { get; set; } = string.Empty;
+    public string Dosage { get; set; } = string.Empty;
+    public string AdministrationTime { get; set; } = string.Empty;
+    public bool Taken { get; set; }
+    public string? Note { get; set; }
+}
+
+public class CreateMedicationRecordRequestWeb
+{
+    public Guid StudentId { get; set; }
+    public string MedicineName { get; set; } = string.Empty;
+    public string Dosage { get; set; } = string.Empty;
+    public string AdministrationTime { get; set; } = string.Empty;
+    public bool Taken { get; set; }
+    public string? Note { get; set; }
+}
+
+public class UpdateMedicationRecordRequestWeb
+{
+    public Guid Id { get; set; }
+    public string MedicineName { get; set; } = string.Empty;
+    public string Dosage { get; set; } = string.Empty;
+    public string AdministrationTime { get; set; } = string.Empty;
+    public bool Taken { get; set; }
+    public string? Note { get; set; }
+}
+
