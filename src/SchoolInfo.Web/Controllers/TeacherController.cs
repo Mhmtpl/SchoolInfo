@@ -49,12 +49,14 @@ public class TeacherController : Controller
             var mealRecords = await _apiService.GetAsync<List<StudentMealDto>>($"api/classrooms/{id}/meal-records/today");
             var activities = await _apiService.GetAsync<List<ActivityDto>>($"api/activities/classroom/{id}");
             var newsletters = await _apiService.GetAsync<List<NewsletterDto>>($"api/newsletters/classroom/{id}");
+            var medicationRecords = await _apiService.GetAsync<List<MedicationRecordDto>>($"api/medication-records/classroom/{id}/today");
 
             ViewBag.Classroom = classroom;
             ViewBag.DailyRecords = dailyRecords ?? new List<ClassroomDailyRecordDto>();
             ViewBag.MealRecords = mealRecords ?? new List<StudentMealDto>();
             ViewBag.Activities = activities ?? new List<ActivityDto>();
             ViewBag.Newsletters = newsletters ?? new List<NewsletterDto>();
+            ViewBag.MedicationRecords = medicationRecords ?? new List<MedicationRecordDto>();
 
             return View();
         }
@@ -356,6 +358,48 @@ public class TeacherController : Controller
         catch (Exception ex)
         {
             return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> AddMedicationRecord([FromBody] CreateMedicationRecordRequestWeb request)
+    {
+        try
+        {
+            var result = await _apiService.PostAsync<object, Guid>("api/medication-records", request);
+            return Json(new { success = true, id = result });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> UpdateMedicationRecord([FromBody] UpdateMedicationRecordRequestWeb request)
+    {
+        try
+        {
+            await _apiService.PutAsync($"api/medication-records/{request.Id}", request);
+            return Json(new { success = true });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> DeleteMedicationRecord(Guid id)
+    {
+        try
+        {
+            await _apiService.DeleteAsync($"api/medication-records/{id}");
+            return Json(new { success = true });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
         }
     }
 }
