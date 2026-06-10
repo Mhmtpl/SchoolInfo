@@ -33,10 +33,24 @@ public class TeacherController : Controller
         }
     }
 
-    public async Task<IActionResult> ClassroomDetails(Guid id)
+    public async Task<IActionResult> ClassroomDetails(Guid id, string? date = null)
     {
         try
         {
+            var today = DateTime.UtcNow.AddHours(3).Date;
+            DateTime targetDate = today;
+
+            if (!string.IsNullOrEmpty(date) && DateTime.TryParse(date, out var parsedDate))
+            {
+                targetDate = parsedDate.Date;
+                if (targetDate < today.AddDays(-2) || targetDate > today)
+                {
+                    return RedirectToAction("ClassroomDetails", new { id = id, date = today.ToString("yyyy-MM-dd") });
+                }
+            }
+
+            var dateStr = targetDate.ToString("yyyy-MM-dd");
+
             var classrooms = await _apiService.GetAsync<List<ClassroomDto>>("api/classrooms/teacher/my");
             var classroom = classrooms?.FirstOrDefault(c => c.Id == id);
 
@@ -45,11 +59,12 @@ public class TeacherController : Controller
                 return NotFound("Yetkili olduğunuz sınıf bulunamadı.");
             }
 
-            var dailyRecords = await _apiService.GetAsync<List<ClassroomDailyRecordDto>>($"api/classrooms/{id}/daily-records/today");
-            var mealRecords = await _apiService.GetAsync<List<StudentMealDto>>($"api/classrooms/{id}/meal-records/today");
+            var dailyRecords = await _apiService.GetAsync<List<ClassroomDailyRecordDto>>($"api/classrooms/{id}/daily-records/today?date={dateStr}");
+            var mealRecords = await _apiService.GetAsync<List<StudentMealDto>>($"api/classrooms/{id}/meal-records/today?date={dateStr}");
             var activities = await _apiService.GetAsync<List<ActivityDto>>($"api/activities/classroom/{id}");
             var newsletters = await _apiService.GetAsync<List<NewsletterDto>>($"api/newsletters/classroom/{id}");
-            var medicationRecords = await _apiService.GetAsync<List<MedicationRecordDto>>($"api/medication-records/classroom/{id}/today");
+            var medicationRecords = await _apiService.GetAsync<List<MedicationRecordDto>>($"api/medication-records/classroom/{id}/today?date={dateStr}");
+            var detailedMeals = await _apiService.GetAsync<List<StudentDetailedMealsResponse>>($"api/classrooms/{id}/meal-records/detailed?date={dateStr}");
 
             ViewBag.Classroom = classroom;
             ViewBag.DailyRecords = dailyRecords ?? new List<ClassroomDailyRecordDto>();
@@ -57,6 +72,8 @@ public class TeacherController : Controller
             ViewBag.Activities = activities ?? new List<ActivityDto>();
             ViewBag.Newsletters = newsletters ?? new List<NewsletterDto>();
             ViewBag.MedicationRecords = medicationRecords ?? new List<MedicationRecordDto>();
+            ViewBag.DetailedMeals = detailedMeals ?? new List<StudentDetailedMealsResponse>();
+            ViewBag.SelectedDate = dateStr;
 
             return View();
         }
@@ -67,41 +84,20 @@ public class TeacherController : Controller
         }
     }
 
-    public async Task<IActionResult> MealTracking(Guid id)
-    {
-        try
-        {
-            var classrooms = await _apiService.GetAsync<List<ClassroomDto>>("api/classrooms/teacher/my");
-            var classroom = classrooms?.FirstOrDefault(c => c.Id == id);
-
-            if (classroom == null)
-            {
-                return NotFound("Yetkili olduğunuz sınıf bulunamadı.");
-            }
-
-            var detailedMeals = await _apiService.GetAsync<List<StudentDetailedMealsResponse>>($"api/classrooms/{id}/meal-records/detailed");
-
-            ViewBag.Classroom = classroom;
-            return View(detailedMeals ?? new List<StudentDetailedMealsResponse>());
-        }
-        catch (Exception ex)
-        {
-            ViewBag.ErrorMessage = "Yemek kayıtları yüklenirken hata oluştu: " + ex.Message;
-            return View(new List<StudentDetailedMealsResponse>());
-        }
-    }
-
     [HttpPost]
     public async Task<IActionResult> UpdateDailyRecord([FromBody] UpdateDailyRecordRequest request)
     {
         try
         {
-            var todayRecord = await _apiService.GetAsync<Dictionary<string, object>>($"api/daily-records/student/{request.StudentId}/today");
+            var dateStr = request.Date ?? DateTime.UtcNow.AddHours(3).ToString("yyyy-MM-dd");
+            var todayRecord = await _apiService.GetAsync<Dictionary<string, object>>($"api/daily-records/student/{request.StudentId}/today?date={dateStr}");
             Guid dailyRecordId;
+
+            var targetDate = DateTime.SpecifyKind(DateTime.Parse(dateStr).Date, DateTimeKind.Utc);
 
             if (todayRecord == null)
             {
-                dailyRecordId = await _apiService.PostAsync<object, Guid>("api/daily-records", new { StudentId = request.StudentId, Date = DateTime.UtcNow.Date });
+                dailyRecordId = await _apiService.PostAsync<object, Guid>("api/daily-records", new { StudentId = request.StudentId, Date = targetDate });
             }
             else
             {
@@ -111,7 +107,7 @@ public class TeacherController : Controller
                 }
                 else
                 {
-                    dailyRecordId = await _apiService.PostAsync<object, Guid>("api/daily-records", new { StudentId = request.StudentId, Date = DateTime.UtcNow.Date });
+                    dailyRecordId = await _apiService.PostAsync<object, Guid>("api/daily-records", new { StudentId = request.StudentId, Date = targetDate });
                 }
             }
 
@@ -119,10 +115,58 @@ public class TeacherController : Controller
             {
                 DailyRecordId = dailyRecordId,
                 SleepStatus = request.SleepStatus,
-                SleepStartTime = DateTime.UtcNow.Date.AddHours(13),
-                SleepEndTime = DateTime.UtcNow.Date.AddHours(14).AddMinutes(30),
+                SleepStartTime = targetDate.AddHours(13),
+                SleepEndTime = targetDate.AddHours(14).AddMinutes(30),
                 WaterAmountInMilliliters = request.WaterConsumptionInMl,
                 TeacherNote = request.TeacherNote
+            };
+
+            await _apiService.PutAsync($"api/daily-records/{dailyRecordId}", updateCommand);
+
+            return Json(new { success = true });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ToggleAttendance([FromBody] ToggleAttendanceRequest request)
+    {
+        try
+        {
+            var dateStr = request.Date;
+            var targetDate = DateTime.SpecifyKind(DateTime.Parse(dateStr).Date, DateTimeKind.Utc);
+            
+            var todayRecord = await _apiService.GetAsync<Dictionary<string, object>>($"api/daily-records/student/{request.StudentId}/today?date={dateStr}");
+            Guid dailyRecordId;
+
+            if (todayRecord == null)
+            {
+                dailyRecordId = await _apiService.PostAsync<object, Guid>("api/daily-records", new { StudentId = request.StudentId, Date = targetDate });
+            }
+            else
+            {
+                if (todayRecord.TryGetValue("id", out var idVal) || todayRecord.TryGetValue("Id", out idVal))
+                {
+                    dailyRecordId = Guid.Parse(idVal.ToString()!);
+                }
+                else
+                {
+                    dailyRecordId = await _apiService.PostAsync<object, Guid>("api/daily-records", new { StudentId = request.StudentId, Date = targetDate });
+                }
+            }
+
+            var updateCommand = new
+            {
+                DailyRecordId = dailyRecordId,
+                SleepStatus = 0,
+                SleepStartTime = targetDate.AddHours(13),
+                SleepEndTime = targetDate.AddHours(14).AddMinutes(30),
+                WaterAmountInMilliliters = 0,
+                TeacherNote = request.IsAbsent ? "Öğrenci devamsız" : "",
+                IsAbsent = request.IsAbsent
             };
 
             await _apiService.PutAsync($"api/daily-records/{dailyRecordId}", updateCommand);
@@ -140,62 +184,11 @@ public class TeacherController : Controller
     {
         try
         {
-            // 1. Öğrencinin detaylarını çekerek ait olduğu sınıf ID'sini bulalım (kesin yöntem, dictionary hatasını önler)
-            var studentInfo = await _apiService.GetAsync<Dictionary<string, object>>($"api/students/{request.StudentId}");
-            if (studentInfo == null)
-            {
-                return Json(new { success = false, message = "Öğrenci bulunamadı." });
-            }
-
-            // Case-insensitive olarak classroomId alanını alalım
-            Guid classroomId = Guid.Empty;
-            if (studentInfo.TryGetValue("classroomId", out var classVal) || studentInfo.TryGetValue("ClassroomId", out classVal))
-            {
-                classroomId = Guid.Parse(classVal.ToString()!);
-            }
-
-            // 2. Bugünlük kayıt var mı kontrol et veya oluştur
-            var todayRecord = await _apiService.GetAsync<Dictionary<string, object>>($"api/daily-records/student/{request.StudentId}/today");
-            Guid dailyRecordId;
-
-            if (todayRecord == null)
-            {
-                dailyRecordId = await _apiService.PostAsync<object, Guid>("api/daily-records", new { StudentId = request.StudentId, Date = DateTime.UtcNow.Date });
-            }
-            else
-            {
-                if (todayRecord.TryGetValue("id", out var idVal) || todayRecord.TryGetValue("Id", out idVal))
-                {
-                    dailyRecordId = Guid.Parse(idVal.ToString()!);
-                }
-                else
-                {
-                    dailyRecordId = await _apiService.PostAsync<object, Guid>("api/daily-records", new { StudentId = request.StudentId, Date = DateTime.UtcNow.Date });
-                }
-            }
-
-            // 3. MealRecordId'yi frontend'den alalım. Yoksa sınıfın bugünkü öğün listesinden eşleştirelim.
-            Guid mealRecordId = request.MealRecordId;
-
-            if (mealRecordId == Guid.Empty)
-            {
-                var meals = await _apiService.GetAsync<List<StudentMealDto>>($"api/classrooms/{classroomId}/meal-records/today");
-                var studentMeal = meals?.FirstOrDefault(m => m.StudentId == request.StudentId);
-                
-                if (studentMeal != null && studentMeal.MealRecordId.HasValue)
-                {
-                    mealRecordId = studentMeal.MealRecordId.Value;
-                }
-                else
-                {
-                    // Test ortamındaki seed uyumluluğu için varsayılan bir Guid
-                    mealRecordId = Guid.NewGuid();
-                }
-            }
-
             var updateCommand = new
             {
-                MealRecordId = mealRecordId,
+                MealRecordId = request.MealRecordId,
+                StudentId = request.StudentId,
+                MealName = request.MealName,
                 StatusType = request.StatusType,
                 Description = request.StatusDescription
             };

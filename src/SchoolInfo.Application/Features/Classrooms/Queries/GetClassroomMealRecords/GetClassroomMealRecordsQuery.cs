@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using MediatR;
 using SchoolInfo.Domain.Enums;
@@ -14,4 +14,4 @@ public record StudentMealDto(
     string Notes
 );
 
-public record GetClassroomMealRecordsQuery(Guid ClassroomId) : IRequest<List<StudentMealDto>>;
+public record GetClassroomMealRecordsQuery(Guid ClassroomId, DateTime? Date = null) : IRequest<List<StudentMealDto>>;

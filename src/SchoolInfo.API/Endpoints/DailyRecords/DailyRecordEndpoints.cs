@@ -47,9 +47,10 @@ public class DailyRecordEndpoints : IEndpoint
         return Results.NoContent();
     }
 
-    private static async Task<IResult> GetStudentDailyRecordTodayAsync(Guid studentId, IMediator mediator)
+    private static async Task<IResult> GetStudentDailyRecordTodayAsync(Guid studentId, DateTime? date, IMediator mediator)
     {
-        var query = new GetStudentDailyRecordQuery(studentId, DateTime.UtcNow.Date);
+        var targetDate = date.HasValue ? DateTime.SpecifyKind(date.Value.Date, DateTimeKind.Utc) : DateTime.SpecifyKind(DateTime.UtcNow.AddHours(3).Date, DateTimeKind.Utc);
+        var query = new GetStudentDailyRecordQuery(studentId, targetDate);
         var result = await mediator.Send(query);
 
         return result is not null ? Results.Ok(result) : Results.NotFound();

@@ -5,4 +5,4 @@ using SchoolInfo.Application.Features.MedicationRecords.Queries.GetStudentMedica
 
 namespace SchoolInfo.Application.Features.MedicationRecords.Queries.GetClassroomMedicationRecordsToday;
 
-public record GetClassroomMedicationRecordsTodayQuery(Guid ClassroomId) : IRequest<List<MedicationRecordDto>>;
+public record GetClassroomMedicationRecordsTodayQuery(Guid ClassroomId, DateTime? Date = null) : IRequest<List<MedicationRecordDto>>;

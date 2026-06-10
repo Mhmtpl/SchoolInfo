@@ -17,7 +17,8 @@ public class DailyRecordRepository : BaseRepository<DailyRecord>, IDailyRecordRe
 
     public async Task<DailyRecord?> GetByStudentAndDateAsync(Guid studentId, DateTime date)
     {
+        var utcDate = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
         return await DbContext.DailyRecords
-            .FirstOrDefaultAsync(d => d.StudentId == studentId && d.Date == date.Date);
+            .FirstOrDefaultAsync(d => d.StudentId == studentId && d.Date == utcDate);
     }
 }

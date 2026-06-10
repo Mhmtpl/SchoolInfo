@@ -33,7 +33,7 @@ public class ApplyWeeklyScheduleCommandHandler : IRequestHandler<ApplyWeeklySche
         if (!templateSchedules.Any()) return false; // Şablon yoksa işlem yapma
 
         // Geçerli haftanın Pazartesi gününü bul
-        var today = DateTime.UtcNow.Date;
+        var today = DateTime.UtcNow.AddHours(3).Date;
         var diff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
         var monday = today.AddDays(-1 * diff).Date;
 

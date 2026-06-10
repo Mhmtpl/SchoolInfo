@@ -88,18 +88,22 @@ public class MedicationRecordEndpoints : IEndpoint
 
     private static async Task<IResult> GetStudentMedicationRecordsTodayAsync(
         Guid studentId,
+        DateTime? date,
         IMediator mediator)
     {
-        var query = new GetStudentMedicationRecordsTodayQuery(studentId);
+        var targetDate = date.HasValue ? DateTime.SpecifyKind(date.Value.Date, DateTimeKind.Utc) : DateTime.SpecifyKind(DateTime.UtcNow.AddHours(3).Date, DateTimeKind.Utc);
+        var query = new GetStudentMedicationRecordsTodayQuery(studentId, targetDate);
         var result = await mediator.Send(query);
         return Results.Ok(result);
     }
 
     private static async Task<IResult> GetClassroomMedicationRecordsTodayAsync(
         Guid classroomId,
+        DateTime? date,
         IMediator mediator)
     {
-        var query = new GetClassroomMedicationRecordsTodayQuery(classroomId);
+        var targetDate = date.HasValue ? DateTime.SpecifyKind(date.Value.Date, DateTimeKind.Utc) : DateTime.SpecifyKind(DateTime.UtcNow.AddHours(3).Date, DateTimeKind.Utc);
+        var query = new GetClassroomMedicationRecordsTodayQuery(classroomId, targetDate);
         var result = await mediator.Send(query);
         return Results.Ok(result);
     }

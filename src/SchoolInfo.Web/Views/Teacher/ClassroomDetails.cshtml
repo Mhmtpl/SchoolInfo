@@ -5,7 +5,17 @@
     var mealRecords = ViewBag.MealRecords as List<StudentMealDto> ?? new List<StudentMealDto>();
     var activities = ViewBag.Activities as List<ActivityDto> ?? new List<ActivityDto>();
     var newsletters = ViewBag.Newsletters as List<NewsletterDto> ?? new List<NewsletterDto>();
-    
+    var detailedMeals = ViewBag.DetailedMeals as List<StudentDetailedMealsResponse> ?? new List<StudentDetailedMealsResponse>();
+
+    var firstStudent = detailedMeals.FirstOrDefault();
+    var bMeal = firstStudent?.Meals?.FirstOrDefault(m => m.MealName.Contains("Kahvaltı", StringComparison.OrdinalIgnoreCase) && !m.MealName.Contains("İkindi", StringComparison.OrdinalIgnoreCase));
+    var lMeal = firstStudent?.Meals?.FirstOrDefault(m => m.MealName.Contains("Öğle", StringComparison.OrdinalIgnoreCase));
+    var sMeal = firstStudent?.Meals?.FirstOrDefault(m => m.MealName.Contains("İkindi", StringComparison.OrdinalIgnoreCase));
+
+    var bMenu = bMeal?.FoodContent;
+    var lMenu = lMeal?.FoodContent;
+    var sMenu = sMeal?.FoodContent;
+
     ViewData["Title"] = $"{classroom?.Name} Sınıf Defteri";
 }
 
@@ -20,8 +30,13 @@
                 &larr; Sınıflarıma Geri Dön
             </a>
             <h1 style="font-size: 2.2rem;">@classroom?.Name Sınıf Defteri</h1>
-            <p style="color: var(--text-secondary); font-size: 0.95rem; margin-top: 0.25rem;">
-                Bugün: <strong>@DateTime.UtcNow.ToLocalTime().ToString("dd MMMM yyyy")</strong>
+            <p style="color: var(--text-secondary); font-size: 0.95rem; margin-top: 0.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                Tarih Seçimi: 
+                <input type="date" id="classroom-date-picker" value="@ViewBag.SelectedDate" 
+                       min="@DateTime.UtcNow.AddHours(3).Date.AddDays(-2).ToString("yyyy-MM-dd")" 
+                       max="@DateTime.UtcNow.AddHours(3).Date.ToString("yyyy-MM-dd")" 
+                       style="padding: 0.25rem 0.5rem; border-radius: 6px; border: 1px solid var(--border-color); font-family: inherit; font-size: 0.9rem; font-weight: 600; color: var(--text-primary); cursor: pointer;"
+                       onchange="changeClassroomDate(this.value)" />
             </p>
         </div>
         <div style="display: flex; gap: 0.8rem; align-items: center;">
@@ -42,10 +57,10 @@
     <!-- MODERN TAB NAVIGATION -->
     <div class="modern-tabs">
         <button class="modern-tab-btn active" onclick="switchMainTab('tab-daily', this)">📅 Günlük Kayıtlar</button>
+        <button class="modern-tab-btn" style="color: var(--accent-orange);" onclick="switchMainTab('tab-meals', this)">🍳 Yemek Takibi</button>
         <button class="modern-tab-btn" onclick="switchMainTab('tab-medication', this)">💊 İlaç Takibi</button>
         <button class="modern-tab-btn" onclick="switchMainTab('tab-schedule', this)">🗓️ Haftalık Program</button>
         <button class="modern-tab-btn" onclick="switchMainTab('tab-newsletters', this)">📰 Veli Bültenleri</button>
-        <a asp-action="MealTracking" asp-route-id="@classroom?.Id" class="modern-tab-btn" style="text-decoration: none; color: var(--accent-orange);">🍳 Detaylı Yemek Takibi ↗</a>
     </div>
 
     <!-- TAB 1: GÜNLÜK KAYITLAR VE AKTİVİTELER -->
@@ -68,6 +83,7 @@
                 <thead>
                     <tr>
                         <th style="width: 20%;">Öğrenci</th>
+                        <th style="width: 10%; text-align: center;">Yoklama</th>
                         <th style="width: 15%;">
                             <div style="display: flex; flex-direction: column; gap: 0.2rem;">
                                 <span>Uyku Durumu</span>
@@ -85,76 +101,56 @@
                                 <input type="number" onchange="bulkUpdate('water', this.value)" step="50" min="0" placeholder="Toplu giriş..." style="font-size: 0.75rem; padding: 0.2rem; font-weight: normal; border-radius: 4px; border: 1px solid var(--border-color); background: #f9fafb; width: 100%;" />
                             </div>
                         </th>
-                        <th style="width: 15%;">
-                            <div style="display: flex; flex-direction: column; gap: 0.2rem;">
-                                <span>Yemek</span>
-                                <select onchange="bulkUpdate('meal', this.value)" style="font-size: 0.75rem; padding: 0.2rem; font-weight: normal; border-radius: 4px; border: 1px solid var(--border-color); background: #f9fafb; cursor: pointer;">
-                                    <option value="">Toplu Seçim...</option>
-                                    <option value="3">Hepsini Yedi</option>
-                                    <option value="2">Yarısını Yedi</option>
-                                    <option value="1">Az Yedi</option>
-                                    <option value="0">Hiç Yemedi</option>
-                                </select>
-                            </div>
-                        </th>
-                        <th style="width: 25%;">Öğretmen Notu / Açıklama</th>
+                        <th style="width: 30%;">Öğretmen Notu / Açıklama</th>
                         <th style="width: 10%; text-align: center;">Aksiyon</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var record in dailyRecords)
                     {
-                        var meal = mealRecords.FirstOrDefault(m => m.StudentId == record.StudentId);
                         var rowId = record.StudentId.ToString();
                         
                         <tr id="row-@rowId" class="@(record.IsAbsent ? "absent-row" : "")">
                             <td>
                                 <div class="student-info">
                                     @record.FirstName @record.LastName
-                                    @if (record.IsAbsent)
-                                    {
-                                        <span style="display:inline-block; margin-left: 0.5rem; font-size: 0.7rem; color: #dc2626; background: #fee2e2; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight:600;">Devamsız</span>
-                                    }
+                                    <span id="badge-absent-@rowId" style="display: @(record.IsAbsent ? "inline-block" : "none"); margin-left: 0.5rem; font-size: 0.7rem; color: #dc2626; background: #fee2e2; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight:600;">Devamsız</span>
                                 </div>
-                                <span style="font-size: 0.75rem; color: var(--text-muted);">
+                                <span id="record-status-@rowId" style="font-size: 0.75rem; color: @(record.HasRecordToday ? "#059669" : "var(--text-muted)"); font-weight: @(record.HasRecordToday ? "600" : "normal");">
                                     @(record.HasRecordToday ? "Kayıt girildi" : "Kayıt girilmedi")
                                 </span>
                             </td>
+                            <td style="text-align: center;">
+                                <label style="display: inline-flex; align-items: center; gap: 0.25rem; cursor: pointer;">
+                                    <input type="checkbox" id="absent-@rowId" onchange="toggleAbsent('@rowId', this.checked)" @(record.IsAbsent ? "checked" : "") style="cursor: pointer;" />
+                                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">Yok</span>
+                                </label>
+                            </td>
                             <td>
                                 <select id="sleep-@rowId" class="state-select" @(record.IsAbsent ? "disabled" : "")>
-                                    <option value="2" selected="@(record.SleepStatus == 2)">Çok İyi Uyudu</option>
-                                    <option value="1" selected="@(record.SleepStatus == 1)">Az Uyudu</option>
-                                    <option value="0" selected="@(record.SleepStatus == 0)">Hiç Uyumadı</option>
+                                    @if (!record.HasRecordToday)
+                                    {
+                                        <option value="" selected disabled>Seçiniz...</option>
+                                    }
+                                    <option value="2" selected="@(record.HasRecordToday && record.SleepStatus == 2)">Çok İyi Uyudu</option>
+                                    <option value="1" selected="@(record.HasRecordToday && record.SleepStatus == 1)">Az Uyudu</option>
+                                    <option value="0" selected="@(record.HasRecordToday && record.SleepStatus == 0)">Hiç Uyumadı</option>
                                 </select>
                             </td>
                             <td>
                                 <div class="water-input-wrapper">
-                                    <input type="number" id="water-@rowId" class="water-input" value="@(record.WaterIntake ?? 200)" step="50" min="0" @(record.IsAbsent ? "disabled" : "") />
+                                    <input type="number" id="water-@rowId" class="water-input" value="@(record.HasRecordToday ? (record.WaterIntake?.ToString() ?? "0") : "")" placeholder="Girilmedi" step="50" min="0" @(record.IsAbsent ? "disabled" : "") />
                                     <span style="font-size: 0.8rem; color: var(--text-muted);">ml</span>
                                 </div>
                             </td>
                             <td>
-                                <select id="meal-status-@rowId" class="state-select" @(record.IsAbsent ? "disabled" : "")>
-                                    <option value="3" selected="@(meal?.Status == 3)">Hepsini Yedi</option>
-                                    <option value="2" selected="@(meal?.Status == 2)">Yarısını Yedi</option>
-                                    <option value="1" selected="@(meal?.Status == 1)">Az Yedi</option>
-                                    <option value="0" selected="@(meal?.Status == 0)">Hiç Yemedi</option>
-                                </select>
-                            </td>
-                            <td>
-                                <input type="text" id="note-@rowId" class="note-input" value="@(record.TeacherNotes ?? meal?.Notes ?? "")" placeholder="@(record.IsAbsent ? "Öğrenci devamsız" : "Gelişim ve yemek notları...")" @(record.IsAbsent ? "disabled" : "") />
+                                <input type="text" id="note-@rowId" class="note-input" value="@(record.TeacherNotes ?? "")" placeholder="@(record.IsAbsent ? "Öğrenci devamsız" : "Gelişim notları...")" @(record.IsAbsent ? "disabled" : "") />
                             </td>
                             <td style="text-align: center;">
-                                @if (record.IsAbsent)
-                                {
-                                    <span style="font-size: 0.8rem; color: var(--text-muted);">İşlem Yok</span>
-                                }
-                                else
-                                {
-                                    <button type="button" onclick="saveRow('@rowId', '@(meal?.MealRecordId ?? Guid.Empty)')" id="btn-save-@rowId" class="save-row-btn">
-                                        Kaydet
-                                    </button>
-                                }
+                                <span id="span-noaction-@rowId" style="font-size: 0.8rem; color: var(--text-muted); display: @(record.IsAbsent ? "inline" : "none");">İşlem Yok</span>
+                                <button type="button" onclick="saveRow('@rowId')" id="btn-save-@rowId" class="save-row-btn" style="display: @(record.IsAbsent ? "none" : "inline-block");">
+                                    Kaydet
+                                </button>
                             </td>
                         </tr>
                     }
@@ -170,7 +166,7 @@
         </div>
 
         @{
-            var todayActivities = activities.Where(a => a.ActivityDate.Date == DateTime.UtcNow.Date).ToList();
+            var todayActivities = activities.Where(a => a.ActivityDate.Date == DateTime.UtcNow.AddHours(3).Date).ToList();
             var currentTime = DateTime.UtcNow.ToLocalTime().TimeOfDay;
         }
 
@@ -247,10 +243,7 @@
                                     <div class="student-info" style="font-weight: 700;">
                                         @record.FirstName @record.LastName
                                     </div>
-                                    @if (record.IsAbsent)
-                                    {
-                                        <span style="display:inline-block; font-size: 0.7rem; color: #dc2626; background: #fee2e2; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight:600; margin-top: 0.25rem;">Devamsız</span>
-                                    }
+                                    <span id="med-badge-absent-@sId" style="display: @(record.IsAbsent ? "inline-block" : "none"); font-size: 0.7rem; color: #dc2626; background: #fee2e2; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight:600; margin-top: 0.25rem;">Devamsız</span>
                                 </td>
                                 <td>
                                     <div id="med-list-@sId" style="display: flex; flex-direction: column; gap: 0.6rem;">
@@ -274,10 +267,13 @@
                                                     </div>
                                                     <div style="display: flex; align-items: center; gap: 0.8rem;">
                                                         <label style="display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.85rem; cursor: pointer; font-weight: 600; color: @(med.Taken ? "#059669" : "var(--text-secondary)");">
-                                                            <input type="checkbox" id="chk-med-@med.Id" @(med.Taken ? "checked" : "") onchange="toggleMedicationTaken('@med.Id', '@med.StudentId', '@med.MedicineName.Replace("'", "\\'")', '@med.Dosage.Replace("'", "\\'")', '@med.AdministrationTime', '@(med.Note?.Replace("'", "\\'") ?? "")')" style="cursor: pointer;" />
+                                                            <input type="checkbox" id="chk-med-@med.Id" @(med.Taken ? "checked" : "") @(record.IsAbsent ? "disabled" : "") onchange="toggleMedicationTaken('@med.Id', '@med.StudentId', '@med.MedicineName.Replace("'", "\\'")', '@med.Dosage.Replace("'", "\\'")', '@med.AdministrationTime', '@(med.Note?.Replace("'", "\\'") ?? "")')" class="med-checkbox-@sId" style="cursor: pointer;" />
                                                             Verildi
                                                         </label>
-                                                        <button type="button" onclick="deleteMedication('@med.Id')" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 0.2rem;" title="Sil">🗑️</button>
+                                                        @if (!record.IsAbsent)
+                                                        {
+                                                            <button type="button" onclick="deleteMedication('@med.Id')" id="btn-delete-med-@med.Id" class="med-delete-btn-@sId" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 0.2rem;" title="Sil">🗑️</button>
+                                                        }
                                                     </div>
                                                 </div>
                                             }
@@ -285,7 +281,7 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <button type="button" onclick="openAddMedicationModal('@sId', '@record.FirstName.Replace("'", "\\'") @record.LastName.Replace("'", "\\'")')" class="btn-secondary" style="margin-top: 0; padding: 0.4rem 0.8rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.25rem;" @(record.IsAbsent ? "disabled" : "")>
+                                    <button type="button" onclick="openAddMedicationModal('@sId', '@record.FirstName.Replace("'", "\\'") @record.LastName.Replace("'", "\\'")')" id="btn-add-med-@sId" class="btn-secondary btn-add-med-class" style="margin-top: 0; padding: 0.4rem 0.8rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.25rem;" @(record.IsAbsent ? "disabled" : "")>
                                         ➕ İlaç Ekle
                                     </button>
                                 </td>
@@ -351,9 +347,9 @@
         </div>
         
         @{
-            var currentDayOfWeek = (int)DateTime.UtcNow.DayOfWeek;
+            var currentDayOfWeek = (int)DateTime.UtcNow.AddHours(3).DayOfWeek;
             if (currentDayOfWeek == 0) currentDayOfWeek = 7; // Pazar
-            var monday = DateTime.UtcNow.Date.AddDays(-(currentDayOfWeek - 1));
+            var monday = DateTime.UtcNow.AddHours(3).Date.AddDays(-(currentDayOfWeek - 1));
             
             var weekDays = new[] {
                 new { Id = 1, Name = "Pazartesi", Date = monday },
@@ -582,6 +578,156 @@
         }
     </div>
     </div> <!-- END TAB 3 -->
+
+    <!-- TAB 4: DETAYLI YEMEK TAKİBİ -->
+    <div id="tab-meals" class="modern-tab-content">
+        <div class="glass-card" style="padding: 1.5rem; border-radius: 20px; border: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.45); backdrop-filter: blur(20px); box-shadow: 0 10px 30px rgba(0,0,0,0.03);">
+            <div class="section-card-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <h2 style="font-size: 1.4rem; color: var(--text-primary); font-weight: 700;">Günlük Öğün Çizelgesi 🍳🍲🧁</h2>
+                    <span style="font-size: 0.85rem; color: var(--text-muted);">Öğrencilerin kahvaltı, öğle yemeği ve ikindi kahvaltısı tüketim durumlarını tek ekrandan güncelleyin.</span>
+                </div>
+                <div style="display: flex; gap: 0.75rem;">
+                    <button type="button" onclick="openWeeklyMealPlanModal()" class="btn-secondary" style="margin-top: 0; width: auto; padding: 0.6rem 1.2rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                        Haftalık Şablonu Düzenle 📅
+                    </button>
+                    <button type="button" onclick="openMealPlanModal()" class="btn-primary" style="margin-top: 0; width: auto; padding: 0.6rem 1.2rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+                        Planlanan Menüyü Düzenle 📝
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid-table-container" style="overflow-x: auto; border-radius: 12px; border: 1px solid var(--border-color);">
+                <table class="grid-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                        <tr style="background: rgba(240, 242, 245, 0.6); border-bottom: 2px solid var(--border-color);">
+                            <th style="padding: 1.2rem 1rem; width: 22%; font-weight: 700; color: var(--text-primary); vertical-align: middle;">Öğrenci</th>
+                            <th style="padding: 1.2rem 1rem; width: 26%; font-weight: 700; color: var(--text-primary); text-align: center; vertical-align: middle;">
+                                <div>🍳 Kahvaltı</div>
+                                <span id="header-menu-breakfast" style="font-size: 0.75rem; font-weight: 500; color: #78350f; display: @(string.IsNullOrEmpty(bMenu) ? "none" : "block"); margin-top: 0.25rem; font-style: italic; background: rgba(251, 191, 36, 0.1); padding: 0.2rem; border-radius: 4px;">@bMenu</span>
+                            </th>
+                            <th style="padding: 1.2rem 1rem; width: 26%; font-weight: 700; color: var(--text-primary); text-align: center; vertical-align: middle;">
+                                <div>🍲 Öğle Yemeği</div>
+                                <span id="header-menu-lunch" style="font-size: 0.75rem; font-weight: 500; color: #1e3a8a; display: @(string.IsNullOrEmpty(lMenu) ? "none" : "block"); margin-top: 0.25rem; font-style: italic; background: rgba(59, 130, 246, 0.1); padding: 0.2rem; border-radius: 4px;">@lMenu</span>
+                            </th>
+                            <th style="padding: 1.2rem 1rem; width: 26%; font-weight: 700; color: var(--text-primary); text-align: center; vertical-align: middle;">
+                                <div>🧁 İkindi Kahvaltısı</div>
+                                <span id="header-menu-snack" style="font-size: 0.75rem; font-weight: 500; color: #065f46; display: @(string.IsNullOrEmpty(sMenu) ? "none" : "block"); margin-top: 0.25rem; font-style: italic; background: rgba(16, 185, 129, 0.1); padding: 0.2rem; border-radius: 4px;">@sMenu</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var student in detailedMeals)
+                        {
+                            var breakfast = student.Meals.FirstOrDefault(m => m.MealName.Contains("Kahvaltı", StringComparison.OrdinalIgnoreCase) && !m.MealName.Contains("İkindi", StringComparison.OrdinalIgnoreCase));
+                            var lunch = student.Meals.FirstOrDefault(m => m.MealName.Contains("Öğle", StringComparison.OrdinalIgnoreCase));
+                            var snack = student.Meals.FirstOrDefault(m => m.MealName.Contains("İkindi", StringComparison.OrdinalIgnoreCase));
+
+                            int enteredMealsCount = student.Meals.Count(m => m.MealRecordId != Guid.Empty);
+                            var rowId = student.StudentId.ToString();
+                            var isStudentAbsent = dailyRecords.Any(r => r.StudentId == student.StudentId && r.IsAbsent);
+
+                            <tr id="meal-row-tr-@rowId" style="border-bottom: 1px solid var(--border-color); transition: background 0.2s; @(isStudentAbsent ? "background: #fef2f2; opacity: 0.7;" : "")" onmouseover="this.style.background='rgba(240, 242, 245, 0.2)'" onmouseout="this.style.background='none'">
+                                <td style="padding: 1.2rem 1rem;">
+                                    <div class="student-info" style="font-weight: 600; color: var(--text-primary); font-size: 1rem;">
+                                        @student.FirstName @student.LastName
+                                        <span id="meal-badge-absent-@rowId" style="display: @(isStudentAbsent ? "inline-block" : "none"); margin-left: 0.5rem; font-size: 0.7rem; color: #dc2626; background: #fee2e2; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight:600;">Devamsız</span>
+                                    </div>
+                                    <span id="meal-count-@rowId" style="font-size: 0.75rem; color: @(enteredMealsCount == 3 ? "#059669" : enteredMealsCount > 0 ? "var(--text-primary)" : "var(--text-muted)"); font-weight: @(enteredMealsCount > 0 ? "600" : "normal"); display: block; margin-top: 0.2rem;">
+                                        @(enteredMealsCount == 0 ? "Öğün kaydı girilmedi" : $"Öğün kaydı girildi ({enteredMealsCount}/3)")
+                                    </span>
+                                </td>
+
+                                <!-- KAHVALTI CELL -->
+                                <td style="padding: 1rem; vertical-align: top;">
+                                    @if (breakfast != null)
+                                    {
+                                        var bRecordId = breakfast.MealRecordId.ToString();
+                                        <div class="meal-cell-container" style="background: rgba(254, 243, 199, 0.4); border: 1px solid rgba(251, 191, 36, 0.2); padding: 0.8rem; border-radius: 12px; display: flex; flex-direction: column; gap: 0.5rem;">
+                                            <select id="meal-status-@rowId-breakfast" class="state-select meal-select-@rowId" @(isStudentAbsent ? "disabled" : "") style="width: 100%; padding: 0.4rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.85rem;">
+                                                @if (breakfast.MealRecordId == Guid.Empty)
+                                                {
+                                                    <option value="" selected disabled>Seçiniz...</option>
+                                                }
+                                                <option value="3" selected="@(breakfast.MealRecordId != Guid.Empty && breakfast.StatusType == 3)">Hepsini Yedi</option>
+                                                <option value="2" selected="@(breakfast.MealRecordId != Guid.Empty && breakfast.StatusType == 2)">Yarısını Yedi</option>
+                                                <option value="1" selected="@(breakfast.MealRecordId != Guid.Empty && breakfast.StatusType == 1)">Az Yedi</option>
+                                                <option value="0" selected="@(breakfast.MealRecordId != Guid.Empty && breakfast.StatusType == 0)">Hiç Yemedi</option>
+                                            </select>
+                                            <input type="text" id="meal-note-@rowId-breakfast" class="note-input meal-input-@rowId" value="@(breakfast.MealRecordId != Guid.Empty ? breakfast.StatusDescription : "")" placeholder="@(isStudentAbsent ? "Öğrenci devamsız" : "Not ekleyin...")" @(isStudentAbsent ? "disabled" : "") style="width: 100%; padding: 0.4rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.08); font-size: 0.8rem;" />
+                                            <button type="button" onclick="saveIndividualMeal('@rowId', '@bRecordId', 'Kahvaltı', 'breakfast')" id="btn-save-@rowId-breakfast" class="save-row-btn meal-btn-@rowId" style="width: 100%; padding: 0.4rem; font-size: 0.8rem; margin-top: 0.2rem; border-radius: 8px; border: none; background: #fbbf24; color: #78350f; font-weight: 600; cursor: pointer; transition: opacity 0.2s; display: @(isStudentAbsent ? "none" : "block");" @(isStudentAbsent ? "disabled" : "")>
+                                                Kaydet
+                                            </button>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 1rem;">Öğün tanımlanmamış</div>
+                                    }
+                                </td>
+
+                                <!-- ÖĞLE YEMEĞİ CELL -->
+                                <td style="padding: 1rem; vertical-align: top;">
+                                    @if (lunch != null)
+                                    {
+                                        var lRecordId = lunch.MealRecordId.ToString();
+                                        <div class="meal-cell-container" style="background: rgba(219, 234, 254, 0.4); border: 1px solid rgba(59, 130, 246, 0.2); padding: 0.8rem; border-radius: 12px; display: flex; flex-direction: column; gap: 0.5rem;">
+                                            <select id="meal-status-@rowId-lunch" class="state-select meal-select-@rowId" @(isStudentAbsent ? "disabled" : "") style="width: 100%; padding: 0.4rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.85rem;">
+                                                @if (lunch.MealRecordId == Guid.Empty)
+                                                {
+                                                    <option value="" selected disabled>Seçiniz...</option>
+                                                }
+                                                <option value="3" selected="@(lunch.MealRecordId != Guid.Empty && lunch.StatusType == 3)">Hepsini Yedi</option>
+                                                <option value="2" selected="@(lunch.MealRecordId != Guid.Empty && lunch.StatusType == 2)">Yarısını Yedi</option>
+                                                <option value="1" selected="@(lunch.MealRecordId != Guid.Empty && lunch.StatusType == 1)">Az Yedi</option>
+                                                <option value="0" selected="@(lunch.MealRecordId != Guid.Empty && lunch.StatusType == 0)">Hiç Yemedi</option>
+                                            </select>
+                                            <input type="text" id="meal-note-@rowId-lunch" class="note-input meal-input-@rowId" value="@(lunch.MealRecordId != Guid.Empty ? lunch.StatusDescription : "")" placeholder="@(isStudentAbsent ? "Öğrenci devamsız" : "Not ekleyin...")" @(isStudentAbsent ? "disabled" : "") style="width: 100%; padding: 0.4rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.08); font-size: 0.8rem;" />
+                                            <button type="button" onclick="saveIndividualMeal('@rowId', '@lRecordId', 'Öğle Yemeği', 'lunch')" id="btn-save-@rowId-lunch" class="save-row-btn meal-btn-@rowId" style="width: 100%; padding: 0.4rem; font-size: 0.8rem; margin-top: 0.2rem; border-radius: 8px; border: none; background: #3b82f6; color: white; font-weight: 600; cursor: pointer; transition: opacity 0.2s; display: @(isStudentAbsent ? "none" : "block");" @(isStudentAbsent ? "disabled" : "")>
+                                                Kaydet
+                                            </button>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 1rem;">Öğün tanımlanmamış</div>
+                                    }
+                                </td>
+
+                                <!-- İKİNDİ CELL -->
+                                <td style="padding: 1rem; vertical-align: top;">
+                                    @if (snack != null)
+                                    {
+                                        var sRecordId = snack.MealRecordId.ToString();
+                                        <div class="meal-cell-container" style="background: rgba(243, 244, 246, 0.8); border: 1px solid rgba(156, 163, 175, 0.2); padding: 0.8rem; border-radius: 12px; display: flex; flex-direction: column; gap: 0.5rem;">
+                                            <select id="meal-status-@rowId-snack" class="state-select meal-select-@rowId" @(isStudentAbsent ? "disabled" : "") style="width: 100%; padding: 0.4rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.85rem;">
+                                                @if (snack.MealRecordId == Guid.Empty)
+                                                {
+                                                    <option value="" selected disabled>Seçiniz...</option>
+                                                }
+                                                <option value="3" selected="@(snack.MealRecordId != Guid.Empty && snack.StatusType == 3)">Hepsini Yedi</option>
+                                                <option value="2" selected="@(snack.MealRecordId != Guid.Empty && snack.StatusType == 2)">Yarısını Yedi</option>
+                                                <option value="1" selected="@(snack.MealRecordId != Guid.Empty && snack.StatusType == 1)">Az Yedi</option>
+                                                <option value="0" selected="@(snack.MealRecordId != Guid.Empty && snack.StatusType == 0)">Hiç Yemedi</option>
+                                            </select>
+                                            <input type="text" id="meal-note-@rowId-snack" class="note-input meal-input-@rowId" value="@(snack.MealRecordId != Guid.Empty ? snack.StatusDescription : "")" placeholder="@(isStudentAbsent ? "Öğrenci devamsız" : "Not ekleyin...")" @(isStudentAbsent ? "disabled" : "") style="width: 100%; padding: 0.4rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.08); font-size: 0.8rem;" />
+                                            <button type="button" onclick="saveIndividualMeal('@rowId', '@sRecordId', 'İkindi Kahvaltısı', 'snack')" id="btn-save-@rowId-snack" class="save-row-btn meal-btn-@rowId" style="width: 100%; padding: 0.4rem; font-size: 0.8rem; margin-top: 0.2rem; border-radius: 8px; border: none; background: #10b981; color: white; font-weight: 600; cursor: pointer; transition: opacity 0.2s; display: @(isStudentAbsent ? "none" : "block");" @(isStudentAbsent ? "disabled" : "")>
+                                                Kaydet
+                                            </button>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 1rem;">Öğün tanımlanmamış</div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div> <!-- END TAB 4 -->
 </div>
 
 <!-- YENİ AKTİVİTE EKLEME MODALI -->
@@ -619,7 +765,7 @@
 
             <div class="form-group">
                 <label for="activityDate">Etkinlik Tarihi</label>
-                <input type="date" id="activityDate" name="activityDate" class="form-control" value="@DateTime.UtcNow.ToString("yyyy-MM-dd")" required />
+                <input type="date" id="activityDate" name="activityDate" class="form-control" value="@DateTime.UtcNow.AddHours(3).ToString("yyyy-MM-dd")" required />
             </div>
 
             <div class="form-group" style="display: flex; gap: 1rem;">
@@ -738,9 +884,339 @@
     </div>
 </div>
 
+<!-- DİNAMİK MENÜ PLANLAMA MODALI -->
+<div id="mealPlanModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="glass-card" style="width: 90%; max-width: 650px; background: rgba(255, 255, 255, 0.95); border-radius: 24px; border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 20px 50px rgba(0,0,0,0.15); padding: 2rem; position: relative; max-height: 90vh; overflow-y: auto;">
+        
+        <button type="button" onclick="closeMealPlanModal()" style="position: absolute; top: 1.2rem; right: 1.2rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); transition: color 0.2s;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-muted)'">&times;</button>
+        
+        <h2 style="font-size: 1.6rem; font-weight: 800; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+            Planlanan Menüyü Düzenle 📝
+        </h2>
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.5rem;">Sınıfın bugünkü tüm yemek planlarını buradan güncelleyin.</p>
+        
+        <form id="mealPlanForm" style="display: flex; flex-direction: column; gap: 1.5rem;">
+            
+            <!-- KAHVALTI BÖLÜMÜ -->
+            <div style="background: rgba(254, 243, 199, 0.35); border: 1px solid rgba(251, 191, 36, 0.2); padding: 1.2rem; border-radius: 16px;">
+                <h3 style="font-size: 1rem; font-weight: 700; color: #78350f; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.4rem;">🍳 Kahvaltı Planı</h3>
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 0.75rem;">
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #78350f; display: block; margin-bottom: 0.25rem;">Menü İçeriği</label>
+                        <input type="text" id="modal-breakfast-food" value="@bMeal?.FoodContent" placeholder="Yumurta, peynir vb..." style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.85rem;" />
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #78350f; display: block; margin-bottom: 0.25rem;">Kalori (kcal)</label>
+                        <input type="number" id="modal-breakfast-cal" value="@bMeal?.PlannedCalories" placeholder="220" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.85rem;" />
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #78350f; display: block; margin-bottom: 0.25rem;">Protein (g)</label>
+                        <input type="number" step="0.1" id="modal-breakfast-prot" value="@bMeal?.ProteinGrams" placeholder="10" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.85rem;" />
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #78350f; display: block; margin-bottom: 0.25rem;">Karb (g)</label>
+                        <input type="number" step="0.1" id="modal-breakfast-carb" value="@bMeal?.CarbsGrams" placeholder="15" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.85rem;" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- ÖĞLE YEMEĞİ BÖLÜMÜ -->
+            <div style="background: rgba(219, 234, 254, 0.35); border: 1px solid rgba(59, 130, 246, 0.2); padding: 1.2rem; border-radius: 16px;">
+                <h3 style="font-size: 1rem; font-weight: 700; color: #1e3a8a; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.4rem;">🍲 Öğle Yemeği Planı</h3>
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 0.75rem;">
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #1e3a8a; display: block; margin-bottom: 0.25rem;">Menü İçeriği</label>
+                        <input type="text" id="modal-lunch-food" value="@lMeal?.FoodContent" placeholder="Çorba, köfte, pilav..." style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.85rem;" />
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #1e3a8a; display: block; margin-bottom: 0.25rem;">Kalori (kcal)</label>
+                        <input type="number" id="modal-lunch-cal" value="@lMeal?.PlannedCalories" placeholder="480" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.85rem;" />
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #1e3a8a; display: block; margin-bottom: 0.25rem;">Protein (g)</label>
+                        <input type="number" step="0.1" id="modal-lunch-prot" value="@lMeal?.ProteinGrams" placeholder="22" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.85rem;" />
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #1e3a8a; display: block; margin-bottom: 0.25rem;">Karb (g)</label>
+                        <input type="number" step="0.1" id="modal-lunch-carb" value="@lMeal?.CarbsGrams" placeholder="50" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.85rem;" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- İKİNDİ KAHVALTISI BÖLÜMÜ -->
+            <div style="background: rgba(243, 244, 246, 0.65); border: 1px solid rgba(156, 163, 175, 0.2); padding: 1.2rem; border-radius: 16px;">
+                <h3 style="font-size: 1rem; font-weight: 700; color: #374151; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.4rem;">🧁 İkindi Kahvaltısı Planı</h3>
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 0.75rem;">
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #374151; display: block; margin-bottom: 0.25rem;">Menü İçeriği</label>
+                        <input type="text" id="modal-snack-food" value="@sMeal?.FoodContent" placeholder="Kek, süt, meyve..." style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.85rem;" />
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #374151; display: block; margin-bottom: 0.25rem;">Kalori (kcal)</label>
+                        <input type="number" id="modal-snack-cal" value="@sMeal?.PlannedCalories" placeholder="190" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.85rem;" />
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #374151; display: block; margin-bottom: 0.25rem;">Protein (g)</label>
+                        <input type="number" step="0.1" id="modal-snack-prot" value="@sMeal?.ProteinGrams" placeholder="6" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.85rem;" />
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; font-weight: 600; color: #374151; display: block; margin-bottom: 0.25rem;">Karb (g)</label>
+                        <input type="number" step="0.1" id="modal-snack-carb" value="@sMeal?.CarbsGrams" placeholder="28" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); font-size: 0.85rem;" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- AKSİYON BUTONLARI -->
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1rem;">
+                <button type="button" onclick="closeMealPlanModal()" style="padding: 0.6rem 1.2rem; border-radius: 10px; border: 1px solid var(--border-color); background: white; color: var(--text-secondary); font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">İptal</button>
+                <button type="button" onclick="saveClassroomMealPlan()" id="btn-save-meal-plan" style="padding: 0.6rem 1.5rem; border-radius: 10px; border: none; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(30, 60, 114, 0.2); transition: opacity 0.2s;">Menüyü Kaydet ve Uygula</button>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<!-- HAFTALIK ŞABLON MODALI -->
+<div id="weeklyMealPlanModal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(8px); z-index: 1000; justify-content: center; align-items: center; padding: 1.5rem;">
+    <div style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.15); width: 100%; max-width: 650px; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; animation: modalFadeIn 0.3s ease-out;">
+        <!-- Modal Başlığı -->
+        <div style="padding: 1.5rem 2rem; border-bottom: 1px solid rgba(0,0,0,0.08); display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, rgba(30, 60, 114, 0.03) 0%, rgba(42, 82, 152, 0.03) 100%);">
+            <div>
+                <h3 style="font-size: 1.3rem; font-weight: 800; color: #1e3c72; margin: 0;">Haftalık Yemek Şablonu Düzenle 📅</h3>
+                <p style="font-size: 0.8rem; color: #6b7280; margin: 0.25rem 0 0 0;">Bu sınıfa ait öğrencilerin günlük öğünleri bu şablondan otomatik olarak beslenecektir.</p>
+            </div>
+            <button type="button" onclick="closeWeeklyMealPlanModal()" style="border: none; background: none; font-size: 1.5rem; color: #9ca3af; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#374151'" onmouseout="this.style.color='#9ca3af'">&times;</button>
+        </div>
+
+        <!-- Modal İçeriği -->
+        <div style="padding: 1.5rem 2rem; flex: 1; display: flex; flex-direction: column; gap: 1rem;">
+            <!-- Gün Seçim Butonları -->
+            <div style="display: flex; gap: 0.35rem; justify-content: space-between; background: rgba(0,0,0,0.03); padding: 0.25rem; border-radius: 12px; border: 1px solid rgba(0,0,0,0.04);">
+                <button type="button" onclick="selectWeeklyDay(1)" id="btn-day-1" style="flex: 1; padding: 0.6rem 0.25rem; border: none; border-radius: 9px; font-size: 0.85rem; font-weight: 700; cursor: pointer; background: transparent; color: #4b5563; transition: all 0.2s;">Pazartesi</button>
+                <button type="button" onclick="selectWeeklyDay(2)" id="btn-day-2" style="flex: 1; padding: 0.6rem 0.25rem; border: none; border-radius: 9px; font-size: 0.85rem; font-weight: 700; cursor: pointer; background: transparent; color: #4b5563; transition: all 0.2s;">Salı</button>
+                <button type="button" onclick="selectWeeklyDay(3)" id="btn-day-3" style="flex: 1; padding: 0.6rem 0.25rem; border: none; border-radius: 9px; font-size: 0.85rem; font-weight: 700; cursor: pointer; background: transparent; color: #4b5563; transition: all 0.2s;">Çarşamba</button>
+                <button type="button" onclick="selectWeeklyDay(4)" id="btn-day-4" style="flex: 1; padding: 0.6rem 0.25rem; border: none; border-radius: 9px; font-size: 0.85rem; font-weight: 700; cursor: pointer; background: transparent; color: #4b5563; transition: all 0.2s;">Perşembe</button>
+                <button type="button" onclick="selectWeeklyDay(5)" id="btn-day-5" style="flex: 1; padding: 0.6rem 0.25rem; border: none; border-radius: 9px; font-size: 0.85rem; font-weight: 700; cursor: pointer; background: transparent; color: #4b5563; transition: all 0.2s;">Cuma</button>
+            </div>
+
+            <div style="max-height: 50vh; overflow-y: auto; padding-right: 0.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                <!-- KAHVALTI -->
+                <div style="background: rgba(251, 191, 36, 0.05); border: 1px solid rgba(251, 191, 36, 0.15); border-radius: 16px; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid rgba(251, 191, 36, 0.2); padding-bottom: 0.5rem;">
+                        <span style="font-size: 1.1rem;">🍳</span>
+                        <strong style="color: #78350f; font-size: 0.95rem;">Kahvaltı Şablonu</strong>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 0.5rem; align-items: end;">
+                        <div>
+                            <label style="font-size: 0.75rem; font-weight: 600; color: #78350f; display: block; margin-bottom: 0.25rem;">Menü İçeriği</label>
+                            <input type="text" id="weekly-breakfast-food" placeholder="Yumurtalı ekmek, peynir, ıhlamur..." style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(251, 191, 36, 0.3); font-size: 0.85rem; background: white;" />
+                        </div>
+                        <div>
+                            <label style="font-size: 0.75rem; font-weight: 600; color: #78350f; display: block; margin-bottom: 0.25rem;">Kalori (kcal)</label>
+                            <input type="number" id="weekly-breakfast-cal" placeholder="210" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(251, 191, 36, 0.3); font-size: 0.85rem; background: white;" />
+                        </div>
+                        <div>
+                            <label style="font-size: 0.75rem; font-weight: 600; color: #78350f; display: block; margin-bottom: 0.25rem;">Prot (g)</label>
+                            <input type="number" step="0.1" id="weekly-breakfast-prot" placeholder="9" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(251, 191, 36, 0.3); font-size: 0.85rem; background: white;" />
+                        </div>
+                        <div>
+                            <label style="font-size: 0.75rem; font-weight: 600; color: #78350f; display: block; margin-bottom: 0.25rem;">Karb (g)</label>
+                            <input type="number" step="0.1" id="weekly-breakfast-carb" placeholder="18" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(251, 191, 36, 0.3); font-size: 0.85rem; background: white;" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ÖĞLE YEMEĞİ -->
+                <div style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.15); border-radius: 16px; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid rgba(59, 130, 246, 0.2); padding-bottom: 0.5rem;">
+                        <span style="font-size: 1.1rem;">🍲</span>
+                        <strong style="color: #1e3c72; font-size: 0.95rem;">Öğle Yemeği Şablonu</strong>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 0.5rem; align-items: end;">
+                        <div>
+                            <label style="font-size: 0.75rem; font-weight: 600; color: #1e3c72; display: block; margin-bottom: 0.25rem;">Menü İçeriği</label>
+                            <input type="text" id="weekly-lunch-food" placeholder="Çorba, tavuk, pilav..." style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 0.85rem; background: white;" />
+                        </div>
+                        <div>
+                            <label style="font-size: 0.75rem; font-weight: 600; color: #1e3c72; display: block; margin-bottom: 0.25rem;">Kalori (kcal)</label>
+                            <input type="number" id="weekly-lunch-cal" placeholder="520" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 0.85rem; background: white;" />
+                        </div>
+                        <div>
+                            <label style="font-size: 0.75rem; font-weight: 600; color: #1e3c72; display: block; margin-bottom: 0.25rem;">Prot (g)</label>
+                            <input type="number" step="0.1" id="weekly-lunch-prot" placeholder="28" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 0.85rem; background: white;" />
+                        </div>
+                        <div>
+                            <label style="font-size: 0.75rem; font-weight: 600; color: #1e3c72; display: block; margin-bottom: 0.25rem;">Karb (g)</label>
+                            <input type="number" step="0.1" id="weekly-lunch-carb" placeholder="55" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 0.85rem; background: white;" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- İKİNDİ KAHVALTISI -->
+                <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.15); border-radius: 16px; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid rgba(16, 185, 129, 0.2); padding-bottom: 0.5rem;">
+                        <span style="font-size: 1.1rem;">🧁</span>
+                        <strong style="color: #065f46; font-size: 0.95rem;">İkindi Kahvaltısı Şablonu</strong>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 0.5rem; align-items: end;">
+                        <div>
+                            <label style="font-size: 0.75rem; font-weight: 600; color: #065f46; display: block; margin-bottom: 0.25rem;">Menü İçeriği</label>
+                            <input type="text" id="weekly-snack-food" placeholder="Yoğurt, grissini, kek..." style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.85rem; background: white;" />
+                        </div>
+                        <div>
+                            <label style="font-size: 0.75rem; font-weight: 600; color: #065f46; display: block; margin-bottom: 0.25rem;">Kalori (kcal)</label>
+                            <input type="number" id="weekly-snack-cal" placeholder="180" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.85rem; background: white;" />
+                        </div>
+                        <div>
+                            <label style="font-size: 0.75rem; font-weight: 600; color: #065f46; display: block; margin-bottom: 0.25rem;">Prot (g)</label>
+                            <input type="number" step="0.1" id="weekly-snack-prot" placeholder="5" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.85rem; background: white;" />
+                        </div>
+                        <div>
+                            <label style="font-size: 0.75rem; font-weight: 600; color: #065f46; display: block; margin-bottom: 0.25rem;">Karb (g)</label>
+                            <input type="number" step="0.1" id="weekly-snack-carb" placeholder="25" style="width:100%; padding: 0.5rem; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 0.85rem; background: white;" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Aksiyonları -->
+        <div style="padding: 1.2rem 2rem; border-top: 1px solid rgba(0,0,0,0.08); display: flex; justify-content: flex-end; gap: 0.75rem; background: rgba(0,0,0,0.01);">
+            <button type="button" onclick="closeWeeklyMealPlanModal()" style="padding: 0.6rem 1.2rem; border-radius: 10px; border: 1px solid var(--border-color); background: white; color: var(--text-secondary); font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='white'">Vazgeç</button>
+            <button type="button" onclick="saveWeeklyMealPlans()" id="btn-save-weekly-plans" style="padding: 0.6rem 1.5rem; border-radius: 10px; border: none; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(30, 60, 114, 0.2); transition: opacity 0.2s;">Haftalık Şablonu Kaydet</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    @@keyframes modalFadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+</style>
+
 @section Scripts {
     <script>
         const classroomId = '@classroom?.Id';
+
+        function changeClassroomDate(val) {
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('date', val);
+            window.location.search = urlParams.toString();
+        }
+
+        async function toggleAbsent(studentId, isAbsent) {
+            const datePicker = document.getElementById('classroom-date-picker');
+            const selectedDate = datePicker ? datePicker.value : new Date().toISOString().split('T')[0];
+
+            try {
+                const response = await fetch('/Teacher/ToggleAttendance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        studentId: studentId,
+                        date: selectedDate,
+                        isAbsent: isAbsent
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    // Update Daily Record row class and disable/enable inputs
+                    const row = document.getElementById(`row-${studentId}`);
+                    const sleepEl = document.getElementById(`sleep-${studentId}`);
+                    const waterEl = document.getElementById(`water-${studentId}`);
+                    const noteEl = document.getElementById(`note-${studentId}`);
+                    const btnSave = document.getElementById(`btn-save-${studentId}`);
+                    const spanNoAction = document.getElementById(`span-noaction-${studentId}`);
+                    const badgeAbsent = document.getElementById(`badge-absent-${studentId}`);
+
+                    if (isAbsent) {
+                        if (row) row.classList.add('absent-row');
+                        if (sleepEl) sleepEl.disabled = true;
+                        if (waterEl) {
+                            waterEl.disabled = true;
+                            waterEl.value = '0';
+                        }
+                        if (noteEl) {
+                            noteEl.disabled = true;
+                            noteEl.value = 'Öğrenci devamsız';
+                            noteEl.placeholder = 'Öğrenci devamsız';
+                        }
+                        if (btnSave) btnSave.style.display = 'none';
+                        if (spanNoAction) spanNoAction.style.display = 'inline';
+                        if (badgeAbsent) badgeAbsent.style.display = 'inline-block';
+                    } else {
+                        if (row) row.classList.remove('absent-row');
+                        if (sleepEl) sleepEl.disabled = false;
+                        if (waterEl) {
+                            waterEl.disabled = false;
+                            waterEl.value = '';
+                        }
+                        if (noteEl) {
+                            noteEl.disabled = false;
+                            noteEl.value = '';
+                            noteEl.placeholder = 'Gelişim notları...';
+                        }
+                        if (btnSave) btnSave.style.display = 'inline-block';
+                        if (spanNoAction) spanNoAction.style.display = 'none';
+                        if (badgeAbsent) badgeAbsent.style.display = 'none';
+                    }
+
+                    // Lockout/unlock elements in Meal Tracking tab
+                    const mealRow = document.getElementById(`meal-row-tr-${studentId}`);
+                    const mealBadgeAbsent = document.getElementById(`meal-badge-absent-${studentId}`);
+                    if (mealRow) {
+                        if (isAbsent) {
+                            mealRow.style.background = '#fef2f2';
+                            mealRow.style.opacity = '0.7';
+                        } else {
+                            mealRow.style.background = 'none';
+                            mealRow.style.opacity = '1';
+                        }
+                    }
+                    if (mealBadgeAbsent) {
+                        mealBadgeAbsent.style.display = isAbsent ? 'inline-block' : 'none';
+                    }
+
+                    // Selects, inputs and buttons under Meal Tracking for this student
+                    document.querySelectorAll(`.meal-select-${studentId}`).forEach(el => el.disabled = isAbsent);
+                    document.querySelectorAll(`.meal-input-${studentId}`).forEach(el => {
+                        el.disabled = isAbsent;
+                        if (isAbsent) {
+                            el.placeholder = 'Öğrenci devamsız';
+                            el.value = '';
+                        } else {
+                            el.placeholder = 'Not ekleyin...';
+                        }
+                    });
+                    document.querySelectorAll(`.meal-btn-${studentId}`).forEach(el => {
+                        el.disabled = isAbsent;
+                        el.style.display = isAbsent ? 'none' : 'block';
+                    });
+
+                    // Lockout/unlock elements in Medication Records tab
+                    document.querySelectorAll(`.med-checkbox-${studentId}`).forEach(el => el.disabled = isAbsent);
+                    document.querySelectorAll(`.med-delete-btn-${studentId}`).forEach(el => {
+                        el.disabled = isAbsent;
+                        el.style.display = isAbsent ? 'none' : 'inline-block';
+                    });
+                    const btnAddMed = document.getElementById(`btn-add-med-${studentId}`);
+                    if (btnAddMed) btnAddMed.disabled = isAbsent;
+
+                    const medBadge = document.getElementById(`med-badge-absent-${studentId}`);
+                    if (medBadge) medBadge.style.display = isAbsent ? 'inline-block' : 'none';
+
+                } else {
+                    alert('Yoklama durumu güncellenirken hata oluştu: ' + result.message);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Sistemsel bir hata oluştu.');
+            }
+        }
 
         // Modern Tab Navigation
         function switchMainTab(tabId, btnElement) {
@@ -874,7 +1350,6 @@
             if (value === "") return;
             let selector = "";
             if (type === 'sleep') selector = "select[id^='sleep-']";
-            if (type === 'meal') selector = "select[id^='meal-status-']";
             if (type === 'water') selector = "input[id^='water-']";
             
             if (!selector) return;
@@ -889,13 +1364,39 @@
 
         // Tümünü Kaydet Butonu
         async function saveAllRows() {
-            const btns = document.querySelectorAll('.save-row-btn');
-            if(btns.length === 0) return;
+            const rows = document.querySelectorAll('tr[id^="row-"]');
+            let invalidStudents = [];
+            
+            rows.forEach(row => {
+                const studentId = row.id.replace('row-', '');
+                const sleepEl = document.getElementById(`sleep-${studentId}`);
+                const waterEl = document.getElementById(`water-${studentId}`);
+                
+                // Devamsız olanları veya elemanı bulunmayanları atla
+                if (!sleepEl || !waterEl) return;
+                const isAbsent = row.classList.contains('absent-row') || sleepEl.disabled;
+                if (isAbsent) return;
+                
+                if (sleepEl.value === "") {
+                    const studentName = row.querySelector('.student-info').innerText.split('\n')[0].trim();
+                    invalidStudents.push(`${studentName} (Uyku Durumu seçilmedi)`);
+                }
+                if (waterEl.value === "" || isNaN(parseInt(waterEl.value))) {
+                    const studentName = row.querySelector('.student-info').innerText.split('\n')[0].trim();
+                    invalidStudents.push(`${studentName} (Su miktarı girilmedi)`);
+                }
+            });
+            
+            if (invalidStudents.length > 0) {
+                alert("Lütfen aşağıdaki öğrencilerin eksik bilgilerini tamamlayın:\n\n" + invalidStudents.join("\n"));
+                return;
+            }
             
             // Kullanıcıyı bilgilendir
             if(!confirm("Ekranda görünen aktif tüm öğrencilerin kayıtları aynı anda kaydedilecek. Onaylıyor musunuz?")) return;
 
             // Sırayla butonların tıklanma işlevini tetikle
+            const btns = document.querySelectorAll('.save-row-btn');
             btns.forEach(btn => {
                 if(!btn.disabled) {
                     btn.click();
@@ -903,15 +1404,30 @@
             });
         }
 
-        // AJAX ile Günlük Gelişim ve Yemek Durumlarını Kaydetme
-        async function saveRow(studentId, mealRecordId) {
+        // AJAX ile Günlük Gelişim Kaydetme
+        async function saveRow(studentId) {
             const btn = document.getElementById(`btn-save-${studentId}`);
             btn.innerText = "Kaydediliyor...";
             btn.disabled = true;
 
-            const sleepStatus = parseInt(document.getElementById(`sleep-${studentId}`).value);
-            const waterIntake = parseInt(document.getElementById(`water-${studentId}`).value);
-            const mealStatus = parseInt(document.getElementById(`meal-status-${studentId}`).value);
+            const sleepEl = document.getElementById(`sleep-${studentId}`);
+            if (sleepEl.value === "") {
+                alert("Lütfen öğrencinin uyku durumunu seçiniz.");
+                btn.innerText = "Tekrar Dene";
+                btn.disabled = false;
+                return;
+            }
+            const sleepStatus = parseInt(sleepEl.value);
+
+            const waterEl = document.getElementById(`water-${studentId}`);
+            if (waterEl.value === "" || isNaN(parseInt(waterEl.value))) {
+                alert("Lütfen su tüketim miktarını giriniz (0 veya daha fazla).");
+                btn.innerText = "Tekrar Dene";
+                btn.disabled = false;
+                return;
+            }
+            const waterIntake = parseInt(waterEl.value);
+            
             const note = document.getElementById(`note-${studentId}`).value;
 
             try {
@@ -928,29 +1444,31 @@
                 });
                 const dailyData = await dailyRes.json();
 
-                // 2. Yemek Öğün Kaydını Güncelle
-                const mealRes = await fetch('/Teacher/UpdateMealRecord', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        studentId: studentId,
-                        mealRecordId: mealRecordId,
-                        statusType: mealStatus,
-                        statusDescription: note
-                    })
-                });
-                const mealData = await mealRes.json();
-
-                if (dailyData.success && mealData.success) {
+                if (dailyData.success) {
                     btn.innerText = "Kaydedildi!";
                     btn.classList.add('success');
+                    
+                    // DOM durumunu güncelle
+                    const statusSpan = document.getElementById(`record-status-${studentId}`);
+                    if (statusSpan) {
+                        statusSpan.innerText = "Kayıt girildi";
+                        statusSpan.style.color = "#059669";
+                        statusSpan.style.fontWeight = "600";
+                    }
+
+                    // Seçiniz placeholder seçeneğini temizle
+                    const placeholderOpt = sleepEl.querySelector('option[value=""][disabled]');
+                    if (placeholderOpt) {
+                        placeholderOpt.remove();
+                    }
+
                     setTimeout(() => {
                         btn.innerText = "Kaydet";
                         btn.classList.remove('success');
                         btn.disabled = false;
                     }, 2000);
                 } else {
-                    alert("Kayıt işlemi sırasında bir hata oluştu: " + (dailyData.message || mealData.message));
+                    alert("Kayıt işlemi sırasında bir hata oluştu: " + dailyData.message);
                     btn.innerText = "Tekrar Dene";
                     btn.disabled = false;
                 }
@@ -1306,6 +1824,381 @@
             } catch (err) {
                 console.error(err);
                 alert("İletişim hatası.");
+            }
+        }
+
+        async function saveIndividualMeal(studentId, mealRecordId, mealName, mealSlug) {
+            const btn = document.getElementById(`btn-save-${studentId}-${mealSlug}`);
+            const originalText = btn.innerText;
+            
+            const selectEl = document.getElementById(`meal-status-${studentId}-${mealSlug}`);
+            const statusVal = selectEl.value;
+            if (statusVal === "") {
+                alert("Lütfen bir öğün tüketim durumu seçiniz.");
+                return;
+            }
+            const status = parseInt(statusVal);
+            const note = document.getElementById(`meal-note-${studentId}-${mealSlug}`).value;
+
+            btn.innerText = "Kaydediliyor...";
+            btn.disabled = true;
+            btn.style.opacity = "0.7";
+
+            try {
+                const response = await fetch('/Teacher/UpdateMealRecord', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentId: studentId,
+                        mealRecordId: mealRecordId,
+                        mealName: mealName,
+                        statusType: status,
+                        statusDescription: note
+                    })
+                });
+                
+                const data = await response.json();
+
+                if (data.success) {
+                    btn.innerText = "✓ Kaydedildi!";
+                    btn.style.background = "#10b981";
+                    btn.style.color = "white";
+                    
+                    // Remove the placeholder option if it exists
+                    const placeholderOpt = selectEl.querySelector('option[value=""]');
+                    if (placeholderOpt) {
+                        placeholderOpt.remove();
+                    }
+                    
+                    // Calculate the new entered count and update the label dynamically
+                    let enteredCount = 0;
+                    const slugs = ['breakfast', 'lunch', 'snack'];
+                    slugs.forEach(slug => {
+                        const sel = document.getElementById(`meal-status-${studentId}-${slug}`);
+                        if (sel) {
+                            if (sel.value !== "") {
+                                enteredCount++;
+                            }
+                        }
+                    });
+                    
+                    const countLabel = document.getElementById(`meal-count-${studentId}`);
+                    if (countLabel) {
+                        if (enteredCount === 0) {
+                            countLabel.innerText = "Öğün kaydı girilmedi";
+                            countLabel.style.color = "var(--text-muted)";
+                            countLabel.style.fontWeight = "normal";
+                        } else {
+                            countLabel.innerText = `Öğün kaydı girildi (${enteredCount}/3)`;
+                            if (enteredCount === 3) {
+                                countLabel.style.color = "#059669";
+                                countLabel.style.fontWeight = "600";
+                            } else {
+                                countLabel.style.color = "var(--text-primary)";
+                                countLabel.style.fontWeight = "600";
+                            }
+                        }
+                    }
+
+                    setTimeout(() => {
+                        btn.innerText = originalText;
+                        // Reset background color according to meal type
+                        if (mealName.includes("Kahvaltı")) {
+                            btn.style.background = "#fbbf24";
+                            btn.style.color = "#78350f";
+                        } else if (mealName.includes("Öğle")) {
+                            btn.style.background = "#3b82f6";
+                            btn.style.color = "white";
+                        } else {
+                            btn.style.background = "#10b981";
+                            btn.style.color = "white";
+                        }
+                        btn.disabled = false;
+                        btn.style.opacity = "1";
+                    }, 2000);
+                } else {
+                    alert("Öğün kaydedilirken bir hata oluştu: " + data.message);
+                    btn.innerText = "Hata! Tekrar Dene";
+                    btn.style.background = "#ef4444";
+                    btn.style.color = "white";
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
+                }
+            } catch (err) {
+                console.error(err);
+                alert("İletişim hatası oluştu!");
+                btn.innerText = "Tekrar Dene";
+                btn.disabled = false;
+                btn.style.opacity = "1";
+            }
+        }
+
+        function openMealPlanModal() {
+            document.getElementById('mealPlanModal').style.display = 'flex';
+        }
+
+        function closeMealPlanModal() {
+            document.getElementById('mealPlanModal').style.display = 'none';
+        }
+
+        async function saveClassroomMealPlan() {
+            const btn = document.getElementById('btn-save-meal-plan');
+            const originalText = btn.innerText;
+
+            btn.innerText = "Kaydediliyor...";
+            btn.disabled = true;
+            btn.style.opacity = "0.7";
+
+            const payload = {
+                classroomId: '@classroom?.Id',
+                meals: [
+                    {
+                        mealName: 'Kahvaltı',
+                        plannedCalories: parseInt(document.getElementById('modal-breakfast-cal').value || 0),
+                        foodContent: document.getElementById('modal-breakfast-food').value || '',
+                        proteinGrams: parseFloat(document.getElementById('modal-breakfast-prot').value || 0),
+                        carbsGrams: parseFloat(document.getElementById('modal-breakfast-carb').value || 0)
+                    },
+                    {
+                        mealName: 'Öğle Yemeği',
+                        plannedCalories: parseInt(document.getElementById('modal-lunch-cal').value || 0),
+                        foodContent: document.getElementById('modal-lunch-food').value || '',
+                        proteinGrams: parseFloat(document.getElementById('modal-lunch-prot').value || 0),
+                        carbsGrams: parseFloat(document.getElementById('modal-lunch-carb').value || 0)
+                    },
+                    {
+                        mealName: 'İkindi Kahvaltısı',
+                        plannedCalories: parseInt(document.getElementById('modal-snack-cal').value || 0),
+                        foodContent: document.getElementById('modal-snack-food').value || '',
+                        proteinGrams: parseFloat(document.getElementById('modal-snack-prot').value || 0),
+                        carbsGrams: parseFloat(document.getElementById('modal-snack-carb').value || 0)
+                    }
+                ]
+            };
+
+            try {
+                const response = await fetch('/Teacher/UpdateClassroomMealPlan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    btn.innerText = "✓ Kaydedildi!";
+                    btn.style.background = "#10b981";
+
+                    // Update UI titles dynamically
+                    payload.meals.forEach(meal => {
+                        let headerId = '';
+                        if (meal.mealName.includes('Kahvaltı')) headerId = 'header-menu-breakfast';
+                        else if (meal.mealName.includes('Öğle')) headerId = 'header-menu-lunch';
+                        else if (meal.mealName.includes('İkindi')) headerId = 'header-menu-snack';
+
+                        const headerSpan = document.getElementById(headerId);
+                        if (headerSpan) {
+                            if (meal.foodContent) {
+                                headerSpan.innerText = meal.foodContent;
+                                headerSpan.style.display = 'block';
+                            } else {
+                                headerSpan.style.display = 'none';
+                            }
+                        }
+                    });
+
+                    setTimeout(() => {
+                        closeMealPlanModal();
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    alert("Menü kaydedilirken hata oluştu: " + data.message);
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
+                }
+            } catch (err) {
+                console.error(err);
+                alert("İletişim hatası oluştu!");
+                btn.innerText = originalText;
+                btn.disabled = false;
+                btn.style.opacity = "1";
+            }
+        }
+
+        let currentSelectedWeeklyDay = -1;
+        let weeklyMealPlansData = [];
+
+        async function openWeeklyMealPlanModal() {
+            try {
+                const response = await fetch(`/Teacher/GetWeeklyMealPlans?classroomId=@classroom?.Id`);
+                const resData = await response.json();
+                if (resData.success) {
+                    weeklyMealPlansData = (resData.plans || []).map(p => ({
+                        id: p.id || p.Id || p.ID || '00000000-0000-0000-0000-000000000000',
+                        dayOfWeek: p.dayOfWeek !== undefined ? p.dayOfWeek : p.DayOfWeek,
+                        mealName: p.mealName || p.MealName || '',
+                        plannedCalories: p.plannedCalories !== undefined ? p.plannedCalories : p.PlannedCalories,
+                        foodContent: p.foodContent || p.FoodContent || '',
+                        proteinGrams: p.proteinGrams !== undefined ? p.proteinGrams : p.ProteinGrams,
+                        carbsGrams: p.carbsGrams !== undefined ? p.carbsGrams : p.CarbsGrams
+                    }));
+                    initializeWeeklyDataDefaults();
+                    document.getElementById('weeklyMealPlanModal').style.display = 'flex';
+                    selectWeeklyDay(1);
+                } else {
+                    alert("Şablon verileri yüklenirken hata oluştu: " + resData.message);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Veriler alınırken iletişim hatası oluştu.");
+            }
+        }
+
+        function closeWeeklyMealPlanModal() {
+            document.getElementById('weeklyMealPlanModal').style.display = 'none';
+            currentSelectedWeeklyDay = -1;
+        }
+
+        function initializeWeeklyDataDefaults() {
+            const meals = ["Kahvaltı", "Öğle Yemeği", "İkindi Kahvaltısı"];
+            for (let d = 1; d <= 5; d++) {
+                meals.forEach(mName => {
+                    const exists = weeklyMealPlansData.some(p => p.dayOfWeek === d && p.mealName.toLowerCase() === mName.toLowerCase());
+                    if (!exists) {
+                        weeklyMealPlansData.push({
+                            id: '00000000-0000-0000-0000-000000000000',
+                            dayOfWeek: d,
+                            mealName: mName,
+                            plannedCalories: 0,
+                            foodContent: '',
+                            proteinGrams: 0,
+                            carbsGrams: 0
+                        });
+                    }
+                });
+            }
+        }
+
+        function selectWeeklyDay(dayNum) {
+            saveCurrentWeeklyDayInputsToData();
+            currentSelectedWeeklyDay = dayNum;
+
+            for (let i = 1; i <= 5; i++) {
+                const btn = document.getElementById(`btn-day-${i}`);
+                if (btn) {
+                    if (i === dayNum) {
+                        btn.style.background = 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)';
+                        btn.style.color = 'white';
+                        btn.style.boxShadow = '0 4px 10px rgba(30, 60, 114, 0.2)';
+                    } else {
+                        btn.style.background = 'transparent';
+                        btn.style.color = '#4b5563';
+                        btn.style.boxShadow = 'none';
+                    }
+                }
+            }
+
+            loadWeeklyDayInputsFromData(dayNum);
+        }
+
+        function saveCurrentWeeklyDayInputsToData() {
+            if (currentSelectedWeeklyDay < 1 || currentSelectedWeeklyDay > 5) return;
+
+            const bf = weeklyMealPlansData.find(p => p.dayOfWeek === currentSelectedWeeklyDay && p.mealName.toLowerCase().includes('kahvaltı') && !p.mealName.toLowerCase().includes('ikindi'));
+            const lu = weeklyMealPlansData.find(p => p.dayOfWeek === currentSelectedWeeklyDay && p.mealName.toLowerCase().includes('öğle'));
+            const sn = weeklyMealPlansData.find(p => p.dayOfWeek === currentSelectedWeeklyDay && p.mealName.toLowerCase().includes('ikindi'));
+
+            if (bf) {
+                bf.foodContent = document.getElementById('weekly-breakfast-food').value || '';
+                bf.plannedCalories = parseInt(document.getElementById('weekly-breakfast-cal').value) || 0;
+                bf.proteinGrams = parseFloat(document.getElementById('weekly-breakfast-prot').value) || 0;
+                bf.carbsGrams = parseFloat(document.getElementById('weekly-breakfast-carb').value) || 0;
+            }
+            if (lu) {
+                lu.foodContent = document.getElementById('weekly-lunch-food').value || '';
+                lu.plannedCalories = parseInt(document.getElementById('weekly-lunch-cal').value) || 0;
+                lu.proteinGrams = parseFloat(document.getElementById('weekly-lunch-prot').value) || 0;
+                lu.carbsGrams = parseFloat(document.getElementById('weekly-lunch-carb').value) || 0;
+            }
+            if (sn) {
+                sn.foodContent = document.getElementById('weekly-snack-food').value || '';
+                sn.plannedCalories = parseInt(document.getElementById('weekly-snack-cal').value) || 0;
+                sn.proteinGrams = parseFloat(document.getElementById('weekly-snack-prot').value) || 0;
+                sn.carbsGrams = parseFloat(document.getElementById('weekly-snack-carb').value) || 0;
+            }
+        }
+
+        function loadWeeklyDayInputsFromData(dayNum) {
+            const bf = weeklyMealPlansData.find(p => p.dayOfWeek === dayNum && p.mealName.toLowerCase().includes('kahvaltı') && !p.mealName.toLowerCase().includes('ikindi'));
+            const lu = weeklyMealPlansData.find(p => p.dayOfWeek === dayNum && p.mealName.toLowerCase().includes('öğle'));
+            const sn = weeklyMealPlansData.find(p => p.dayOfWeek === dayNum && p.mealName.toLowerCase().includes('ikindi'));
+
+            document.getElementById('weekly-breakfast-food').value = bf ? bf.foodContent : '';
+            document.getElementById('weekly-breakfast-cal').value = bf ? (bf.plannedCalories || '') : '';
+            document.getElementById('weekly-breakfast-prot').value = bf ? (bf.proteinGrams || '') : '';
+            document.getElementById('weekly-breakfast-carb').value = bf ? (bf.carbsGrams || '') : '';
+
+            document.getElementById('weekly-lunch-food').value = lu ? lu.foodContent : '';
+            document.getElementById('weekly-lunch-cal').value = lu ? (lu.plannedCalories || '') : '';
+            document.getElementById('weekly-lunch-prot').value = lu ? (lu.proteinGrams || '') : '';
+            document.getElementById('weekly-lunch-carb').value = lu ? (lu.carbsGrams || '') : '';
+
+            document.getElementById('weekly-snack-food').value = sn ? sn.foodContent : '';
+            document.getElementById('weekly-snack-cal').value = sn ? (sn.plannedCalories || '') : '';
+            document.getElementById('weekly-snack-prot').value = sn ? (sn.proteinGrams || '') : '';
+            document.getElementById('weekly-snack-carb').value = sn ? (sn.carbsGrams || '') : '';
+        }
+
+        async function saveWeeklyMealPlans() {
+            saveCurrentWeeklyDayInputsToData();
+
+            const btn = document.getElementById('btn-save-weekly-plans');
+            const originalText = btn.innerText;
+            btn.innerText = "Kaydediliyor...";
+            btn.disabled = true;
+            btn.style.opacity = "0.7";
+
+            try {
+                const plansPayload = weeklyMealPlansData.map(p => ({
+                    Id: p.id,
+                    DayOfWeek: p.dayOfWeek,
+                    MealName: p.mealName,
+                    PlannedCalories: p.plannedCalories,
+                    FoodContent: p.foodContent,
+                    ProteinGrams: p.proteinGrams,
+                    CarbsGrams: p.carbsGrams
+                }));
+
+                const response = await fetch('/Teacher/UpdateClassroomWeeklyMealPlan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        classroomId: '@classroom?.Id',
+                        plans: plansPayload
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    btn.innerText = "✓ Şablon Kaydedildi!";
+                    btn.style.background = "#10b981";
+                    setTimeout(() => {
+                        closeWeeklyMealPlanModal();
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    alert("Şablon kaydedilirken hata oluştu: " + data.message);
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                    btn.style.opacity = "1";
+                }
+            } catch (err) {
+                console.error(err);
+                alert("İletişim hatası oluştu!");
+                btn.innerText = originalText;
+                btn.disabled = false;
+                btn.style.opacity = "1";
             }
         }
     </script>

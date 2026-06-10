@@ -21,7 +21,7 @@ public class DailyRecord : BaseEntity
     public DailyRecord(Guid studentId, DateTime date)
     {
         StudentId = studentId;
-        Date = date.Date;
+        Date = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
         SleepInfo = new SleepData(Enums.SleepStatus.DidNotSleep, null, null);
         WaterConsumption = new WaterIntake(0);
         IsAbsent = false;

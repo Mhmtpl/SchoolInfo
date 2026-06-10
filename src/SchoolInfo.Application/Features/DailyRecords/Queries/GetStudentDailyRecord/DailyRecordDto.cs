@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace SchoolInfo.Application.Features.DailyRecords.Queries.GetStudentDailyRecord;
 
