@@ -24,7 +24,10 @@ public class MealRecordEndpoints : IEndpoint
 
     private static async Task<IResult> UpdateMealRecordAsync(Guid studentId, UpdateMealRecordCommand command, IMediator mediator)
     {
-        // Not: Gerçek senaryoda StudentId üzerinden MealRecordId bulunur, örnek olarak direkt gönderiliyor.
+        if (command.StudentId == Guid.Empty || command.StudentId == null)
+        {
+            command = command with { StudentId = studentId };
+        }
         await mediator.Send(command);
         return Results.NoContent();
     }

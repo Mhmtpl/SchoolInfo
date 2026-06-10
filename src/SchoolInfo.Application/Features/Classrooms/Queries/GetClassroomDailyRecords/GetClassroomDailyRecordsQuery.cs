@@ -16,4 +16,4 @@ public record ClassroomDailyRecordDto(
     bool IsAbsent
 );
 
-public record GetClassroomDailyRecordsQuery(Guid ClassroomId) : IRequest<List<ClassroomDailyRecordDto>>;
+public record GetClassroomDailyRecordsQuery(Guid ClassroomId, DateTime? Date = null) : IRequest<List<ClassroomDailyRecordDto>>;

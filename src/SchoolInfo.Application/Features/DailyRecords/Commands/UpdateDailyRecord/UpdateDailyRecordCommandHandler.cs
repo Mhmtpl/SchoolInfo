@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -47,6 +47,11 @@ public class UpdateDailyRecordCommandHandler : IRequestHandler<UpdateDailyRecord
         if (request.TeacherNote != null)
         {
             dailyRecord.SetTeacherNote(request.TeacherNote);
+        }
+
+        if (request.IsAbsent.HasValue)
+        {
+            dailyRecord.SetAbsentStatus(request.IsAbsent.Value);
         }
 
         await _dailyRecordRepository.UpdateAsync(dailyRecord);

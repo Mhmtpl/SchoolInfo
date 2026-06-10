@@ -27,6 +27,12 @@ public static class DatabaseInitializer
         // 1. Bekleyen migration'ları uygula (Veritabanı yoksa oluşturulur)
         await context.Database.MigrateAsync();
 
+        // Veritabanında zaten veri varsa sıfırlama ve tekrar tohumlama yapma
+        if (await context.Set<School>().AnyAsync())
+        {
+            return;
+        }
+
         context.Set<ClassroomWeeklySchedule>().RemoveRange(context.Set<ClassroomWeeklySchedule>());
         context.Set<WeeklyMealPlan>().RemoveRange(context.Set<WeeklyMealPlan>());
         context.Set<DailySummary>().RemoveRange(context.Set<DailySummary>());
@@ -42,7 +48,7 @@ public static class DatabaseInitializer
         // Şifre: "123456" (Hız için tek sefer hash'liyoruz)
         var defaultPasswordHash = BCrypt.Net.BCrypt.HashPassword("123456");
 
-        var today = DateTime.UtcNow.Date;
+        var today = DateTime.UtcNow.AddHours(3).Date;
         var yesterday = today.AddDays(-1);
 
         // ==========================================
@@ -263,29 +269,8 @@ public static class DatabaseInitializer
 
 
 
-            // --- 2. BUGÜNÜN KAYDI (TODAY DAILY RECORD) ---
-            var recToday = new DailyRecord(item.Entity.Id, today);
-            recToday.SchoolId = item.SchoolId;
-            recToday.UpdateSleepInfo(new SleepData(SleepStatus.SleptLittle, today.AddHours(13).AddMinutes(30), today.AddHours(14)));
-            recToday.UpdateWaterConsumption(new WaterIntake(400));
-            recToday.SetTeacherNote($"{item.Entity.FirstName} bugün biraz uykusuz görünüyordu fakat oyun saatinde enerjisi oldukça yerine geldi.");
-            await context.Set<DailyRecord>().AddAsync(recToday);
-
-            // Bugünün Öğünleri
-            var b2 = new MealRecord(recToday.Id, "Kahvaltı", new MealStatus(MealStatusType.Little, "Ekmeğini yedi, peyniri bitirmedi."));
-            b2.SetNutrition(220, "Haşlanmış Yumurta, Beyaz Peynir, Zeytin, Bitki Çayı", 10.0, 15.0);
-            b2.SchoolId = item.SchoolId;
-            await context.Set<MealRecord>().AddAsync(b2);
-
-            var l2 = new MealRecord(recToday.Id, "Öğle Yemeği", new MealStatus(MealStatusType.All, "Makarna ve yoğurdun hepsini yedi."));
-            l2.SetNutrition(480, "Mercimek Çorbası, Izgara Köfte, Tereyağlı Makarna", 22.0, 50.0);
-            l2.SchoolId = item.SchoolId;
-            await context.Set<MealRecord>().AddAsync(l2);
-
-            var s2 = new MealRecord(recToday.Id, "İkindi Kahvaltısı", new MealStatus(MealStatusType.None, "Keki yemek istemedi."));
-            s2.SetNutrition(190, "Ev Yapımı Havuçlu Kek, Süt", 6.0, 28.0);
-            s2.SchoolId = item.SchoolId;
-            await context.Set<MealRecord>().AddAsync(s2);
+            // Bugünün kaydı boş bırakılıyor. Öğretmenler ve veliler "Giriş Yapılmadı" durumunu görebilecek
+            // ve öğretmenlerin bugün için girdiği veriler kalıcı olacaktır.
         }
 
         // --- Haftalık Yemek Planı Şablonları Tohumlama ---

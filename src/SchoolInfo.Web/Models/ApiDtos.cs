@@ -86,6 +86,14 @@ public class UpdateDailyRecordRequest
     public int SleepStatus { get; set; }
     public int WaterConsumptionInMl { get; set; }
     public string TeacherNote { get; set; } = string.Empty;
+    public string? Date { get; set; }
+}
+
+public class ToggleAttendanceRequest
+{
+    public Guid StudentId { get; set; }
+    public string Date { get; set; } = string.Empty;
+    public bool IsAbsent { get; set; }
 }
 
 public class UpdateMealRecordRequest
@@ -233,5 +241,15 @@ public class UpdateMedicationRecordRequestWeb
     public string AdministrationTime { get; set; } = string.Empty;
     public bool Taken { get; set; }
     public string? Note { get; set; }
+}
+
+public class WeeklyScheduleDto
+{
+    public int DayOfWeek { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public TimeSpan StartTime { get; set; }
+    public TimeSpan EndTime { get; set; }
+    public int Type { get; set; }
 }
 

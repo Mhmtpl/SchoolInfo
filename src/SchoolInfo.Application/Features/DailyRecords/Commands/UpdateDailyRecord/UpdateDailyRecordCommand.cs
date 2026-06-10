@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using MediatR;
 using SchoolInfo.Domain.Enums;
 
@@ -13,4 +13,5 @@ public record UpdateDailyRecordCommand(
     DateTime? SleepStartTime, 
     DateTime? SleepEndTime, 
     int WaterAmountInMilliliters, 
-    string? TeacherNote) : IRequest;
+    string? TeacherNote,
+    bool? IsAbsent = null) : IRequest;

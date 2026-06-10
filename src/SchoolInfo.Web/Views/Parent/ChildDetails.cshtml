@@ -133,11 +133,23 @@
                     <span class="child-hero-badge">Öğrenci Kartı</span>
                 </div>
             </div>
-        </div>
-        <div class="child-hero-date">
-            📅 @DateTime.UtcNow.ToLocalTime().ToString("dd MMMM yyyy, dddd")
+        <div class="child-hero-date" style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255,255,255,0.1); padding: 0.4rem 0.8rem; border-radius: 8px; color: white;">
+            <span>Tarih:</span>
+            <input type="date" id="child-date-picker" value="@ViewBag.SelectedDate" 
+                   min="@DateTime.UtcNow.AddHours(3).Date.AddDays(-2).ToString("yyyy-MM-dd")" 
+                   max="@DateTime.UtcNow.AddHours(3).Date.ToString("yyyy-MM-dd")" 
+                   style="padding: 0.25rem 0.5rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); font-family: inherit; font-size: 0.9rem; font-weight: 600; color: #1e293b; background: white; cursor: pointer;"
+                   onchange="changeChildDate(this.value)" />
         </div>
     </div>
+
+    @if (dailyRecord != null && dailyRecord.IsAbsent)
+    {
+        <div class="warning-summary" style="background: #fee2e2; border: 1px solid #fca5a5; color: #b91c1c; padding: 1.2rem; border-radius: 12px; margin-bottom: 1.5rem; font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; gap: 0.75rem; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.08);">
+            <span>🚨</span>
+            Öğrenci bu tarihte devamsızdır.
+        </div>
+    }
 
     <!-- İKİ KOLONLU PANORAMİK DÜZEN -->
     <div class="parent-dashboard">
@@ -292,7 +304,7 @@
                                     @(breakfast != null && !string.IsNullOrEmpty(breakfast.FoodContent) ? breakfast.FoodContent : "Girilmedi")
                                 </td>
                                 <td>
-                                    @if (breakfast != null)
+                                    @if (breakfast != null && breakfast.MealRecordId != Guid.Empty)
                                     {
                                         var badgeClass = breakfast.StatusType switch
                                         {
@@ -330,7 +342,7 @@
                                     @(lunch != null && !string.IsNullOrEmpty(lunch.FoodContent) ? lunch.FoodContent : "Girilmedi")
                                 </td>
                                 <td>
-                                    @if (lunch != null)
+                                    @if (lunch != null && lunch.MealRecordId != Guid.Empty)
                                     {
                                         var badgeClass = lunch.StatusType switch
                                         {
@@ -368,7 +380,7 @@
                                     @(snack != null && !string.IsNullOrEmpty(snack.FoodContent) ? snack.FoodContent : "Girilmedi")
                                 </td>
                                 <td>
-                                    @if (snack != null)
+                                    @if (snack != null && snack.MealRecordId != Guid.Empty)
                                     {
                                         var badgeClass = snack.StatusType switch
                                         {
@@ -419,86 +431,167 @@
 
         <!-- SAĞ KOLON: AKTİVİTELER VE PROGRAM -->
         <div class="child-main-panel">
-            <div class="glass-card" style="padding: 2rem;">
-                <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                    🎨 Sınıf İçi Aktiviteler
-                </h2>
-
-                @if (activities.Count == 0)
-                {
-                    <p style="color: var(--text-secondary); text-align: center; padding: 2rem; font-size: 0.9rem; font-style: italic;">
-                        Bugün henüz bir aktivite yapılmadı.
-                    </p>
-                }
-                else
-                {
-                    <div class="timeline">
-                        @foreach (var activity in activities.OrderBy(a => a.StartTime))
-                        {
-                            <div class="timeline-item">
-                                <div class="timeline-dot @(activity.CompletedAt.HasValue ? "completed" : "")">
-                                    @(activity.CompletedAt.HasValue ? "✓" : "•")
-                                </div>
-                                <div class="timeline-content">
-                                    <div class="timeline-title" style="font-size: 0.95rem; font-weight: 700;">
-                                        <span>@activity.StartTime.ToString(@"hh\:mm") - @activity.EndTime.ToString(@"hh\:mm") | @activity.Title</span>
-                                    </div>
-                                    <div class="timeline-desc" style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                                        @activity.Description
-                                    </div>
-                                    <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.35rem; font-weight: 600; display: inline-flex; align-items: center;">
-                                        @if (activity.CompletedAt.HasValue)
-                                        {
-                                            <span class="badge-completed">Tamamlandı</span>
-                                        }
-                                        else
-                                        {
-                                            <span style="background: #e2e8f0; color: #475569; padding: 0.1rem 0.4rem; border-radius: 4px; border: 1px solid #cbd5e1;">Planlandı</span>
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    </div>
-                }
+            <!-- MODERN TABS FOR PARENT PANELS -->
+            <div class="modern-tabs">
+                <button onclick="switchParentTab('tab-parent-activities')" id="btn-parent-activities" class="modern-tab-btn active">🎨 Bugünün Akışı</button>
+                <button onclick="switchParentTab('tab-parent-weekly')" id="btn-parent-weekly" class="modern-tab-btn">📅 Haftalık Program</button>
+                <button onclick="switchParentTab('tab-parent-newsletters')" id="btn-parent-newsletters" class="modern-tab-btn">📰 Sınıf Bültenleri</button>
             </div>
 
-            <!-- BÜLTENLER BÖLÜMÜ -->
-            <div class="glass-card" style="padding: 2rem; margin-top: 1.5rem;">
-                <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                    📰 Haftalık Sınıf Bültenleri
-                </h2>
+            <!-- TAB 1: BUGÜNÜN AKTİVİTELERİ -->
+            <div id="tab-parent-activities" class="modern-tab-content active">
+                <div class="glass-card" style="padding: 2rem;">
+                    <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        🎨 Bugünün Sınıf İçi Aktiviteleri
+                    </h2>
 
-                @if (newsletters.Count == 0)
-                {
-                    <p style="color: var(--text-secondary); text-align: center; padding: 2rem; font-size: 0.9rem; font-style: italic;">
-                        Henüz yayınlanmış bir bülten bulunmuyor.
-                    </p>
-                }
-                else
-                {
-                    <div style="display: flex; flex-direction: column; gap: 1rem;">
-                        @foreach (var newsletter in newsletters)
-                        {
-                            <div id="newsletter-pdf-@newsletter.Id" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.2rem; background: rgba(255,255,255,0.6); box-shadow: 0 4px 15px rgba(0,0,0,0.02); position: relative;">
-                                <div data-html2canvas-ignore style="position: absolute; right: 1rem; top: 1rem;">
-                                    <button onclick="downloadNewsletterPdf('@newsletter.Id', '@newsletter.Title')" class="btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem; display: flex; align-items: center; gap: 0.3rem;" title="Bülteni PDF Olarak İndir">
-                                        <span>📥</span> PDF İndir
-                                    </button>
+                    @if (activities.Count == 0)
+                    {
+                        <p style="color: var(--text-secondary); text-align: center; padding: 2rem; font-size: 0.9rem; font-style: italic;">
+                            Bugün henüz bir aktivite yapılmadı.
+                        </p>
+                    }
+                    else
+                    {
+                        var currentTime = DateTime.UtcNow.ToLocalTime().TimeOfDay;
+                        <div class="timeline">
+                            @foreach (var activity in activities.OrderBy(a => a.StartTime))
+                            {
+                                bool isPast = activity.EndTime <= currentTime || activity.CompletedAt.HasValue;
+                                bool isCurrent = !isPast && activity.StartTime <= currentTime && activity.EndTime > currentTime;
+                                bool isFuture = !isPast && !isCurrent;
+
+                                string dotClass = isPast ? "completed" : isCurrent ? "current" : "pending";
+                                string dotIcon = isPast ? "✓" : isCurrent ? "▶" : "•";
+                                string badgeClass = isPast ? "badge-completed" : isCurrent ? "badge-current" : "badge-pending";
+                                string badgeText = isPast ? "Tamamlandı" : isCurrent ? "Şu An İşleniyor" : "Bekliyor";
+
+                                <div class="timeline-item" style="opacity: @(isPast ? "0.7" : "1");">
+                                    <div class="timeline-dot @dotClass">
+                                        @dotIcon
+                                    </div>
+                                    <div class="timeline-content" style="@(isCurrent ? "border-left: 3px solid #059669; padding-left: 1rem; background: rgba(209, 250, 229, 0.3); border-radius: 4px;" : "")">
+                                        <div class="timeline-title" style="font-size: 0.95rem; font-weight: 700; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                                            <span>@activity.StartTime.ToString(@"hh\:mm") - @activity.EndTime.ToString(@"hh\:mm") | @activity.Title</span>
+                                            <span class="@badgeClass" style="@(isCurrent ? "background: #10b981; color: white; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600;" : isPast ? "background: #d1fae5; color: #065f46; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600;" : "background: #f3f4f6; color: #6b7280; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.7rem; font-weight: 600;")">@badgeText</span>
+                                        </div>
+                                        <div class="timeline-desc" style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                                            @activity.Description
+                                        </div>
+                                    </div>
                                 </div>
-                                <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem; color: var(--accent-blue); padding-right: 6rem;">@newsletter.Title</h3>
-                                <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.5;">@newsletter.Content</p>
-                                @if (!string.IsNullOrEmpty(newsletter.ImageUrl))
-                                {
-                                    <a href="@newsletter.ImageUrl" target="_blank" style="display: inline-block; margin-bottom: 1rem; font-size: 0.85rem; color: var(--accent-purple); font-weight: 600;">🔗 İlgili Görsele/Dosyaya Git</a>
-                                }
-                                <div style="font-size: 0.75rem; color: var(--text-muted); text-align: right;">
-                                    Yayınlanma: @newsletter.PublishedAt?.ToString("dd MMMM yyyy")
-                                </div>
-                            </div>
-                        }
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- TAB 2: HAFTALIK PROGRAM -->
+            <div id="tab-parent-weekly" class="modern-tab-content">
+                <div class="glass-card" style="padding: 2rem;">
+                    <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        📅 Haftalık Sınıf Etkinlik Şablonu
+                    </h2>
+                    
+                    @{
+                        var weeklySchedule = ViewBag.WeeklySchedule as List<WeeklyScheduleDto> ?? new List<WeeklyScheduleDto>();
+                    }
+
+                    <!-- Gün Switcher'ı (Monday-Friday) -->
+                    <div style="display: flex; gap: 0.35rem; justify-content: space-between; background: rgba(0,0,0,0.03); padding: 0.25rem; border-radius: 12px; border: 1px solid rgba(0,0,0,0.04); margin-bottom: 1.5rem;">
+                        <button type="button" onclick="selectWeeklyScheduleDay(1)" id="btn-sch-day-1" class="day-select-btn active-day" style="flex: 1; padding: 0.5rem; border: none; border-radius: 9px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s; background: #1e293b; color: white;">Pzt</button>
+                        <button type="button" onclick="selectWeeklyScheduleDay(2)" id="btn-sch-day-2" class="day-select-btn" style="flex: 1; padding: 0.5rem; border: none; border-radius: 9px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s; background: transparent; color: #4b5563;">Sal</button>
+                        <button type="button" onclick="selectWeeklyScheduleDay(3)" id="btn-sch-day-3" class="day-select-btn" style="flex: 1; padding: 0.5rem; border: none; border-radius: 9px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s; background: transparent; color: #4b5563;">Çar</button>
+                        <button type="button" onclick="selectWeeklyScheduleDay(4)" id="btn-sch-day-4" class="day-select-btn" style="flex: 1; padding: 0.5rem; border: none; border-radius: 9px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s; background: transparent; color: #4b5563;">Per</button>
+                        <button type="button" onclick="selectWeeklyScheduleDay(5)" id="btn-sch-day-5" class="day-select-btn" style="flex: 1; padding: 0.5rem; border: none; border-radius: 9px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.2s; background: transparent; color: #4b5563;">Cum</button>
                     </div>
-                }
+
+                    @for (int dayNum = 1; dayNum <= 5; dayNum++)
+                    {
+                        var daySchedules = weeklySchedule.Where(s => s.DayOfWeek == dayNum).OrderBy(s => s.StartTime).ToList();
+                        <div id="sch-day-container-@dayNum" class="schedule-day-panel" style="display: @(dayNum == 1 ? "block" : "none");">
+                            @if (!daySchedules.Any())
+                            {
+                                <p style="color: var(--text-secondary); text-align: center; padding: 1.5rem; font-size: 0.85rem; font-style: italic;">
+                                    Bu gün için planlanmış bir etkinlik bulunmuyor.
+                                </p>
+                            }
+                            else
+                            {
+                                <div class="timeline" style="margin-left: 0.5rem;">
+                                    @foreach (var item in daySchedules)
+                                    {
+                                        var emoji = item.Type switch
+                                        {
+                                            2 => "🍔", // Lunch
+                                            3 => "🌙", // Sleep / Dinlenme
+                                            _ => "📚"  // General/Art/Music
+                                        };
+                                        <div class="timeline-item" style="gap: 1rem;">
+                                            <div class="timeline-dot" style="font-size: 0.9rem; width: 28px; height: 28px;">
+                                                @emoji
+                                            </div>
+                                            <div class="timeline-content">
+                                                <div class="timeline-title" style="font-size: 0.9rem; font-weight: 700;">
+                                                    <span>@item.StartTime.ToString(@"hh\:mm") - @item.EndTime.ToString(@"hh\:mm")</span>
+                                                </div>
+                                                <div style="font-weight: 600; font-size: 0.85rem; color: var(--text-primary); margin-top: 0.15rem;">
+                                                    @item.Title
+                                                </div>
+                                                @if (!string.IsNullOrEmpty(item.Description))
+                                                {
+                                                    <div class="timeline-desc" style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.15rem; font-style: italic;">
+                                                        @item.Description
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- TAB 3: BÜLTENLER BÖLÜMÜ -->
+            <div id="tab-parent-newsletters" class="modern-tab-content">
+                <div class="glass-card" style="padding: 2rem;">
+                    <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        📰 Haftalık Sınıf Bültenleri
+                    </h2>
+
+                    @if (newsletters.Count == 0)
+                    {
+                        <p style="color: var(--text-secondary); text-align: center; padding: 2rem; font-size: 0.9rem; font-style: italic;">
+                            Henüz yayınlanmış bir bülten bulunmuyor.
+                        </p>
+                    }
+                    else
+                    {
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            @foreach (var newsletter in newsletters)
+                            {
+                                <div id="newsletter-pdf-@newsletter.Id" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.2rem; background: rgba(255,255,255,0.6); box-shadow: 0 4px 15px rgba(0,0,0,0.02); position: relative;">
+                                    <div data-html2canvas-ignore style="position: absolute; right: 1rem; top: 1rem;">
+                                        <button onclick="downloadNewsletterPdf('@newsletter.Id', '@newsletter.Title')" class="btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem; display: flex; align-items: center; gap: 0.3rem;" title="Bülteni PDF Olarak İndir">
+                                            <span>📥</span> PDF İndir
+                                        </button>
+                                    </div>
+                                    <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem; color: var(--accent-blue); padding-right: 6rem;">@newsletter.Title</h3>
+                                    <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.5;">@newsletter.Content</p>
+                                    @if (!string.IsNullOrEmpty(newsletter.ImageUrl))
+                                    {
+                                        <a href="@newsletter.ImageUrl" target="_blank" style="display: inline-block; margin-bottom: 1rem; font-size: 0.85rem; color: var(--accent-purple); font-weight: 600;">🔗 İlgili Görsele/Dosyaya Git</a>
+                                    }
+                                    <div style="font-size: 0.75rem; color: var(--text-muted); text-align: right;">
+                                        Yayınlanma: @newsletter.PublishedAt?.ToString("dd MMMM yyyy")
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
             </div>
         </div>
     </div>
@@ -621,6 +714,58 @@
             
             // html2pdf will ignore elements with data-html2canvas-ignore
             html2pdf().set(opt).from(element).save();
+        }
+
+        function switchParentTab(tabId) {
+            // Deactivate all parent tab content
+            document.querySelectorAll('#tab-parent-activities, #tab-parent-weekly, #tab-parent-newsletters').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Deactivate all parent tab buttons
+            document.querySelectorAll('#btn-parent-activities, #btn-parent-weekly, #btn-parent-newsletters').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Activate target
+            document.getElementById(tabId).classList.add('active');
+            
+            // Activate button
+            let btnId = '';
+            if (tabId === 'tab-parent-activities') btnId = 'btn-parent-activities';
+            else if (tabId === 'tab-parent-weekly') btnId = 'btn-parent-weekly';
+            else if (tabId === 'tab-parent-newsletters') btnId = 'btn-parent-newsletters';
+            
+            document.getElementById(btnId).classList.add('active');
+        }
+
+        function selectWeeklyScheduleDay(dayNum) {
+            // Hide all day panels
+            document.querySelectorAll('.schedule-day-panel').forEach(panel => {
+                panel.style.display = 'none';
+            });
+            
+            // Deactivate all day buttons
+            document.querySelectorAll('.day-select-btn').forEach(btn => {
+                btn.style.background = 'transparent';
+                btn.style.color = '#4b5563';
+                btn.classList.remove('active-day');
+            });
+            
+            // Show selected day panel
+            document.getElementById('sch-day-container-' + dayNum).style.display = 'block';
+            
+            // Activate selected day button
+            const btn = document.getElementById('btn-sch-day-' + dayNum);
+            btn.style.background = '#1e293b';
+            btn.style.color = 'white';
+            btn.classList.add('active-day');
+        }
+
+        function changeChildDate(val) {
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('date', val);
+            window.location.search = urlParams.toString();
         }
     </script>
 }

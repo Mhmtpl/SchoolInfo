@@ -22,7 +22,7 @@ public class GetClassroomMealRecordsHandler : IRequestHandler<GetClassroomMealRe
 
     public async Task<List<StudentMealDto>> Handle(GetClassroomMealRecordsQuery request, CancellationToken cancellationToken)
     {
-        var today = DateTime.UtcNow.Date;
+        var today = request.Date.HasValue ? DateTime.SpecifyKind(request.Date.Value.Date, DateTimeKind.Utc) : DateTime.SpecifyKind(DateTime.UtcNow.AddHours(3).Date, DateTimeKind.Utc);
 
         var students = await _dbContext.Students
             .Where(s => s.ClassroomId == request.ClassroomId && s.SchoolId == _currentUserService.SchoolId)

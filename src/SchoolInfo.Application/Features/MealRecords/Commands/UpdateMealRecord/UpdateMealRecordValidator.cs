@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 
 namespace SchoolInfo.Application.Features.MealRecords.Commands.UpdateMealRecord;
 
@@ -9,7 +9,10 @@ public class UpdateMealRecordValidator : AbstractValidator<UpdateMealRecordComma
 {
     public UpdateMealRecordValidator()
     {
-        RuleFor(v => v.MealRecordId).NotEmpty().WithMessage("Ã–ÄŸÃ¼n kayÄ±t Id boÅŸ olamaz.");
-        RuleFor(v => v.StatusType).IsInEnum().WithMessage("GeÃ§ersiz Ã¶ÄŸÃ¼n durumu.");
+        RuleFor(v => v.StatusType).IsInEnum().WithMessage("Geçersiz öğün durumu.");
+        
+        RuleFor(v => v)
+            .Must(v => v.MealRecordId != Guid.Empty || (v.StudentId.HasValue && !string.IsNullOrEmpty(v.MealName)))
+            .WithMessage("Ya Öğün Kayıt Id'si ya da Öğrenci Id ve Öğün Adı belirtilmelidir.");
     }
 }

@@ -17,7 +17,8 @@ public class DailySummaryRepository : BaseRepository<DailySummary>, IDailySummar
 
     public async Task<DailySummary?> GetByStudentAndDateAsync(Guid studentId, DateTime date)
     {
+        var utcDate = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
         return await DbContext.DailySummaries
-            .FirstOrDefaultAsync(d => d.StudentId == studentId && d.Date == date.Date);
+            .FirstOrDefaultAsync(d => d.StudentId == studentId && d.Date == utcDate);
     }
 }

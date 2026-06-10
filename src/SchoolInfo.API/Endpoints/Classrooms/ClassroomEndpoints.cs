@@ -55,9 +55,10 @@ public class ClassroomEndpoints : IEndpoint
         .WithDescription("Giriş yapan öğretmenin sorumlu olduğu tüm sınıfları döner. Birden fazla sınıf olabilir.")
         .RequireAuthorization(policy => policy.RequireRole(SchoolInfo.Domain.Enums.UserRole.Teacher.ToString()));
 
-        group.MapGet("/{id:guid}/daily-records/today", async (System.Guid id, IMediator mediator) =>
+        group.MapGet("/{id:guid}/daily-records/today", async (System.Guid id, DateTime? date, IMediator mediator) =>
         {
-            var result = await mediator.Send(new SchoolInfo.Application.Features.Classrooms.Queries.GetClassroomDailyRecords.GetClassroomDailyRecordsQuery(id));
+            var targetDate = date.HasValue ? DateTime.SpecifyKind(date.Value.Date, DateTimeKind.Utc) : DateTime.SpecifyKind(DateTime.UtcNow.AddHours(3).Date, DateTimeKind.Utc);
+            var result = await mediator.Send(new SchoolInfo.Application.Features.Classrooms.Queries.GetClassroomDailyRecords.GetClassroomDailyRecordsQuery(id, targetDate));
             return Results.Ok(result);
         })
         .WithName("GetClassroomDailyRecordsToday")
@@ -65,9 +66,10 @@ public class ClassroomEndpoints : IEndpoint
         .WithDescription("Öğretmenin veya yöneticinin tek ekranda sınıfın tamamını görebilmesi için bugünün özbakım, uyku ve su tüketim kayıtlarını döner.")
         .RequireAuthorization(policy => policy.RequireRole(SchoolInfo.Domain.Enums.UserRole.Teacher.ToString(), SchoolInfo.Domain.Enums.UserRole.Admin.ToString()));
 
-        group.MapGet("/{id:guid}/meal-records/today", async (System.Guid id, IMediator mediator) =>
+        group.MapGet("/{id:guid}/meal-records/today", async (System.Guid id, DateTime? date, IMediator mediator) =>
         {
-            var result = await mediator.Send(new SchoolInfo.Application.Features.Classrooms.Queries.GetClassroomMealRecords.GetClassroomMealRecordsQuery(id));
+            var targetDate = date.HasValue ? DateTime.SpecifyKind(date.Value.Date, DateTimeKind.Utc) : DateTime.SpecifyKind(DateTime.UtcNow.AddHours(3).Date, DateTimeKind.Utc);
+            var result = await mediator.Send(new SchoolInfo.Application.Features.Classrooms.Queries.GetClassroomMealRecords.GetClassroomMealRecordsQuery(id, targetDate));
             return Results.Ok(result);
         })
         .WithName("GetClassroomMealRecordsToday")
@@ -75,9 +77,9 @@ public class ClassroomEndpoints : IEndpoint
         .WithDescription("Öğretmenin veya yöneticinin tek ekranda sınıfın tamamının yemek durumunu görebilmesi için bugünün öğün kayıtlarını döner.")
         .RequireAuthorization(policy => policy.RequireRole(SchoolInfo.Domain.Enums.UserRole.Teacher.ToString(), SchoolInfo.Domain.Enums.UserRole.Admin.ToString()));
 
-        group.MapGet("/{id:guid}/meal-records/detailed", async (System.Guid id, SchoolInfo.Application.Common.Interfaces.IAppDbContext dbContext, SchoolInfo.Application.Common.Interfaces.ICurrentUserService currentUserService) =>
+        group.MapGet("/{id:guid}/meal-records/detailed", async (System.Guid id, DateTime? date, SchoolInfo.Application.Common.Interfaces.IAppDbContext dbContext, SchoolInfo.Application.Common.Interfaces.ICurrentUserService currentUserService) =>
         {
-            var today = DateTime.UtcNow.Date;
+            var today = date.HasValue ? DateTime.SpecifyKind(date.Value.Date, DateTimeKind.Utc) : DateTime.SpecifyKind(DateTime.UtcNow.AddHours(3).Date, DateTimeKind.Utc);
             var dayOfWeek = today.DayOfWeek;
 
             var students = await dbContext.Students
@@ -105,68 +107,21 @@ public class ClassroomEndpoints : IEndpoint
             var lunchPlan = weeklyPlans.FirstOrDefault(w => w.MealName.Equals("Öğle Yemeği", StringComparison.OrdinalIgnoreCase));
             var snackPlan = weeklyPlans.FirstOrDefault(w => w.MealName.Equals("İkindi Kahvaltısı", StringComparison.OrdinalIgnoreCase));
 
-            bool dbChanged = false;
-
-            foreach (var student in students)
-            {
-                var dailyRecord = dailyRecords.FirstOrDefault(d => d.StudentId == student.Id);
-                if (dailyRecord == null)
-                {
-                    dailyRecord = new DailyRecord(student.Id, today);
-                    dailyRecord.SchoolId = student.SchoolId;
-                    await dbContext.DailyRecords.AddAsync(dailyRecord);
-                    dailyRecords.Add(dailyRecord);
-                    dbChanged = true;
-                }
-
-                var meals = mealRecords.Where(m => m.DailyRecordId == dailyRecord.Id).ToList();
-                if (!meals.Any())
-                {
-                    var kahvalti = new MealRecord(dailyRecord.Id, "Kahvaltı", new SchoolInfo.Domain.ValueObjects.MealStatus(SchoolInfo.Domain.Enums.MealStatusType.None, string.Empty));
-                    kahvalti.SchoolId = student.SchoolId;
-                    if (breakfastPlan != null)
-                    {
-                        kahvalti.SetNutrition(breakfastPlan.PlannedCalories, breakfastPlan.FoodContent, breakfastPlan.ProteinGrams, breakfastPlan.CarbsGrams);
-                    }
-
-                    var ogleYemegi = new MealRecord(dailyRecord.Id, "Öğle Yemeği", new SchoolInfo.Domain.ValueObjects.MealStatus(SchoolInfo.Domain.Enums.MealStatusType.None, string.Empty));
-                    ogleYemegi.SchoolId = student.SchoolId;
-                    if (lunchPlan != null)
-                    {
-                        ogleYemegi.SetNutrition(lunchPlan.PlannedCalories, lunchPlan.FoodContent, lunchPlan.ProteinGrams, lunchPlan.CarbsGrams);
-                    }
-
-                    var ikindi = new MealRecord(dailyRecord.Id, "İkindi Kahvaltısı", new SchoolInfo.Domain.ValueObjects.MealStatus(SchoolInfo.Domain.Enums.MealStatusType.None, string.Empty));
-                    ikindi.SchoolId = student.SchoolId;
-                    if (snackPlan != null)
-                    {
-                        ikindi.SetNutrition(snackPlan.PlannedCalories, snackPlan.FoodContent, snackPlan.ProteinGrams, snackPlan.CarbsGrams);
-                    }
-
-                    var dbSet = ((DbContext)dbContext).Set<MealRecord>();
-                    await dbSet.AddRangeAsync(new[] { kahvalti, ogleYemegi, ikindi });
-                    
-                    mealRecords.Add(kahvalti);
-                    mealRecords.Add(ogleYemegi);
-                    mealRecords.Add(ikindi);
-                    dbChanged = true;
-                }
-            }
-
-            if (dbChanged)
-            {
-                await dbContext.SaveChangesAsync();
-            }
-
             var result = students.Select(student =>
             {
                 var dailyRecord = dailyRecords.FirstOrDefault(d => d.StudentId == student.Id);
                 var studentMeals = new List<object>();
 
-                if (dailyRecord != null)
+                var mealNames = new[] { "Kahvaltı", "Öğle Yemeği", "İkindi Kahvaltısı" };
+                foreach (var mealName in mealNames)
                 {
-                    var meals = mealRecords.Where(m => m.DailyRecordId == dailyRecord.Id).ToList();
-                    foreach (var m in meals)
+                    MealRecord? m = null;
+                    if (dailyRecord != null)
+                    {
+                        m = mealRecords.FirstOrDefault(x => x.DailyRecordId == dailyRecord.Id && x.MealName.Equals(mealName, StringComparison.OrdinalIgnoreCase));
+                    }
+
+                    if (m != null)
                     {
                         studentMeals.Add(new
                         {
@@ -178,6 +133,24 @@ public class ClassroomEndpoints : IEndpoint
                             FoodContent = m.FoodContent,
                             ProteinGrams = m.ProteinGrams,
                             CarbsGrams = m.CarbsGrams
+                        });
+                    }
+                    else
+                    {
+                        var plan = mealName.Equals("Kahvaltı", StringComparison.OrdinalIgnoreCase) ? breakfastPlan :
+                                   mealName.Equals("Öğle Yemeği", StringComparison.OrdinalIgnoreCase) ? lunchPlan :
+                                   snackPlan;
+
+                        studentMeals.Add(new
+                        {
+                            MealRecordId = Guid.Empty, // Kayıt yok, öğretmen ilk kaydettiğinde oluşacak
+                            MealName = mealName,
+                            StatusType = 0, // None / Hiç Yemedi
+                            StatusDescription = "",
+                            PlannedCalories = plan?.PlannedCalories,
+                            FoodContent = plan?.FoodContent,
+                            ProteinGrams = plan?.ProteinGrams,
+                            CarbsGrams = plan?.CarbsGrams
                         });
                     }
                 }
@@ -199,7 +172,7 @@ public class ClassroomEndpoints : IEndpoint
 
         group.MapPut("/{id:guid}/meal-records/plan", async (System.Guid id, UpdateClassroomMealPlanRequest request, SchoolInfo.Application.Common.Interfaces.IAppDbContext dbContext) =>
         {
-            var today = System.DateTime.UtcNow.Date;
+            var today = System.DateTime.UtcNow.AddHours(3).Date;
             var students = await dbContext.Students
                 .Where(s => s.ClassroomId == id && !s.IsDeleted)
                 .ToListAsync();

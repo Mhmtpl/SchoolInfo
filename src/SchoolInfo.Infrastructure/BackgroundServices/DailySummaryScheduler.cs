@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -67,7 +67,7 @@ public class DailySummaryScheduler : BackgroundService
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var today = DateTime.UtcNow.Date;
+        var today = DateTime.UtcNow.AddHours(3).Date;
         
         var studentIds = await dbContext.Students.Select(s => s.Id).ToListAsync(cancellationToken);
 

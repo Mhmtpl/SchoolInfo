@@ -21,7 +21,7 @@ public class GetClassroomMedicationRecordsTodayQueryHandler : IRequestHandler<Ge
 
     public async Task<List<MedicationRecordDto>> Handle(GetClassroomMedicationRecordsTodayQuery request, CancellationToken cancellationToken)
     {
-        var today = DateTime.UtcNow.Date;
+        var today = request.Date.HasValue ? DateTime.SpecifyKind(request.Date.Value.Date, DateTimeKind.Utc) : DateTime.SpecifyKind(DateTime.UtcNow.AddHours(3).Date, DateTimeKind.Utc);
         
         var studentIds = await _dbContext.Students
             .Where(s => s.ClassroomId == request.ClassroomId && !s.IsDeleted)

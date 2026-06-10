@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using SchoolInfo.Domain.Common;
 using SchoolInfo.Domain.Events;
 
@@ -17,7 +17,7 @@ public class DailySummary : BaseEntity
     public DailySummary(Guid studentId, DateTime date, string content)
     {
         StudentId = studentId;
-        Date = date.Date;
+        Date = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
         Content = content;
         IsReadByParent = false;
     }

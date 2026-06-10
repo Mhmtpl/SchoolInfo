@@ -19,7 +19,7 @@ public class GetStudentMedicationRecordsTodayQueryHandler : IRequestHandler<GetS
 
     public async Task<List<MedicationRecordDto>> Handle(GetStudentMedicationRecordsTodayQuery request, CancellationToken cancellationToken)
     {
-        var today = DateTime.UtcNow.Date;
+        var today = request.Date.HasValue ? DateTime.SpecifyKind(request.Date.Value.Date, DateTimeKind.Utc) : DateTime.SpecifyKind(DateTime.UtcNow.AddHours(3).Date, DateTimeKind.Utc);
         var records = await _medicationRecordRepository.GetByStudentAndDateAsync(request.StudentId, today);
 
         return records.Select(m => new MedicationRecordDto(

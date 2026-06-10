@@ -14,4 +14,4 @@ public record MedicationRecordDto(
     bool Taken,
     string? Note);
 
-public record GetStudentMedicationRecordsTodayQuery(Guid StudentId) : IRequest<List<MedicationRecordDto>>;
+public record GetStudentMedicationRecordsTodayQuery(Guid StudentId, DateTime? Date = null) : IRequest<List<MedicationRecordDto>>;
