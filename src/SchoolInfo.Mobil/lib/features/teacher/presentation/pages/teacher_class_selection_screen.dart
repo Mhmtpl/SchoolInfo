@@ -16,13 +16,14 @@ class TeacherClassSelectionScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final classroomAsync = ref.watch(teacherClassroomListProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Öğretmen Paneli'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout_rounded),
             tooltip: 'Çıkış Yap',
             onPressed: () => _logout(context),
           ),
@@ -47,74 +48,148 @@ class TeacherClassSelectionScreen extends ConsumerWidget {
     BuildContext context,
     List<ClassroomSummary> classrooms,
   ) {
+    final theme = Theme.of(context);
     if (classrooms.isEmpty) {
-      return const Center(child: Text('Atanmış sınıf bulunamadı.'));
+      return const Center(
+        child: Text(
+          'Atanmış sınıf bulunamadı.',
+          style: TextStyle(color: Color(0xFF64748B), fontSize: 16),
+        ),
+      );
     }
 
     final totalStudents = classrooms.fold<int>(0, (sum, item) => sum + item.studentCount);
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       children: [
-        Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+        // Hoş Geldiniz Kartı
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+            boxShadow: const [
+              BoxShadow(
+                color: Color.fromRGBO(15, 23, 42, 0.03),
+                blurRadius: 20,
+                offset: Offset(0, 8),
+              ),
+            ],
           ),
-          elevation: 2,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Hoş geldiniz, öğretmen!',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Hoş geldiniz, Öğretmenim! 👋',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                  letterSpacing: -0.5,
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Bugün sınıflarınızı hızlıca yönetebilir, uyku ve haftalık yemek programlarını düzenleyebilirsiniz.',
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Bugün sınıflarınızı hızlıca yönetebilir, uyku ve haftalık yemek programlarını düzenleyebilirsiniz.',
+                style: TextStyle(
+                  color: Color(0xFF64748B),
+                  fontSize: 14,
+                  height: 1.5,
+                  fontWeight: FontWeight.w500,
                 ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: [
-                    _dashboardMetric('Sınıf', classrooms.length.toString()),
-                    _dashboardMetric('Öğrenci', totalStudents.toString()),
-                  ],
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  _dashboardMetric(context, 'Sınıf', classrooms.length.toString(), theme.colorScheme.primary),
+                  const SizedBox(width: 12),
+                  _dashboardMetric(context, 'Öğrenci', totalStudents.toString(), theme.colorScheme.secondary),
+                ],
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
+        
+        const Text(
+          'Sınıflarınız',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF0F172A),
+          ),
+        ),
+        const SizedBox(height: 12),
+        
         ...classrooms.map((classroom) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color.fromRGBO(15, 23, 42, 0.02),
+                    blurRadius: 10,
+                  ),
+                ],
               ),
-              elevation: 1,
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-                title: Text(
-                  classroom.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text('${classroom.studentCount} öğrenci'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 18),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          TeacherClassroomDetailScreen(classroom: classroom),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            TeacherClassroomDetailScreen(classroom: classroom),
+                      ),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withOpacity(0.08),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.school_rounded, color: theme.colorScheme.primary, size: 20),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                classroom.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${classroom.studentCount} kayıtlı öğrenci',
+                                style: const TextStyle(color: Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w500),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8), size: 24),
+                      ],
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
             ),
           );
@@ -123,24 +198,38 @@ class TeacherClassSelectionScreen extends ConsumerWidget {
     );
   }
 
-  Widget _dashboardMetric(String label, String value) {
-    return Container(
-      width: 120,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            value,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 6),
-          Text(label, style: const TextStyle(color: Colors.black87)),
-        ],
+  Widget _dashboardMetric(BuildContext context, String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withOpacity(0.12), width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: color,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF64748B),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

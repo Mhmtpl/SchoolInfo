@@ -14,47 +14,60 @@ class HomeMenuCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            const BoxShadow(
-              blurRadius: 18,
-              color: Color.fromRGBO(0, 0, 0, 0.06),
-              offset: Offset(0, 8),
-            ),
-          ],
+    final theme = Theme.of(context);
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFFF1F5F9), // Light slate border
+          width: 1.5,
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0x1A6C5CE7),
+        boxShadow: const [
+          BoxShadow(
+            blurRadius: 24,
+            color: Color.fromRGBO(15, 23, 42, 0.04),
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 18),
+            child: Row(
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: theme.colorScheme.primary.withOpacity(0.08),
+                  ),
+                  child: Icon(icon, color: theme.colorScheme.primary, size: 22),
                 ),
-                child: Icon(icon, color: const Color(0xFF6C5CE7), size: 22),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF2D3436),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0F172A), // Slate 900
+                    ),
                   ),
                 ),
-              ),
-              const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF9AA4B9)),
-            ],
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 22,
+                  color: Color(0xFF94A3B8), // Slate 400
+                ),
+              ],
+            ),
           ),
         ),
       ),

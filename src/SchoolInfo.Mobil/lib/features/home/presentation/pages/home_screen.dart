@@ -5,10 +5,7 @@ import '../../../auth/presentation/pages/login_screen.dart';
 import '../../data/repositories/home_repository_impl.dart';
 import '../../domain/usecases/get_home_summary.dart';
 import '../../domain/entities/home_summary.dart';
-import '../widgets/dashboard_stat_card.dart';
-import '../widgets/home_menu_card.dart';
 import 'activity_screen.dart';
-import 'announcement_screen.dart';
 import 'medication_screen.dart';
 import 'meal_screen.dart';
 import 'profile_screen.dart';
@@ -95,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FF),
+      backgroundColor: const Color(0xFFF8FAFC), // Ultra-clean background
       body: FutureBuilder<HomeSummary>(
         future: _getHomeSummary(widget.schoolId),
         builder: (context, snapshot) {
@@ -104,35 +101,51 @@ class _HomeScreenState extends State<HomeScreen> {
           }
 
           if (snapshot.hasError) {
-            return Center(child: Text('Veri yüklenemedi: ${snapshot.error}'));
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Text(
+                  'Veri yüklenemedi: ${snapshot.error}',
+                  style: const TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold),
+                ),
+              ),
+            );
           }
 
           final summary = snapshot.data!;
           final selectedChild = _selectedChild;
           return SafeArea(
             bottom: true,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 40),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(summary, selectedChild),
-                  Container(
-                    width: double.infinity,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF3F1FF),
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(32),
-                        topRight: Radius.circular(32),
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+            child: RefreshIndicator(
+              onRefresh: () async {
+                setState(() {});
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(bottom: 40),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(summary, selectedChild),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildAtAGlance(summary),
-                          const SizedBox(height: 22),
+                          if (widget.students != null && widget.students!.isNotEmpty) ...[
+                            _buildChildrenSection(widget.students!, summary.classroom),
+                            const SizedBox(height: 20),
+                          ],
+                          
+                          // At a glance summary (Sleep, Meal, Activity)
+                          _buildAtAGlanceSection(summary),
+                          const SizedBox(height: 24),
+                          
+                          if (selectedChild != null) ...[
+                            _buildSelectedChildSummary(selectedChild, summary.classroom),
+                            const SizedBox(height: 24),
+                          ],
+
                           _buildSectionTitle(
                             'Hızlı Erişim',
                             'En sık ziyaret edilen alanlara hızlıca ulaşın',
@@ -140,26 +153,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(height: 12),
                           _buildQuickActionsRow(context),
                           const SizedBox(height: 28),
-                          if (widget.students != null && widget.students!.isNotEmpty) ...[
-                            _buildChildrenSection(widget.students!, summary.classroom),
-                            const SizedBox(height: 24),
-                            if (selectedChild != null) _buildSelectedChildSummary(selectedChild, summary.classroom),
-                            const SizedBox(height: 24),
-                          ],
+                          
                           _buildSectionTitle(
-                            'Okul Panosu',
-                            'Duyurular ve sık kullanılan sayfalara hızlı erişim',
+                            'Duyurular & Haberler',
+                            'Okuldan gelen en son duyuruları takip edin',
                           ),
-                          const SizedBox(height: 12),
-                          _buildMenuGrid(context),
-                          const SizedBox(height: 24),
-                          _buildAnnouncementBanner(),
-                          const SizedBox(height: 40),
+                          const SizedBox(height: 14),
+                          _buildAnnouncementsSection(),
+                          const SizedBox(height: 20),
                         ],
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );
@@ -167,6 +173,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
   void _logout() {
     Navigator.pushAndRemoveUntil(
       context,
@@ -174,146 +181,102 @@ class _HomeScreenState extends State<HomeScreen> {
       (route) => false,
     );
   }
+
   String get _parentFirstName {
     final value = _currentFirstName.trim();
-    if (value.isEmpty) return 'Yıldız';
+    if (value.isEmpty) return 'Veli';
 
     final lowerValue = value.toLowerCase();
     final children = widget.students ?? [];
     if (children.any((child) => child.firstName.toLowerCase() == lowerValue)) {
-      return 'Yıldız';
+      return 'Veli';
     }
 
     return value.split(' ').first;
   }
 
   Widget _buildHeader(HomeSummary summary, Student? selectedChild) {
-    final headerChildName = selectedChild != null
-        ? '${selectedChild.firstName} ${selectedChild.lastName}'
-        : summary.childName;
-    final headerClassroom = summary.classroom.isNotEmpty
-        ? summary.classroom
-        : 'Bilinmiyor';
-    final headerDetails = selectedChild != null
-        ? 'Sınıf: $headerClassroom'
-        : 'Giriş Saati: 08:45 | Sınıf: $headerClassroom';
-
+    final theme = Theme.of(context);
+    
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF6C5CE7), Color(0xFFa29bfe)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(36),
-          bottomRight: Radius.circular(36),
-        ),
-      ),
-      padding: const EdgeInsets.only(top: 32, left: 24, right: 24, bottom: 28),
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Mini Adımlar Anaokulu',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
                     Text(
-                      'Merhaba, $_parentFirstName Hanım 👋',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
+                      'MİNİ ADIMLAR ANAOKULU',
+                      style: TextStyle(
+                        color: theme.colorScheme.primary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.5,
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      'Çocuğunuzun gününü takip edin ve okuldan gelen bildirimleri hızlıca görün.',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                        height: 1.5,
+                    const SizedBox(height: 4),
+                    Text(
+                      'Merhaba, $_parentFirstName 👋',
+                      style: const TextStyle(
+                        color: Color(0xFF0F172A),
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
                       ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 12),
+              
+              // Profile Action Group
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color.fromRGBO(255, 255, 255, 0.18),
-                  borderRadius: BorderRadius.circular(24),
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Hesap',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _parentFirstName,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 12),
                     InkWell(
                       borderRadius: BorderRadius.circular(32),
                       onTap: _openProfileScreen,
                       child: Container(
-                        width: 38,
-                        height: 38,
+                        width: 32,
+                        height: 32,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
+                          border: Border.all(color: Colors.white, width: 1.5),
                         ),
-                        child: const CircleAvatar(
-                          radius: 18,
+                        child: CircleAvatar(
+                          radius: 16,
                           backgroundColor: Colors.white,
-                          child: Icon(Icons.face, size: 26, color: Color(0xFF6C5CE7)),
+                          child: Icon(Icons.face_rounded, size: 20, color: theme.colorScheme.primary),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 6),
                     Container(
-                      width: 36,
-                      height: 36,
+                      width: 28,
+                      height: 28,
                       decoration: BoxDecoration(
-                        color: const Color.fromRGBO(255, 255, 255, 0.18),
-                        borderRadius: BorderRadius.circular(14),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: IconButton(
                         onPressed: _logout,
-                        icon: const Icon(Icons.logout, size: 18, color: Color(0xFF202020)),
+                        icon: const Icon(Icons.logout_rounded, size: 14, color: Color(0xFF64748B)),
                         tooltip: 'Çıkış',
-                        splashRadius: 20,
+                        padding: EdgeInsets.zero,
+                        splashRadius: 18,
                       ),
                     ),
                   ],
@@ -321,106 +284,323 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 22),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: const Color.fromRGBO(255, 255, 255, 0.15),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '$headerChildName şu an okulda 🎒',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        headerDetails,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
-                        ),
-                      ),
-                      if (widget.students != null && widget.students!.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          'Çocuk(lar): ${widget.students!.map((s) => '${s.firstName} ${s.lastName}').join(', ')}',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: const Icon(
-                    Icons.school,
-                    color: Color(0xFF6C5CE7),
-                    size: 32,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildAtAGlance(HomeSummary summary) {
-    return Wrap(
-      spacing: 14,
-      runSpacing: 14,
+  Widget _buildChildrenSection(List<Student> students, String className) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          width: 110,
-          child: DashboardStatCard(
-            icon: Icons.restaurant,
-            value: summary.mealStatus,
-            label: 'Yemek Durumu',
-            color: const Color(0xFF6C5CE7),
+        const Text(
+          'Çocuklarınız',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF0F172A),
           ),
         ),
+        const SizedBox(height: 10),
         SizedBox(
-          width: 110,
-          child: DashboardStatCard(
-            icon: Icons.hotel,
-            value: summary.sleepStatus,
-            label: 'Uyku Durumu',
-            color: const Color(0xFFFFA325),
-          ),
-        ),
-        SizedBox(
-          width: 110,
-          child: DashboardStatCard(
-            icon: Icons.sports_tennis,
-            value: summary.activityStatus,
-            label: 'Aktivite Durumu',
-            color: const Color(0xFF00B894),
+          height: 82,
+          child: ListView.separated(
+            physics: const BouncingScrollPhysics(),
+            scrollDirection: Axis.horizontal,
+            itemCount: students.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 14),
+            itemBuilder: (context, index) {
+              final s = students[index];
+              final isSelected = index == _selectedChildIndex;
+              final initials = s.firstName.isNotEmpty ? s.firstName[0] : '';
+              
+              return GestureDetector(
+                onTap: () => setState(() {
+                  _selectedChildIndex = index;
+                }),
+                child: Column(
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isSelected ? theme.colorScheme.primary : Colors.white,
+                        border: Border.all(
+                          color: isSelected ? theme.colorScheme.primary : const Color(0xFFE2E8F0),
+                          width: isSelected ? 2 : 1.2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: isSelected
+                                ? theme.colorScheme.primary.withOpacity(0.12)
+                                : const Color.fromRGBO(15, 23, 42, 0.02),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(
+                          initials,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : theme.colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      s.firstName,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        color: isSelected ? theme.colorScheme.primary : const Color(0xFF475569),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ),
       ],
+    );
+  }
+
+  // Visualizers for At a Glance section
+  double _parseSleepProgress(String status) {
+    final s = status.toLowerCase();
+    if (s.contains('tamam') || s.contains('düzenli') || s.contains('iyi')) return 1.0;
+    if (s.contains('orta') || s.contains('az')) return 0.4;
+    return 0.8; 
+  }
+
+  String _getSleepLabel(String status) {
+    final s = status.toLowerCase();
+    if (s.contains('düzenli') || s.contains('iyi')) return '2.5 Sa / 2.5 Sa';
+    if (s.contains('az')) return '1.0 Sa / 2.5 Sa';
+    return '2.0 Sa / 2.5 Sa';
+  }
+
+  int _parseMealSegments(String status) {
+    final s = status.toLowerCase();
+    if (s.contains('tamam') || s.contains('hepsi')) return 3;
+    if (s.contains('orta') || s.contains('yarım') || s.contains('kısmen')) return 2;
+    if (s.contains('az') || s.contains('yemedi')) return 1;
+    return 3;
+  }
+
+  String _getMealLabel(String status) {
+    final s = status.toLowerCase();
+    if (s.contains('tamam')) return '3 / 3 Öğün';
+    if (s.contains('yarım') || s.contains('orta')) return '2 / 3 Öğün';
+    return '3 / 3 Öğün';
+  }
+
+  double _parseActivityProgress(String status) {
+    final s = status.toLowerCase();
+    if (s.contains('zamanı') || s.contains('aktif') || s.contains('iyi')) return 0.75;
+    if (s.contains('sakin') || s.contains('az')) return 0.35;
+    return 0.6;
+  }
+
+  String _getActivityLabel(String status) {
+    final s = status.toLowerCase();
+    if (s.contains('zamanı') || s.contains('aktif')) return '45 / 60 dk';
+    if (s.contains('sakin')) return '20 / 60 dk';
+    return '35 / 60 dk';
+  }
+
+  Widget _buildAtAGlanceSection(HomeSummary summary) {
+    final sleepVal = _parseSleepProgress(summary.sleepStatus);
+    final sleepLbl = _getSleepLabel(summary.sleepStatus);
+    final mealVal = _parseMealSegments(summary.mealStatus);
+    final mealLbl = _getMealLabel(summary.mealStatus);
+    final actVal = _parseActivityProgress(summary.activityStatus);
+    final actLbl = _getActivityLabel(summary.activityStatus);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = (constraints.maxWidth - 20) / 3;
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            SizedBox(
+              width: cardWidth,
+              child: _buildVisualStatCard(
+                title: 'Uyku',
+                icon: Icons.bedtime_rounded,
+                accentColor: const Color(0xFFF59E0B),
+                bgColor: const Color(0xFFFEF3C7),
+                statusLabel: summary.sleepStatus,
+                detailLabel: sleepLbl,
+                visual: SizedBox(
+                  width: 38,
+                  height: 38,
+                  child: CircularProgressIndicator(
+                    value: sleepVal,
+                    strokeWidth: 4,
+                    color: const Color(0xFFF59E0B),
+                    backgroundColor: const Color(0xFFFEF3C7),
+                    strokeCap: StrokeCap.round,
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: _buildVisualStatCard(
+                title: 'Yemek',
+                icon: Icons.restaurant_rounded,
+                accentColor: const Color(0xFFF97316),
+                bgColor: const Color(0xFFFFE4E6),
+                statusLabel: summary.mealStatus,
+                detailLabel: mealLbl,
+                visual: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Row(
+                      children: List.generate(3, (i) {
+                        final isFilled = i < mealVal;
+                        return Expanded(
+                          child: Container(
+                            height: 6,
+                            margin: EdgeInsets.only(right: i < 2 ? 3 : 0),
+                            decoration: BoxDecoration(
+                              color: isFilled ? const Color(0xFFF97316) : const Color(0xFFFFE4E6),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: const [
+                        Text('K', style: TextStyle(fontSize: 8, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
+                        Text('Ö', style: TextStyle(fontSize: 8, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
+                        Text('İ', style: TextStyle(fontSize: 8, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              child: _buildVisualStatCard(
+                title: 'Aktivite',
+                icon: Icons.sports_tennis_rounded,
+                accentColor: const Color(0xFF10B981),
+                bgColor: const Color(0xFFD1FAE5),
+                statusLabel: summary.activityStatus,
+                detailLabel: actLbl,
+                visual: SizedBox(
+                  width: 38,
+                  height: 38,
+                  child: CircularProgressIndicator(
+                    value: actVal,
+                    strokeWidth: 4,
+                    color: const Color(0xFF10B981),
+                    backgroundColor: const Color(0xFFD1FAE5),
+                    strokeCap: StrokeCap.round,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildVisualStatCard({
+    required String title,
+    required IconData icon,
+    required Color accentColor,
+    required Color bgColor,
+    required Widget visual,
+    required String statusLabel,
+    required String detailLabel,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFFE2E8F0),
+          width: 1,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color.fromRGBO(15, 23, 42, 0.02),
+            blurRadius: 16,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: accentColor, size: 16),
+              ),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Color(0xFF64748B),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Center(
+            child: SizedBox(
+              height: 40,
+              child: visual,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            statusLabel,
+            style: const TextStyle(
+              color: Color(0xFF0F172A),
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            detailLabel,
+            style: const TextStyle(
+              color: Color(0xFF94A3B8),
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 
@@ -435,77 +615,95 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2D3436),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                  letterSpacing: -0.4,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: const TextStyle(fontSize: 13, color: Colors.grey),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF64748B),
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
         ),
         if (onViewAll != null)
-          TextButton(onPressed: onViewAll, child: const Text('Tümünü Gör')),
+          TextButton(
+            onPressed: onViewAll,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text('Tümünü Gör', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          ),
       ],
     );
   }
 
   Widget _buildQuickActionsRow(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
+    final theme = Theme.of(context);
+    return SizedBox(
+      height: 40,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
         children: [
           _buildQuickActionChip(
             context,
-            icon: Icons.bedtime,
+            icon: Icons.bedtime_rounded,
             label: 'Uyku',
-            color: const Color(0xFF00B894),
+            color: const Color(0xFFF59E0B),
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const SleepScreen()),
             ),
           ),
+          const SizedBox(width: 8),
           _buildQuickActionChip(
             context,
-            icon: Icons.restaurant,
+            icon: Icons.restaurant_rounded,
             label: 'Yemek',
-            color: const Color(0xFF6C5CE7),
+            color: const Color(0xFFF97316),
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const MealScreen()),
             ),
           ),
+          const SizedBox(width: 8),
           _buildQuickActionChip(
             context,
-            icon: Icons.sports_tennis,
+            icon: Icons.sports_tennis_rounded,
             label: 'Etkinlik',
-            color: const Color(0xFFFF9F43),
+            color: const Color(0xFF10B981),
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ActivityScreen()),
             ),
           ),
+          const SizedBox(width: 8),
           _buildQuickActionChip(
             context,
-            icon: Icons.medical_services,
+            icon: Icons.medical_services_rounded,
             label: 'İlaç',
-            color: const Color(0xFF8E44AD),
+            color: const Color(0xFFEF4444),
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const MedicationScreen()),
             ),
           ),
+          const SizedBox(width: 8),
           _buildQuickActionChip(
             context,
-            icon: Icons.person,
+            icon: Icons.person_rounded,
             label: 'Profil',
-            color: const Color(0xFF2980B9),
+            color: theme.colorScheme.primary,
             onTap: _openProfileScreen,
           ),
         ],
@@ -520,331 +718,374 @@ class _HomeScreenState extends State<HomeScreen> {
     required Color color,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: color.withAlpha((0.12 * 255).round()),
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(color: color, fontWeight: FontWeight.bold),
-            ),
-          ],
+    return Container(
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withOpacity(0.12),
+          width: 1,
         ),
       ),
-    );
-  }
-
-  Widget _buildChildrenSection(List<Student> students, String className) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(bottom: 10.0),
-            child: Text(
-              'Çocuklarınız',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-          ),
-          SizedBox(
-            height: 170,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: students.length,
-              separatorBuilder: (context, index) => const SizedBox(width: 10),
-              itemBuilder: (context, index) {
-                final s = students[index];
-                final isSelected = index == _selectedChildIndex;
-                final dob = s.dateOfBirth == DateTime.fromMillisecondsSinceEpoch(0)
-                    ? '—'
-                    : '${s.dateOfBirth.day}/${s.dateOfBirth.month}/${s.dateOfBirth.year}';
-                return GestureDetector(
-                  onTap: () => setState(() {
-                    _selectedChildIndex = index;
-                  }),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    width: 220,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isSelected ? const Color(0xFF6C5CE7) : Colors.transparent,
-                        width: 2,
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color.fromRGBO(0, 0, 0, 0.08),
-                          blurRadius: 8,
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '${s.firstName} ${s.lastName}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: isSelected ? const Color(0xFF6C5CE7) : Colors.black,
-                              ),
-                            ),
-                            Icon(
-                              isSelected ? Icons.star : Icons.star_border,
-                              color: isSelected ? const Color(0xFF6C5CE7) : Colors.grey,
-                              size: 18,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text('Sınıf: ${className.isNotEmpty ? className : 'Bilinmiyor'}', style: const TextStyle(color: Colors.black54, fontSize: 12)),
-                        const SizedBox(height: 4),
-                        Text('Doğum: $dob', style: const TextStyle(color: Colors.black54, fontSize: 12)),
-                        const Spacer(),
-                        Text(
-                          s.dailyRecordSummary ?? 'Bugün için veri bekleniyor',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12, color: Colors.black87),
-                        ),
-                      ],
-                    ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: color, size: 16),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
                   ),
-                );
-              },
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildSelectedChildSummary(Student child, String className) {
+    final theme = Theme.of(context);
     final dob = child.dateOfBirth == DateTime.fromMillisecondsSinceEpoch(0)
         ? '—'
         : '${child.dateOfBirth.day}/${child.dateOfBirth.month}/${child.dateOfBirth.year}';
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionTitle('Seçili Çocuk', 'Tüm önemli bilgileri ve günlük özetini burada görün'),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color.fromRGBO(0, 0, 0, 0.08),
-                  blurRadius: 12,
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${child.firstName} ${child.lastName}',
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          Text('Sınıf: ${className.isNotEmpty ? className : 'Bilinmiyor'}', style: const TextStyle(color: Colors.black54)),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color.fromRGBO(108, 92, 231, 0.12),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(
-                        Icons.child_care,
-                        color: Color(0xFF6C5CE7),
-                        size: 24,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    _buildInfoChip('Doğum', dob),
-                    const SizedBox(width: 10),
-                    _buildInfoChip('Durum', child.dailyRecordSummary != null ? 'Güncellenmiş' : 'Bekleniyor'),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                const Text('Bugünkü Özet', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                const SizedBox(height: 8),
-                Text(
-                  child.dailyRecordSummary ?? 'Öğretmenden günlük veri bekleniyor. Bu alanda uyku, su tüketimi ve önemli notlar gösterilecektir.',
-                  style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.4),
-                ),
-                if (child.aiSummary != null && child.aiSummary!.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  const Text('Yapay Zeka Önerisi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  const SizedBox(height: 8),
-                  Text(
-                    child.aiSummary!,
-                    style: const TextStyle(fontSize: 14, color: Colors.black87, height: 1.4),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoChip(String label, String value) {
+    
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      decoration: BoxDecoration(
-        color: const Color.fromRGBO(108, 92, 231, 0.08),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 11, color: Colors.black54)),
-          const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMenuGrid(BuildContext context) {
-    final items = [
-      _MenuItem(
-        title: 'Yemek',
-        icon: Icons.restaurant,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const MealScreen()),
-        ),
-      ),
-      _MenuItem(
-        title: 'Uyku',
-        icon: Icons.bedtime,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const SleepScreen()),
-        ),
-      ),
-      _MenuItem(
-        title: 'Etkinlik',
-        icon: Icons.sports_tennis,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ActivityScreen()),
-        ),
-      ),
-      _MenuItem(
-        title: 'İlaç Takibi',
-        icon: Icons.medical_services,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const MedicationScreen()),
-        ),
-      ),
-      _MenuItem(
-        title: 'Duyurular',
-        icon: Icons.announcement,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AnnouncementScreen()),
-        ),
-      ),
-      _MenuItem(
-        title: 'Profil',
-        icon: Icons.person,
-        onTap: _openProfileScreen,
-      ),
-    ];
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: items.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 2.5,
-      ),
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return HomeMenuCard(
-          title: item.title,
-          icon: item.icon,
-          onTap: item.onTap,
-        );
-      },
-    );
-  }
-
-  Widget _buildAnnouncementBanner() {
-    return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: const Color(0xFFE2E8F0),
+          width: 1,
+        ),
         boxShadow: const [
           BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.06),
-            blurRadius: 12,
-            offset: Offset(0, 6),
+            color: Color.fromRGBO(15, 23, 42, 0.02),
+            blurRadius: 24,
+            offset: Offset(0, 8),
           ),
         ],
       ),
-      child: const Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.announcement, color: Color(0xFF6C5CE7), size: 28),
-          SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              'Bugün etkinlik var: Resim atölyesi 15:00’te.',
-              style: TextStyle(color: Color(0xFF202020), fontSize: 15),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          '${child.firstName} ${child.lastName}',
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0F172A),
+                            letterSpacing: -0.4,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD1FAE5),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Badge(
+                                backgroundColor: Color(0xFF10B981),
+                                smallSize: 6,
+                              ),
+                              SizedBox(width: 5),
+                              Text(
+                                'Okulda',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF065F46),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Sınıf: ${className.isNotEmpty ? className : 'Bilinmiyor'} • Doğum: $dob',
+                      style: const TextStyle(
+                        color: Color(0xFF64748B), 
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.child_care_rounded,
+                  color: theme.colorScheme.primary,
+                  size: 22,
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 18),
+          const Divider(color: Color(0xFFF1F5F9), height: 1),
+          const SizedBox(height: 16),
+          
+          const Text(
+            'Bugünkü Rapor',
+            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF0F172A)),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            child.dailyRecordSummary ?? 'Öğretmenden günlük veri bekleniyor. Bu alanda uyku, su tüketimi ve önemli notlar gösterilecektir.',
+            style: const TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.5, fontWeight: FontWeight.w500),
+          ),
+          
+          if (child.aiSummary != null && child.aiSummary!.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFFF1F2), Color(0xFFFDF4FF)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFFFFE4E6),
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.auto_awesome_rounded, color: theme.colorScheme.secondary, size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Yapay Zeka Önerisi',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: theme.colorScheme.secondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    child.aiSummary!,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF4F46E5),
+                      height: 1.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
+
+  Widget _buildAnnouncementsSection() {
+    final theme = Theme.of(context);
+    
+    // Örnek Duyurular Listesi
+    final announcements = [
+      _AnnouncementItem(
+        title: 'Resim Atölyesi Etkinliği',
+        body: 'Bugün saat 15:00’te tüm sınıflarımızın katılımıyla okul bahçesinde resim atölyesi yapılacaktır. Çocuklarımızın yedek kıyafetlerini getirmeyi unutmayınız.',
+        date: 'Bugün, 09:30',
+        isNew: true,
+        category: 'Etkinlik',
+        icon: Icons.palette_rounded,
+        iconColor: const Color(0xFFEA580C),
+      ),
+      _AnnouncementItem(
+        title: 'Veli Bilgilendirme Toplantısı',
+        body: 'Yeni dönem eğitim planı ve okul içi düzenlemeler hakkında görüşmek üzere Cuma günü saat 18:00’de konferans salonunda toplantı yapılacaktır.',
+        date: 'Dün, 14:15',
+        isNew: false,
+        category: 'Toplantı',
+        icon: Icons.groups_rounded,
+        iconColor: theme.colorScheme.primary,
+      ),
+    ];
+
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: announcements.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final item = announcements[index];
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: item.isNew ? theme.colorScheme.secondary.withOpacity(0.2) : const Color(0xFFE2E8F0),
+              width: item.isNew ? 1.2 : 1,
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color.fromRGBO(15, 23, 42, 0.02),
+                blurRadius: 16,
+                offset: Offset(0, 6),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: item.iconColor.withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(item.icon, color: item.iconColor, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: item.isNew 
+                                    ? theme.colorScheme.secondary.withOpacity(0.1)
+                                    : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                item.category,
+                                style: TextStyle(
+                                  color: item.isNew ? theme.colorScheme.secondary : const Color(0xFF64748B),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            if (item.isNew) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEF4444),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'YENİ',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          item.date,
+                          style: const TextStyle(
+                            color: Color(0xFF94A3B8),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                item.title,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0F172A),
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                item.body,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF475569),
+                  height: 1.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
-class _MenuItem {
+class _AnnouncementItem {
   final String title;
+  final String body;
+  final String date;
+  final bool isNew;
+  final String category;
   final IconData icon;
-  final VoidCallback onTap;
+  final Color iconColor;
 
-  _MenuItem({required this.title, required this.icon, required this.onTap});
+  _AnnouncementItem({
+    required this.title,
+    required this.body,
+    required this.date,
+    required this.isNew,
+    required this.category,
+    required this.icon,
+    required this.iconColor,
+  });
 }
