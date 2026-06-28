@@ -70,6 +70,7 @@ Kurallar:
 
         // Services
         services.AddScoped<IAISummaryService, AgentSummaryService>();
+        services.AddScoped<IAIClassroomParser, AIClassroomParser>();
         services.AddScoped<INotificationService, FirebaseNotificationService>();
         services.AddSingleton<JwtTokenService>();
 

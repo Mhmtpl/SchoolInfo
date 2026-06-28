@@ -351,7 +351,23 @@ public class ClassroomEndpoints : IEndpoint
         .WithName("ApplyWeeklyScheduleToWeek")
         .WithSummary("Sınıfın şablonunu geçerli haftaya aktarır.")
         .RequireAuthorization();
+
+        group.MapPost("/{id:guid}/ai-update", async (System.Guid id, AIClassroomUpdateRequest request, IMediator mediator) =>
+        {
+            var command = new SchoolInfo.Application.Features.Classrooms.Commands.AIClassroomUpdate.AIClassroomUpdateCommand(id, request.Command, request.DateStr);
+            var result = await mediator.Send(command);
+            return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+        })
+        .WithName("AIClassroomUpdate")
+        .WithSummary("Yapay zeka ile sınıf günlük gelişim ve yemek kayıtlarını toplu günceller.")
+        .RequireAuthorization(policy => policy.RequireRole(SchoolInfo.Domain.Enums.UserRole.Teacher.ToString(), SchoolInfo.Domain.Enums.UserRole.Admin.ToString()));
     }
+}
+
+public class AIClassroomUpdateRequest
+{
+    public string Command { get; set; } = string.Empty;
+    public string DateStr { get; set; } = string.Empty;
 }
 
 public class ClassroomMealPlanDto

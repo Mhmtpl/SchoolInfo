@@ -66,6 +66,57 @@
     <!-- TAB 1: GÜNLÜK KAYITLAR VE AKTİVİTELER -->
     <div id="tab-daily" class="modern-tab-content active">
 
+    <!-- YAPAY ZEKA TOPLU VERİ GİRİŞİ (SESLİ/YAZILI) -->
+    <style>
+        @@keyframes pulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.15); opacity: 0.4; }
+            100% { transform: scale(1.3); opacity: 0; }
+        }
+    </style>
+    <div class="glass-card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.08)); border: 1px solid rgba(99, 102, 241, 0.2); padding: 1.5rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+                <h3 style="font-size: 1.25rem; font-weight: 700; color: #4f46e5; display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+                    ✨ Yapay Zeka ile Akıllı Veri Girişi (Sesli & Yazılı)
+                </h3>
+                <span style="font-size: 0.85rem; color: var(--text-muted);">Sınıfın durumunu sesli olarak söyleyin veya yazın, AI otomatik olarak tüm öğrencileri güncellesin!</span>
+            </div>
+            <div>
+                <span style="font-size: 0.75rem; background: rgba(99, 102, 241, 0.15); color: #4f46e5; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 20px;">
+                    Gemini 3.5 Destekli
+                </span>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; align-items: stretch; flex-direction: column;">
+            <div style="position: relative; display: flex; gap: 0.75rem; align-items: center;">
+                <textarea id="ai-command-input" rows="2" style="flex: 1; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid rgba(99, 102, 241, 0.3); font-family: inherit; font-size: 0.95rem; resize: none; background: rgba(255, 255, 255, 0.85); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); transition: all 0.2s;" placeholder="Örnek: &quot;Ali hariç herkes yemeğini yedi, Ali az yedi notu düş ve diğer bütün öğrencileri güncelle&quot; veya &quot;Mert bugün gelmedi, Ayşe çok iyi uyudu&quot;..."></textarea>
+                
+                <button type="button" id="btn-record-voice" onclick="toggleVoiceRecord()" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; width: 3.2rem; height: 3.2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.4rem; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); transition: all 0.3s; position: relative;" title="Sesli Söyle">
+                    🎤
+                    <span id="voice-pulse" style="display: none; position: absolute; top: -4px; left: -4px; right: -4px; bottom: -4px; border: 3px solid #ef4444; border-radius: 50%; animation: pulse 1.5s infinite; opacity: 0.8;"></span>
+                </button>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                <div id="ai-status-text" style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">
+                    Mikrofonu kullanmak için butona tıklayıp konuşun veya doğrudan metin alanına yazın.
+                </div>
+                <button type="button" id="btn-apply-ai" onclick="applyAIUpdate()" class="btn-primary" style="margin-top: 0; width: auto; padding: 0.6rem 1.5rem; display: inline-flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #4f46e5, #7c3aed); border: none; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);">
+                    <span>⚡</span> AI ile Sınıfı Güncelle
+                </button>
+            </div>
+        </div>
+        
+        <!-- Rapor Alanı -->
+        <div id="ai-report-box" style="display: none; margin-top: 1rem; padding: 0.85rem; border-radius: 10px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); color: #065f46; font-size: 0.85rem;">
+            <div style="font-weight: 700; margin-bottom: 0.25rem;">Güncelleme Raporu:</div>
+            <ul id="ai-report-list" style="margin: 0; padding-left: 1.25rem; line-height: 1.5;"></ul>
+        </div>
+    </div>
+
+
     <!-- ÖĞRENCİ GÜNLÜK KAYIT GRİDİ -->
     <div class="glass-card">
         <div class="section-card-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -2333,5 +2384,141 @@
             urlParams.set('date', val);
             window.location.search = urlParams.toString();
         }
+
+        // --- YAPAY ZEKA TOPLU VERİ GİRİŞİ (AI) ---
+        let voiceRecognition = null;
+        let isRecording = false;
+
+        function toggleVoiceRecord() {
+            const btn = document.getElementById('btn-record-voice');
+            const pulse = document.getElementById('voice-pulse');
+            const statusText = document.getElementById('ai-status-text');
+            const input = document.getElementById('ai-command-input');
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("Tarayıcınız ses tanıma özelliğini desteklemiyor. Lütfen Google Chrome veya Edge kullanın.");
+                return;
+            }
+
+            if (!voiceRecognition) {
+                voiceRecognition = new SpeechRecognition();
+                voiceRecognition.lang = 'tr-TR';
+                voiceRecognition.continuous = false;
+                voiceRecognition.interimResults = false;
+
+                voiceRecognition.onstart = () => {
+                    isRecording = true;
+                    btn.style.background = 'linear-gradient(135deg, #10b981, #059669)'; // Yeşile döndür
+                    pulse.style.display = 'block';
+                    statusText.innerHTML = '🎙️ Dinleniyor... Konuşun...';
+                };
+
+                voiceRecognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    if (input.value) {
+                        input.value += ' ' + transcript;
+                    } else {
+                        input.value = transcript;
+                    }
+                    statusText.innerHTML = '✓ Ses başarıyla metne çevrildi.';
+                };
+
+                voiceRecognition.onerror = (event) => {
+                    console.error("Speech recognition error:", event.error);
+                    statusText.innerHTML = '❌ Ses alınırken bir hata oluştu: ' + event.error;
+                    stopRecordingUI();
+                };
+
+                voiceRecognition.onend = () => {
+                    stopRecordingUI();
+                };
+            }
+
+            if (isRecording) {
+                voiceRecognition.stop();
+            } else {
+                voiceRecognition.start();
+            }
+        }
+
+        function stopRecordingUI() {
+            isRecording = false;
+            const btn = document.getElementById('btn-record-voice');
+            const pulse = document.getElementById('voice-pulse');
+            const statusText = document.getElementById('ai-status-text');
+            
+            if (btn) btn.style.background = ''; // Eski rengine dön (kırmızı)
+            if (pulse) pulse.style.display = 'none';
+            if (statusText && statusText.innerHTML === '🎙️ Dinleniyor... Konuşun...') {
+                statusText.innerHTML = 'Mikrofonu kullanmak için butona tıklayıp konuşun veya doğrudan metin alanına yazın.';
+            }
+        }
+
+        async function applyAIUpdate() {
+            const input = document.getElementById('ai-command-input');
+            const btnApply = document.getElementById('btn-apply-ai');
+            const btnRecord = document.getElementById('btn-record-voice');
+            const statusText = document.getElementById('ai-status-text');
+            const reportBox = document.getElementById('ai-report-box');
+            const reportList = document.getElementById('ai-report-list');
+
+            const command = input.value.trim();
+            if (!command) {
+                alert("Lütfen önce bir ses kaydı alın veya güncelleme komutunu yazın.");
+                return;
+            }
+
+            btnApply.disabled = true;
+            btnRecord.disabled = true;
+            statusText.innerHTML = '✨ Yapay zeka komutunuzu analiz ediyor, lütfen bekleyin...';
+            reportBox.style.display = 'none';
+            reportList.innerHTML = '';
+
+            const datePicker = document.getElementById('classroom-date-picker');
+            const dateStr = datePicker ? datePicker.value : '';
+
+            try {
+                const response = await fetch('/Teacher/AIUpdateClassroom', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        classroomId: '@classroom?.Id',
+                        command: command,
+                        dateStr: dateStr
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success && data.result && data.result.success) {
+                    const result = data.result;
+                    statusText.innerHTML = '✅ Güncellemeler başarıyla uygulandı! Sayfa yenileniyor...';
+                    
+                    if (result.updatedStudents && result.updatedStudents.length > 0) {
+                        reportBox.style.display = 'block';
+                        result.updatedStudents.forEach(rep => {
+                            const li = document.createElement('li');
+                            li.innerHTML = rep;
+                            reportList.appendChild(li);
+                        });
+                    }
+
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 3500);
+                } else {
+                    const errMsg = data.message || (data.result ? data.result.message : 'Bilinmeyen hata');
+                    statusText.innerHTML = '❌ Hata oluştu: ' + errMsg;
+                    btnApply.disabled = false;
+                    btnRecord.disabled = false;
+                }
+            } catch (err) {
+                console.error(err);
+                statusText.innerHTML = '❌ Sunucuyla iletişim kurulurken bir hata oluştu.';
+                btnApply.disabled = false;
+                btnRecord.disabled = false;
+            }
+        }
     </script>
 }
+

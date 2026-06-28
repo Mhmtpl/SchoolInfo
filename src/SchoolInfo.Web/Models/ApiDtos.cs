@@ -254,3 +254,19 @@ public class WeeklyScheduleDto
     public int Type { get; set; }
 }
 
+// --- AI BATCH UPDATE ---
+public class AIClassroomUpdateWebRequest
+{
+    public Guid ClassroomId { get; set; }
+    public string Command { get; set; } = string.Empty;
+    public string? DateStr { get; set; }
+}
+
+public class AIClassroomUpdateResponseWeb
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public List<string> UpdatedStudents { get; set; } = new();
+}
+
+

@@ -427,4 +427,29 @@ public class TeacherController : Controller
             return Json(new { success = false, message = ex.Message });
         }
     }
+
+    [HttpPost]
+    public async Task<IActionResult> AIUpdateClassroom([FromBody] AIClassroomUpdateWebRequest request)
+    {
+        try
+        {
+            var dateStr = request.DateStr ?? DateTime.UtcNow.AddHours(3).ToString("yyyy-MM-dd");
+            var apiRequest = new
+            {
+                Command = request.Command,
+                DateStr = dateStr
+            };
+
+            var response = await _apiService.PostAsync<object, AIClassroomUpdateResponseWeb>(
+                $"api/classrooms/{request.ClassroomId}/ai-update", 
+                apiRequest
+            );
+
+            return Json(new { success = true, result = response });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
 }

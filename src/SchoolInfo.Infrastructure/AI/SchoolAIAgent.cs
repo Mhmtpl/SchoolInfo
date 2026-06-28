@@ -79,4 +79,65 @@ public class SchoolAIAgent
 
         return text ?? "Bugün okulda her şey harikaydı. Yemeklerini güzelce yedi.";
     }
+
+    public async Task<string> RunWithCustomInstructionsAsync(string input, string systemInstructions, bool responseJson = false)
+    {
+        if (string.IsNullOrEmpty(_apiKey) || _apiKey == "YOUR_API_KEY" || _apiKey == "YOUR_GEMINI_API_KEY")
+        {
+            return responseJson ? "{}" : "İşlem yapılamadı.";
+        }
+
+        // Gemini API URL
+        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
+
+        // Build the request payload according to the Gemini API spec
+        var payload = new
+        {
+            contents = new[]
+            {
+                new
+                {
+                    parts = new[]
+                    {
+                        new { text = input }
+                    }
+                }
+            },
+            systemInstruction = new
+            {
+                parts = new[]
+                {
+                    new { text = systemInstructions }
+                }
+            },
+            generationConfig = new
+            {
+                temperature = 0.1,
+                responseMimeType = responseJson ? "application/json" : "text/plain"
+            }
+        };
+
+        var json = JsonSerializer.Serialize(payload);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var response = await _httpClient.PostAsync(url, content);
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            var err = await response.Content.ReadAsStringAsync();
+            throw new Exception($"Gemini API error ({response.StatusCode}): {err}");
+        }
+
+        var responseJsonStr = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(responseJsonStr);
+        var text = doc.RootElement
+            .GetProperty("candidates")[0]
+            .GetProperty("content")
+            .GetProperty("parts")[0]
+            .GetProperty("text")
+            .GetString();
+
+        return text ?? (responseJson ? "{}" : "İşlem yapılamadı.");
+    }
 }
+
