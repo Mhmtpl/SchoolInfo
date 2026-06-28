@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using SchoolInfo.Web.Models;
 using SchoolInfo.Web.Services;
 
@@ -13,10 +14,12 @@ namespace SchoolInfo.Web.Controllers;
 public class ParentController : Controller
 {
     private readonly SchoolInfoApiService _apiService;
+    private readonly ILogger<ParentController> _logger;
 
-    public ParentController(SchoolInfoApiService apiService)
+    public ParentController(SchoolInfoApiService apiService, ILogger<ParentController> logger)
     {
         _apiService = apiService;
+        _logger = logger;
     }
 
     public async Task<IActionResult> Index()
@@ -48,7 +51,8 @@ public class ParentController : Controller
         }
         catch (Exception ex)
         {
-            ViewBag.ErrorMessage = "Çocuklarınızın listesi yüklenirken bir hata oluştu: " + ex.Message;
+            _logger.LogError(ex, "Veli için çocuk listesi yüklenemedi.");
+            ViewBag.ErrorMessage = "Çocuklarınızın listesi yüklenirken bir hata oluştu. Lütfen tekrar deneyin.";
             return View(new List<ClassroomStudentDto>());
         }
     }
@@ -187,6 +191,7 @@ public class ParentController : Controller
                 // Sessizce yut
             }
 
+            ViewBag.StudentId = id;
             ViewBag.StudentName = $"{studentInfo["firstName"]} {studentInfo["lastName"]}";
             ViewBag.ClassroomName = classroomName;
             ViewBag.DailyRecord = myDailyRecord;
@@ -204,6 +209,34 @@ public class ParentController : Controller
         {
             ViewBag.ErrorMessage = "Çocuk detayları yüklenirken hata oluştu: " + ex.Message;
             return View();
+        }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> AddMedicationRecord([FromBody] CreateMedicationRecordRequestWeb request)
+    {
+        try
+        {
+            var result = await _apiService.PostAsync<object, Guid>("api/medication-records", request);
+            return Json(new { success = true, id = result });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> DeleteMedicationRecord(Guid id)
+    {
+        try
+        {
+            await _apiService.DeleteAsync($"api/medication-records/{id}");
+            return Json(new { success = true });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
         }
     }
 }

@@ -16,6 +16,8 @@ public class User : BaseEntity
     public string PasswordHash { get; set; }
     public UserRole Role { get; private set; }
     public string FcmToken { get; private set; }
+    public string? RefreshToken { get; private set; }
+    public DateTime? RefreshTokenExpiry { get; private set; }
 
     private readonly List<Student> _students = new();
     public IReadOnlyCollection<Student> Students => _students.AsReadOnly();
@@ -62,6 +64,26 @@ public class User : BaseEntity
     public void UpdateFcmToken(string fcmToken)
     {
         FcmToken = fcmToken;
+        UpdateTimestamp();
+    }
+
+    /// <summary>
+    /// Yeni refresh token atar ve süresini belirler.
+    /// </summary>
+    public void SetRefreshToken(string refreshToken, DateTime expiry)
+    {
+        RefreshToken = refreshToken;
+        RefreshTokenExpiry = expiry;
+        UpdateTimestamp();
+    }
+
+    /// <summary>
+    /// Refresh token'ı geçersiz kılar (logout).
+    /// </summary>
+    public void RevokeRefreshToken()
+    {
+        RefreshToken = null;
+        RefreshTokenExpiry = null;
         UpdateTimestamp();
     }
 }

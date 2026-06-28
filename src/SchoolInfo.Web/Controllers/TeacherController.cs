@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using SchoolInfo.Web.Models;
 using SchoolInfo.Web.Services;
 
@@ -13,10 +14,12 @@ namespace SchoolInfo.Web.Controllers;
 public class TeacherController : Controller
 {
     private readonly SchoolInfoApiService _apiService;
+    private readonly ILogger<TeacherController> _logger;
 
-    public TeacherController(SchoolInfoApiService apiService)
+    public TeacherController(SchoolInfoApiService apiService, ILogger<TeacherController> logger)
     {
         _apiService = apiService;
+        _logger = logger;
     }
 
     public async Task<IActionResult> Index()
@@ -28,7 +31,8 @@ public class TeacherController : Controller
         }
         catch (Exception ex)
         {
-            ViewBag.ErrorMessage = "Sınıflarınız yüklenirken bir hata oluştu: " + ex.Message;
+            _logger.LogError(ex, "Öğretmen sınıfları yüklenemedi.");
+            ViewBag.ErrorMessage = "Sınıflarınız yüklenirken bir hata oluştu. Lütfen tekrar deneyin.";
             return View(new List<ClassroomDto>());
         }
     }
@@ -79,7 +83,8 @@ public class TeacherController : Controller
         }
         catch (Exception ex)
         {
-            ViewBag.ErrorMessage = "Sınıf detayları yüklenirken hata oluştu: " + ex.Message;
+            _logger.LogError(ex, "Sınıf detayları yüklenemedi. ClassroomId={Id}", id);
+            ViewBag.ErrorMessage = "Sınıf detayları yüklenirken hata oluştu. Lütfen sayfayı yenileyin.";
             return View();
         }
     }
@@ -224,7 +229,8 @@ public class TeacherController : Controller
         }
         catch (Exception ex)
         {
-            TempData["ErrorMessage"] = "Aktivite eklenirken hata oluştu: " + ex.Message;
+            _logger.LogError(ex, "Aktivite eklenemedi.");
+            TempData["ErrorMessage"] = "Aktivite eklenirken hata oluştu. Lütfen tekrar deneyin.";
             return RedirectToAction("ClassroomDetails", new { id = classroomId });
         }
     }
@@ -239,7 +245,8 @@ public class TeacherController : Controller
         }
         catch (Exception ex)
         {
-            TempData["ErrorMessage"] = "Aktivite tamamlanırken hata oluştu: " + ex.Message;
+            _logger.LogError(ex, "Aktivite tamamlanamadı.");
+            TempData["ErrorMessage"] = "Aktivite tamamlanırken hata oluştu. Lütfen tekrar deneyin.";
             return RedirectToAction("ClassroomDetails", new { id = classroomId });
         }
     }
@@ -378,7 +385,8 @@ public class TeacherController : Controller
         }
         catch (Exception ex)
         {
-            return Json(new { success = false, message = ex.Message });
+            _logger.LogError(ex, "İlaç kaydı güncellenemedi.");
+            return Json(new { success = false, message = "İlaç kaydı güncellenirken hata oluştu." });
         }
     }
 
@@ -388,6 +396,30 @@ public class TeacherController : Controller
         try
         {
             await _apiService.DeleteAsync($"api/medication-records/{id}");
+            return Json(new { success = true });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> GenerateDailySummaries(Guid classroomId, string date)
+    {
+        try
+        {
+            var students = await _apiService.GetAsync<List<ClassroomStudentDto>>($"api/classrooms/{classroomId}/students");
+            if (students == null || !students.Any())
+            {
+                return Json(new { success = false, message = "Sınıfta öğrenci bulunamadı." });
+            }
+
+            foreach (var student in students)
+            {
+                await _apiService.PostAsync<object, object>($"api/summary/generate/{student.Id}?date={date}", null!);
+            }
+
             return Json(new { success = true });
         }
         catch (Exception ex)

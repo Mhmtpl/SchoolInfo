@@ -50,7 +50,8 @@ public class MedicationRecordEndpoints : IEndpoint
             request.Dosage,
             request.AdministrationTime,
             request.Taken,
-            request.Note);
+            request.Note,
+            request.Date);
 
         var id = await mediator.Send(command);
         return Results.Created($"/api/medication-records/{id}", id);
@@ -114,7 +115,8 @@ public class MedicationRecordEndpoints : IEndpoint
         string Dosage,
         string AdministrationTime,
         bool Taken,
-        string? Note);
+        string? Note,
+        DateTime? Date);
 
     private sealed record UpdateMedicationRecordRequest(
         Guid Id,

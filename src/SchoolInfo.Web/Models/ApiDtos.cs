@@ -231,6 +231,7 @@ public class CreateMedicationRecordRequestWeb
     public string AdministrationTime { get; set; } = string.Empty;
     public bool Taken { get; set; }
     public string? Note { get; set; }
+    public DateTime? Date { get; set; }
 }
 
 public class UpdateMedicationRecordRequestWeb

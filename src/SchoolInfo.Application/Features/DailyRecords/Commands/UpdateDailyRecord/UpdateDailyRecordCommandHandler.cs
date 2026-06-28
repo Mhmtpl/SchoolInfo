@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using SchoolInfo.Application.Common.Interfaces;
 using SchoolInfo.Domain.Exceptions;
 using SchoolInfo.Domain.Interfaces;
@@ -52,6 +53,14 @@ public class UpdateDailyRecordCommandHandler : IRequestHandler<UpdateDailyRecord
         if (request.IsAbsent.HasValue)
         {
             dailyRecord.SetAbsentStatus(request.IsAbsent.Value);
+        }
+
+        // Veli sayfayı açtığında yeni verilerle tekrar AI özeti üretilmesi için eski özeti siliyoruz
+        var existingSummary = await _dbContext.DailySummaries
+            .FirstOrDefaultAsync(s => s.StudentId == dailyRecord.StudentId && s.Date == dailyRecord.Date, cancellationToken);
+        if (existingSummary != null)
+        {
+            _dbContext.DailySummaries.Remove(existingSummary);
         }
 
         await _dailyRecordRepository.UpdateAsync(dailyRecord);

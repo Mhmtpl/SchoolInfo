@@ -216,10 +216,14 @@
         }
 
         <div class="glass-card">
-            <div class="section-card-header">
+            <div class="section-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                 <div>
                     <h2>Bugünkü İlaç Takip Defteri</h2>
                     <span style="font-size: 0.8rem; color: var(--text-muted);">Öğrencilerin bugün alması gereken ilaçları ekleyebilir, verildi durumunu güncelleyebilir veya silebilirsiniz.</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; background: rgba(255, 255, 255, 0.5); padding: 0.5rem 1rem; border-radius: 12px; border: 1px solid var(--border-color);">
+                    <input type="checkbox" id="filter-meds-only" onchange="toggleMedsFilter(this.checked)" style="cursor: pointer; width: 16px; height: 16px;" />
+                    <label for="filter-meds-only" style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary); cursor: pointer; user-select: none;">Sadece İlacı Olanları Göster</label>
                 </div>
             </div>
 
@@ -238,7 +242,7 @@
                             var studentMeds = medicationRecords.Where(m => m.StudentId == record.StudentId).ToList();
                             var sId = record.StudentId.ToString();
                             
-                            <tr id="med-student-row-@sId">
+                            <tr id="med-student-row-@sId" class="med-student-row" data-has-meds="@(studentMeds.Any() ? "true" : "false")">
                                 <td>
                                     <div class="student-info" style="font-weight: 700;">
                                         @record.FirstName @record.LastName
@@ -362,7 +366,7 @@
 
         <div style="background: rgba(255, 255, 255, 0.45); border: 1px solid var(--border-color); border-radius: 20px; padding: 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.03); margin-top: 1rem;">
             
-            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem;">
+            <div class="weekly-schedule-grid">
                 @foreach (var day in weekDays)
                 {
                     var dayActs = activities.Where(a => a.ActivityDate.Date == day.Date).OrderBy(a => a.StartTime).ToList();
@@ -587,7 +591,10 @@
                     <h2 style="font-size: 1.4rem; color: var(--text-primary); font-weight: 700;">Günlük Öğün Çizelgesi 🍳🍲🧁</h2>
                     <span style="font-size: 0.85rem; color: var(--text-muted);">Öğrencilerin kahvaltı, öğle yemeği ve ikindi kahvaltısı tüketim durumlarını tek ekrandan güncelleyin.</span>
                 </div>
-                <div style="display: flex; gap: 0.75rem;">
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                    <button type="button" onclick="saveAllMeals()" class="btn-primary" style="margin-top: 0; width: auto; padding: 0.6rem 1.2rem; display: inline-flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, #059669, #047857);">
+                        💾 Tümünü Kaydet
+                    </button>
                     <button type="button" onclick="openWeeklyMealPlanModal()" class="btn-secondary" style="margin-top: 0; width: auto; padding: 0.6rem 1.2rem; display: inline-flex; align-items: center; gap: 0.5rem;">
                         Haftalık Şablonu Düzenle 📅
                     </button>
@@ -605,14 +612,35 @@
                             <th style="padding: 1.2rem 1rem; width: 26%; font-weight: 700; color: var(--text-primary); text-align: center; vertical-align: middle;">
                                 <div>🍳 Kahvaltı</div>
                                 <span id="header-menu-breakfast" style="font-size: 0.75rem; font-weight: 500; color: #78350f; display: @(string.IsNullOrEmpty(bMenu) ? "none" : "block"); margin-top: 0.25rem; font-style: italic; background: rgba(251, 191, 36, 0.1); padding: 0.2rem; border-radius: 4px;">@bMenu</span>
+                                <select onchange="bulkMealUpdate('breakfast', this.value); this.value=''" style="margin-top: 0.4rem; font-size: 0.72rem; padding: 0.2rem 0.4rem; border-radius: 6px; border: 1px solid rgba(251,191,36,0.4); background: rgba(254,243,199,0.6); cursor: pointer; width: 100%; font-weight: normal;">
+                                    <option value="">Toplu Seçim...</option>
+                                    <option value="3">✅ Hepsini Yedi</option>
+                                    <option value="2">🟡 Yarısını Yedi</option>
+                                    <option value="1">🔶 Az Yedi</option>
+                                    <option value="0">❌ Hiç Yemedi</option>
+                                </select>
                             </th>
                             <th style="padding: 1.2rem 1rem; width: 26%; font-weight: 700; color: var(--text-primary); text-align: center; vertical-align: middle;">
                                 <div>🍲 Öğle Yemeği</div>
                                 <span id="header-menu-lunch" style="font-size: 0.75rem; font-weight: 500; color: #1e3a8a; display: @(string.IsNullOrEmpty(lMenu) ? "none" : "block"); margin-top: 0.25rem; font-style: italic; background: rgba(59, 130, 246, 0.1); padding: 0.2rem; border-radius: 4px;">@lMenu</span>
+                                <select onchange="bulkMealUpdate('lunch', this.value); this.value=''" style="margin-top: 0.4rem; font-size: 0.72rem; padding: 0.2rem 0.4rem; border-radius: 6px; border: 1px solid rgba(59,130,246,0.4); background: rgba(219,234,254,0.6); cursor: pointer; width: 100%; font-weight: normal;">
+                                    <option value="">Toplu Seçim...</option>
+                                    <option value="3">✅ Hepsini Yedi</option>
+                                    <option value="2">🟡 Yarısını Yedi</option>
+                                    <option value="1">🔶 Az Yedi</option>
+                                    <option value="0">❌ Hiç Yemedi</option>
+                                </select>
                             </th>
                             <th style="padding: 1.2rem 1rem; width: 26%; font-weight: 700; color: var(--text-primary); text-align: center; vertical-align: middle;">
                                 <div>🧁 İkindi Kahvaltısı</div>
                                 <span id="header-menu-snack" style="font-size: 0.75rem; font-weight: 500; color: #065f46; display: @(string.IsNullOrEmpty(sMenu) ? "none" : "block"); margin-top: 0.25rem; font-style: italic; background: rgba(16, 185, 129, 0.1); padding: 0.2rem; border-radius: 4px;">@sMenu</span>
+                                <select onchange="bulkMealUpdate('snack', this.value); this.value=''" style="margin-top: 0.4rem; font-size: 0.72rem; padding: 0.2rem 0.4rem; border-radius: 6px; border: 1px solid rgba(16,185,129,0.4); background: rgba(209,250,229,0.6); cursor: pointer; width: 100%; font-weight: normal;">
+                                    <option value="">Toplu Seçim...</option>
+                                    <option value="3">✅ Hepsini Yedi</option>
+                                    <option value="2">🟡 Yarısını Yedi</option>
+                                    <option value="1">🔶 Az Yedi</option>
+                                    <option value="0">❌ Hiç Yemedi</option>
+                                </select>
                             </th>
                         </tr>
                     </thead>
@@ -1396,7 +1424,7 @@
             if(!confirm("Ekranda görünen aktif tüm öğrencilerin kayıtları aynı anda kaydedilecek. Onaylıyor musunuz?")) return;
 
             // Sırayla butonların tıklanma işlevini tetikle
-            const btns = document.querySelectorAll('.save-row-btn');
+            const btns = document.querySelectorAll('button[id^="btn-save-"]:not([id$="-breakfast"]):not([id$="-lunch"]):not([id$="-snack"]):not([id="btn-save-meal-plan"]):not([id="btn-save-weekly-plans"])');
             btns.forEach(btn => {
                 if(!btn.disabled) {
                     btn.click();
@@ -1522,6 +1550,13 @@
             const savedNlTab = localStorage.getItem('activeNewsletterTab');
             if (savedNlTab) {
                 switchNewsletterTab(savedNlTab);
+            }
+            
+            const savedFilter = localStorage.getItem('filterMedsOnly') === 'true';
+            const filterCheckbox = document.getElementById('filter-meds-only');
+            if (filterCheckbox) {
+                filterCheckbox.checked = savedFilter;
+                toggleMedsFilter(savedFilter);
             }
         });
 
@@ -1796,6 +1831,14 @@
                         row.remove();
                         if (parent && parent.children.length === 0) {
                             parent.innerHTML = '<span class="no-meds-label" style="font-size: 0.85rem; color: var(--text-muted); font-style: italic;">Bugün için ilaç kaydı bulunmuyor.</span>';
+                            const tr = parent.closest('tr');
+                            if (tr) {
+                                tr.setAttribute('data-has-meds', 'false');
+                                const filterCheckbox = document.getElementById('filter-meds-only');
+                                if (filterCheckbox && filterCheckbox.checked) {
+                                    tr.style.display = 'none';
+                                }
+                            }
                         }
                     }
                 } else {
@@ -1805,6 +1848,19 @@
                 console.error(err);
                 alert("İletişim hatası.");
             }
+        }
+
+        function toggleMedsFilter(checked) {
+            const rows = document.querySelectorAll('.med-student-row');
+            rows.forEach(row => {
+                const hasMeds = row.getAttribute('data-has-meds') === 'true';
+                if (checked && !hasMeds) {
+                    row.style.display = 'none';
+                } else {
+                    row.style.display = '';
+                }
+            });
+            localStorage.setItem('filterMedsOnly', checked);
         }
 
         async function applyWeeklyScheduleToWeek() {
@@ -2200,6 +2256,82 @@
                 btn.disabled = false;
                 btn.style.opacity = "1";
             }
+        }
+
+        // ========================
+        // YEMEK TOPLU GİRİŞ FONKSİYONLARI
+        // ========================
+
+        // Sütun başlığındaki dropdown ile tüm aktif öğrencilerin o öğün dropdownunu günceller
+        function bulkMealUpdate(mealSlug, value) {
+            if (value === '' || value === null || value === undefined) return;
+            document.querySelectorAll(`[id^="meal-status-"][id$="-${mealSlug}"]`).forEach(sel => {
+                if (!sel.disabled) {
+                    const ph = sel.querySelector('option[value=""]');
+                    if (ph) ph.remove();
+                    sel.value = parseInt(value);
+                }
+            });
+        }
+
+        // Tüm öğrencilerin tüm öğün kaydet işlemlerini sırayla tetikler
+        async function saveAllMeals() {
+            const rows = document.querySelectorAll('[id^="meal-row-tr-"]');
+            let successCount = 0;
+            let skipCount = 0;
+            let errorCount = 0;
+
+            const saveBtn = document.querySelector('[onclick="saveAllMeals()"]');
+            if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '⏳ Kaydediliyor...'; }
+
+            for (const row of rows) {
+                if (row.style.opacity === '0.7') continue;
+                const rowId = row.id.replace('meal-row-tr-', '');
+                const slugs = ['breakfast', 'lunch', 'snack'];
+                const mealNames = { breakfast: 'Kahvaltı', lunch: 'Öğle Yemeği', snack: 'İkindi Kahvaltısı' };
+
+                for (const slug of slugs) {
+                    const sel = document.getElementById(`meal-status-${rowId}-${slug}`);
+                    if (!sel || sel.disabled || sel.value === '') { skipCount++; continue; }
+                    const btn = document.getElementById(`btn-save-${rowId}-${slug}`);
+                    if (!btn) { skipCount++; continue; }
+                    const onclickStr = btn.getAttribute('onclick') || '';
+                    const match = onclickStr.match(/saveIndividualMeal\('([^']+)',\s*'([^']+)',\s*'([^']+)',\s*'([^']+)'\)/);
+                    if (!match) { skipCount++; continue; }
+                    const [, sId, mealRecordId, mealName] = match;
+                    const note = document.getElementById(`meal-note-${rowId}-${slug}`)?.value || '';
+                    try {
+                        const response = await fetch('/Teacher/UpdateMealRecord', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ studentId: sId, mealRecordId, mealName, statusType: parseInt(sel.value), statusDescription: note })
+                        });
+                        const data = await response.json();
+                        if (data.success) { successCount++; const ph = sel.querySelector('option[value=""]'); if (ph) ph.remove(); }
+                        else { errorCount++; }
+                    } catch { errorCount++; }
+                }
+            }
+
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                if (errorCount > 0) {
+                    saveBtn.innerHTML = `❌ ${errorCount} Hata`;
+                    saveBtn.style.background = '#ef4444';
+                    setTimeout(() => { saveBtn.innerHTML = '💾 Tümünü Kaydet'; saveBtn.style.background = ''; }, 3000);
+                    alert(`Toplu kayıt: ✅ ${successCount} başarılı, ❌ ${errorCount} hata, ⏭ ${skipCount} atlandı.`);
+                } else {
+                    saveBtn.innerHTML = `✓ ${successCount} Kayıt Tamamlandı!`;
+                    saveBtn.style.background = '#059669';
+                    setTimeout(() => { saveBtn.innerHTML = '💾 Tümünü Kaydet'; saveBtn.style.background = ''; }, 2500);
+                }
+            }
+        }
+
+        function changeClassroomDate(val) {
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('date', val);
+            window.location.search = urlParams.toString();
         }
     </script>
 }

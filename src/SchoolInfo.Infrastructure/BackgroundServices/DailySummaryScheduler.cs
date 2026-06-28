@@ -6,6 +6,7 @@ using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SchoolInfo.Application.Common.Interfaces;
 using SchoolInfo.Application.Features.DailySummary.Commands.GenerateDailySummary;
 using SchoolInfo.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 namespace SchoolInfo.Infrastructure.BackgroundServices;
 
 /// <summary>
-/// Her gÃ¼n 17:00'de Ã§alÄ±ÅŸarak Ã¶ÄŸrencilerin gÃ¼nlÃ¼k Ã¶zetlerini oluÅŸturan zamanlanmÄ±ÅŸ arka plan servisi.
+/// Her gün 17:00'de çalışarak öğrencilerin günlük günlüğünün hazır olduğunu bildiren zamanlanmış arka plan servisi.
 /// </summary>
 public class DailySummaryScheduler : BackgroundService
 {
@@ -39,15 +40,15 @@ public class DailySummaryScheduler : BackgroundService
             }
 
             var delay = targetTime - now;
-            _logger.LogInformation("DailySummaryScheduler {TargetTime} saatinde Ã§alÄ±ÅŸmak Ã¼zere bekliyor.", targetTime);
+            _logger.LogInformation("DailySummaryScheduler {TargetTime} saatinde çalışmak üzere bekliyor.", targetTime);
 
             try
             {
                 await Task.Delay(delay, stoppingToken);
 
-                _logger.LogInformation("DailySummaryScheduler Ã§alÄ±ÅŸmaya baÅŸladÄ±.");
+                _logger.LogInformation("DailySummaryScheduler çalışmaya başladı.");
                 await ProcessSummariesAsync(stoppingToken);
-                _logger.LogInformation("DailySummaryScheduler iÅŸlemi tamamlandÄ±.");
+                _logger.LogInformation("DailySummaryScheduler işlemi tamamlandı.");
             }
             catch (TaskCanceledException)
             {
@@ -55,7 +56,7 @@ public class DailySummaryScheduler : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "DailySummaryScheduler dÃ¶ngÃ¼sÃ¼nde hata oluÅŸtu.");
+                _logger.LogError(ex, "DailySummaryScheduler döngüsünde hata oluştu.");
                 await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
             }
         }
@@ -64,24 +65,31 @@ public class DailySummaryScheduler : BackgroundService
     private async Task ProcessSummariesAsync(CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
-        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var notificationService = scope.ServiceProvider.GetRequiredService<INotificationService>();
 
         var today = DateTime.UtcNow.AddHours(3).Date;
         
-        var studentIds = await dbContext.Students.Select(s => s.Id).ToListAsync(cancellationToken);
+        // Bugün günlük kaydı veya devamsızlık durumu girilmiş öğrencileri getirelim
+        var activeStudentIds = await dbContext.DailyRecords
+            .Where(r => r.Date == today && !r.IsDeleted)
+            .Select(r => r.StudentId)
+            .ToListAsync(cancellationToken);
 
-        foreach (var studentId in studentIds)
+        foreach (var studentId in activeStudentIds)
         {
             try
             {
-                var command = new GenerateDailySummaryCommand(studentId, today);
-                await mediator.Send(command, cancellationToken);
+                // Maliyeti sıfır tutmak için Gemini API'yi burada çağırmıyoruz.
+                // Sadece veliye bildirim atıyoruz. Veli sayfayı açtığında AI özeti anında (on-demand) üretilecektir.
+                await notificationService.SendNotificationAsync(
+                    studentId, 
+                    "Bugünün günlüğü hazır", 
+                    "Çocuğunuzun bugünkü okul günlüğü hazır! Yapay zeka özetini okumak için tıklayın.");
             }
             catch (Exception ex)
             {
-                // Bir Ã¶ÄŸrencinin hatasÄ± diÄŸerini etkilemesin
-                _logger.LogError(ex, "Ã–ÄŸrenci {StudentId} iÃ§in gÃ¼nlÃ¼k Ã¶zet oluÅŸturulurken hata meydana geldi.", studentId);
+                _logger.LogError(ex, "Öğrenci {StudentId} için hazır bildirimi gönderilirken hata meydana geldi.", studentId);
             }
         }
     }

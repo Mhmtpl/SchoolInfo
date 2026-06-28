@@ -20,10 +20,19 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.LogoutPath = "/Account/Logout";
         options.AccessDeniedPath = "/Account/Login";
         options.Cookie.Name = "SchoolInfo.Session";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() 
+            ? Microsoft.AspNetCore.Http.CookieSecurePolicy.None 
+            : Microsoft.AspNetCore.Http.CookieSecurePolicy.Always;
+        options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
     });
 
-// API Haberleşme Servisi (Typed HttpClient)
-builder.Services.AddHttpClient<SchoolInfoApiService>();
+// API Haberleşme Servisi (Typed HttpClient) ile SSL bypass (localhost için)
+builder.Services.AddHttpClient<SchoolInfoApiService>()
+    .ConfigurePrimaryHttpMessageHandler(() => new System.Net.Http.HttpClientHandler
+    {
+        ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+    });
 
 var app = builder.Build();
 

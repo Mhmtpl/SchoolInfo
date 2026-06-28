@@ -1,0 +1,7 @@
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+WORKDIR /app
+EXPOSE 5200
+ENV ASPNETCORE_URLS=http://+:5200
+COPY schoolinfo-web-publish/ .
+RUN chmod -R 755 /app
+ENTRYPOINT ["dotnet", "SchoolInfo.Web.dll"]

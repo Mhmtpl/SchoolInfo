@@ -637,6 +637,8 @@ a:hover {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: space-between;
 }
 
 .timeline-desc {
@@ -1009,4 +1011,59 @@ a:hover {
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- RESPONSIVE WEEKLY SCHEDULE GRID --- */
+.weekly-schedule-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+}
+
+@media (max-width: 1024px) {
+    .weekly-schedule-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+@media (max-width: 640px) {
+    .weekly-schedule-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* --- PREMIUM TABLE FOR PARENT VIEW --- */
+.premium-table-container {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: #ffffff;
+    margin-top: 1rem;
+}
+
+.premium-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.9rem;
+}
+
+.premium-table th {
+    background: rgba(240, 242, 245, 0.6);
+    padding: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.premium-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    vertical-align: middle;
+}
+
+.premium-table tr:last-child td {
+    border-bottom: none;
 }

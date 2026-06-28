@@ -113,7 +113,7 @@
 
     <!-- ÇOCUK KAHRAMAN KARTI (Child Hero Card) -->
     <div class="child-hero-card">
-        <div style="display: flex; align-items: center; gap: 1.5rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem; width: 100%;">
             <!-- Profil Baş Harfleri Avatarı -->
             <div style="width: 70px; height: 70px; background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; font-weight: 800; color: white; border: 3px solid rgba(255,255,255,0.15); box-shadow: 0 8px 20px rgba(2, 132, 199, 0.25);">
                 @{
@@ -216,9 +216,14 @@
                 var medicationRecords = ViewBag.MedicationRecords as List<MedicationRecordDto> ?? new List<MedicationRecordDto>();
             }
             <div class="glass-card" style="padding: 2rem; margin-top: 1.5rem; margin-bottom: 1.5rem;">
-                <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                    💊 Bugünkü İlaç Takip Durumu
-                </h2>
+                <div class="section-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+                    <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        💊 Bugünkü İlaç Takip Durumu
+                    </h2>
+                    <button type="button" onclick="openParentMedicationModal()" class="btn-secondary" style="margin-top: 0; padding: 0.4rem 0.8rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+                        ➕ İlaç Ekle
+                    </button>
+                </div>
                 @if (!medicationRecords.Any())
                 {
                     <div style="background: rgba(0,0,0,0.01); border: 1px dashed var(--border-color); border-radius: 12px; padding: 1.5rem; text-align: center; color: var(--text-secondary); font-size: 0.9rem; font-style: italic;">
@@ -230,7 +235,7 @@
                     <div style="display: flex; flex-direction: column; gap: 0.8rem;">
                         @foreach (var med in medicationRecords)
                         {
-                            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(30, 60, 114, 0.03); border: 1px solid rgba(30, 60, 114, 0.08); padding: 1rem 1.25rem; border-radius: 12px;">
+                            <div id="parent-med-row-@med.Id" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; background: rgba(30, 60, 114, 0.03); border: 1px solid rgba(30, 60, 114, 0.08); padding: 1rem 1.25rem; border-radius: 12px;">
                                 <div>
                                     <span style="font-weight: 700; color: #1e3c72; font-size: 1.05rem;">💊 @med.MedicineName</span>
                                     <span style="font-size: 0.85rem; color: var(--text-secondary); margin-left: 0.4rem;">(@med.Dosage)</span>
@@ -242,7 +247,7 @@
                                         }
                                     </div>
                                 </div>
-                                <div>
+                                <div style="display: flex; align-items: center; gap: 0.75rem;">
                                     @if (med.Taken)
                                     {
                                         <span style="font-size: 0.82rem; color: #065f46; background: #d1fae5; border: 1px solid #a7f3d0; padding: 0.3rem 0.8rem; border-radius: 20px; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">
@@ -250,10 +255,11 @@
                                         </span>
                                     }
                                     else
-                                      {
+                                    {
                                         <span style="font-size: 0.82rem; color: #7c2d12; background: #ffedd5; border: 1px solid #fed7aa; padding: 0.3rem 0.8rem; border-radius: 20px; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">
                                             • Beklemede
                                         </span>
+                                        <button type="button" onclick="deleteParentMedication('@med.Id')" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 0.2rem;" title="Sil">🗑️</button>
                                     }
                                 </div>
                             </div>
@@ -597,6 +603,49 @@
     </div>
 </div>
 
+<!-- VELİ İLAÇ TALEP MODALI -->
+<div id="parentMedicationModal" class="simple-modal">
+    <div class="glass-card simple-modal-content" style="max-width: 450px;">
+        <div class="section-card-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+            <h2>İlaç Talebi Ekle</h2>
+            <button onclick="closeParentMedicationModal()" style="background:none; border:none; color:var(--text-muted); font-size:1.5rem; cursor:pointer;">&times;</button>
+        </div>
+        <div>
+            <p style="font-weight: 700; color: var(--accent-blue); margin-bottom: 1rem;">@ViewBag.StudentName</p>
+            <div class="form-group">
+                <label for="pMedName">İlaç Adı</label>
+                <input type="text" id="pMedName" class="form-control" placeholder="Örn: Calpol, Parol Şurup" required />
+            </div>
+            <div class="form-group">
+                <label for="pMedDosage">Dozaj / Miktar</label>
+                <input type="text" id="pMedDosage" class="form-control" placeholder="Örn: 1 ölçek, 5 ml, 1 tablet" required />
+            </div>
+            <div class="form-group">
+                <label for="pMedTime">Veriliş Saati</label>
+                <input type="time" id="pMedTime" class="form-control" value="08:00" required />
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label for="pMedStartDate">Başlangıç Tarihi</label>
+                    <input type="date" id="pMedStartDate" class="form-control" required />
+                </div>
+                <div class="form-group">
+                    <label for="pMedEndDate">Bitiş Tarihi</label>
+                    <input type="date" id="pMedEndDate" class="form-control" required />
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="pMedNote">Öğretmene İletilecek Not (Opsiyonel)</label>
+                <textarea id="pMedNote" class="form-control" style="height: 80px; resize: none;" placeholder="Örn: Yemeklerden sonra tok karna verilecek..."></textarea>
+            </div>
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button type="button" onclick="closeParentMedicationModal()" class="btn-secondary" style="flex: 1;">İptal</button>
+                <button type="button" onclick="saveParentMedication()" class="btn-primary" style="flex: 1; margin-top: 0;">Talebi Gönder</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Chart.js initialization script -->
 @if (totalPlannedCalories > 0)
 {
@@ -701,7 +750,10 @@
                 }
             });
         });
+    </script>
+}
 
+<script>
         function downloadNewsletterPdf(id, title) {
             var element = document.getElementById('newsletter-pdf-' + id);
             var opt = {
@@ -767,5 +819,103 @@
             urlParams.set('date', val);
             window.location.search = urlParams.toString();
         }
+
+        function openParentMedicationModal() {
+            document.getElementById('pMedName').value = '';
+            document.getElementById('pMedDosage').value = '';
+            document.getElementById('pMedTime').value = '08:00';
+            document.getElementById('pMedNote').value = '';
+            
+            // Set default dates to selected page date or today
+            const selectedDate = document.getElementById('child-date-picker').value;
+            document.getElementById('pMedStartDate').value = selectedDate;
+            document.getElementById('pMedEndDate').value = selectedDate;
+            
+            document.getElementById('parentMedicationModal').style.display = 'flex';
+        }
+
+        function closeParentMedicationModal() {
+            document.getElementById('parentMedicationModal').style.display = 'none';
+        }
+
+        async function saveParentMedication() {
+            const name = document.getElementById('pMedName').value.trim();
+            const dosage = document.getElementById('pMedDosage').value.trim();
+            const time = document.getElementById('pMedTime').value;
+            const note = document.getElementById('pMedNote').value.trim();
+            const startDateStr = document.getElementById('pMedStartDate').value;
+            const endDateStr = document.getElementById('pMedEndDate').value;
+
+            if (!name || !dosage || !time || !startDateStr || !endDateStr) {
+                alert("Lütfen tüm alanları doldurunuz.");
+                return;
+            }
+
+            const start = new Date(startDateStr);
+            const end = new Date(endDateStr);
+
+            if (end < start) {
+                alert("Bitiş tarihi başlangıç tarihinden önce olamaz.");
+                return;
+            }
+
+            // Loop and submit for each date
+            let currentDate = new Date(start);
+            let promises = [];
+
+            while (currentDate <= end) {
+                const dateStr = currentDate.toISOString().split('T')[0];
+                
+                promises.push(
+                    fetch('/Parent/AddMedicationRecord', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            studentId: '@ViewBag.StudentId',
+                            medicineName: name,
+                            dosage: dosage,
+                            administrationTime: time,
+                            taken: false,
+                            note: note || null,
+                            date: dateStr
+                        })
+                    }).then(res => res.json())
+                );
+
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            try {
+                const results = await Promise.all(promises);
+                const failed = results.filter(r => !r.success);
+                
+                if (failed.length > 0) {
+                    alert(`${failed.length} ilaç kaydı oluşturulurken hata meydana geldi: ` + failed[0].message);
+                } else {
+                    window.location.reload();
+                }
+            } catch (err) {
+                console.error(err);
+                alert("İlaç talepleri gönderilirken iletişim hatası oluştu.");
+            }
+        }
+
+        async function deleteParentMedication(id) {
+            if (!confirm("Bu ilaç talebini iptal etmek / silmek istediğinize emin misiniz?")) return;
+
+            try {
+                const res = await fetch(`/Parent/DeleteMedicationRecord?id=${id}`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert("İlaç talebi silinirken hata oluştu: " + data.message);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("İletişim hatası.");
+            }
+        }
     </script>
-}

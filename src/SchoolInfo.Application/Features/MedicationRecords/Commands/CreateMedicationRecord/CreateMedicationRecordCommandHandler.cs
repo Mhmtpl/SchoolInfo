@@ -37,7 +37,7 @@ public class CreateMedicationRecordCommandHandler : IRequestHandler<CreateMedica
 
     public async Task<Guid> Handle(CreateMedicationRecordCommand request, CancellationToken cancellationToken)
     {
-        if (_currentUserService.Role != "Teacher" && _currentUserService.Role != "Admin")
+        if (_currentUserService.Role != "Teacher" && _currentUserService.Role != "Admin" && _currentUserService.Role != "Parent")
         {
             throw new UnauthorizedAccessException("İlaç kaydı oluşturmak için yetkiniz bulunmamaktadır.");
         }
@@ -48,12 +48,12 @@ public class CreateMedicationRecordCommandHandler : IRequestHandler<CreateMedica
             throw new StudentNotFoundException(request.StudentId);
         }
 
-        var today = DateTime.UtcNow.AddHours(3).Date;
-        var dailyRecord = await _dailyRecordRepository.GetByStudentAndDateAsync(request.StudentId, today);
+        var targetDate = request.Date?.Date ?? DateTime.UtcNow.AddHours(3).Date;
+        var dailyRecord = await _dailyRecordRepository.GetByStudentAndDateAsync(request.StudentId, targetDate);
 
         if (dailyRecord == null)
         {
-            dailyRecord = new DailyRecord(request.StudentId, today)
+            dailyRecord = new DailyRecord(request.StudentId, targetDate)
             {
                 SchoolId = student.SchoolId
             };

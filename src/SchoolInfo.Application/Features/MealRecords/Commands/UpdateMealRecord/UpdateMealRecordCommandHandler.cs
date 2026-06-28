@@ -100,6 +100,7 @@ public class UpdateMealRecordCommandHandler : IRequestHandler<UpdateMealRecordCo
                 }
 
                 await dbSet.AddAsync(mealRecord, cancellationToken);
+                await ClearCachedSummaryAsync(dailyRecord.Id, cancellationToken);
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 return;
             }
@@ -112,6 +113,21 @@ public class UpdateMealRecordCommandHandler : IRequestHandler<UpdateMealRecordCo
 
         mealRecord.UpdateStatus(new MealStatus(request.StatusType, request.Description ?? string.Empty));
         await _mealRecordRepository.UpdateAsync(mealRecord);
+        await ClearCachedSummaryAsync(mealRecord.DailyRecordId, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task ClearCachedSummaryAsync(Guid dailyRecordId, CancellationToken cancellationToken)
+    {
+        var dailyRecord = await _dailyRecordRepository.GetByIdAsync(dailyRecordId);
+        if (dailyRecord != null)
+        {
+            var existingSummary = await _dbContext.DailySummaries
+                .FirstOrDefaultAsync(s => s.StudentId == dailyRecord.StudentId && s.Date == dailyRecord.Date, cancellationToken);
+            if (existingSummary != null)
+            {
+                _dbContext.DailySummaries.Remove(existingSummary);
+            }
+        }
     }
 }

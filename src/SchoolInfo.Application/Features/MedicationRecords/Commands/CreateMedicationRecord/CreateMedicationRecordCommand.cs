@@ -9,4 +9,5 @@ public record CreateMedicationRecordCommand(
     string Dosage,
     string AdministrationTime,
     bool Taken,
-    string? Note) : IRequest<Guid>;
+    string? Note,
+    DateTime? Date = null) : IRequest<Guid>;

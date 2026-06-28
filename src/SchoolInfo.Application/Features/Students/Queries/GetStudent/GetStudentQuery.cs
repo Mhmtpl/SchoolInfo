@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -31,7 +31,19 @@ public class GetStudentHandler : IRequestHandler<GetStudentQuery, StudentDto>
         if (student == null)
             throw new System.Collections.Generic.KeyNotFoundException("Ogrenci bulunamadi.");
 
-        // TODO: Veli kontrolü (Sadece kendi çocuğu mu?) eklenebilir.
+        // Veli yalnızca kendi çocuğuna erişebilir (IDOR koruması)
+        if (_currentUserService.Role == "Parent")
+        {
+            // Shadow join table üzerinden kontrol: StudentParents
+            var isMyChild = await ((DbContext)_dbContext).Set<Student>()
+                .Where(s => s.Id == request.Id)
+                .SelectMany(s => s.Parents)
+                .AnyAsync(p => p.Id == _currentUserService.UserId, cancellationToken);
+
+            if (!isMyChild)
+                throw new UnauthorizedAccessException("Bu öğrencinin bilgilerine erişim yetkiniz bulunmamaktadır.");
+        }
+
         return new StudentDto(student.Id, student.FirstName, student.LastName, student.ClassroomId);
     }
 }

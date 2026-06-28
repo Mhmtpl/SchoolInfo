@@ -59,27 +59,31 @@ public class AccountController : Controller
                 return View(model);
             }
 
-            // Helper to get claim value safely from both short names and long XML URIs
-            Func<string, string, string, string> getClaim = (shortName, longUri, defVal) =>
+            // JWT içindeki claims'leri standart listeye ekliyoruz
+            var claims = new List<Claim>();
+            foreach (var claim in jsonToken.Claims)
             {
-                if (jsonToken.Payload.TryGetValue(shortName, out var v1) && v1 != null) return v1.ToString()!;
-                if (jsonToken.Payload.TryGetValue(longUri, out var v2) && v2 != null) return v2.ToString()!;
-                return defVal;
-            };
+                claims.Add(new Claim(claim.Type, claim.Value));
+            }
 
-            var emailVal = getClaim("email", ClaimTypes.Email, model.Email);
-            var roleVal = getClaim("role", ClaimTypes.Role, "Parent");
-            var nameIdVal = getClaim("sub", ClaimTypes.NameIdentifier, Guid.NewGuid().ToString());
-            var schoolIdVal = getClaim("SchoolId", "SchoolId", Guid.Empty.ToString());
-
-            var claims = new List<Claim>
+            // Geriye dönük uyumluluk ve varsayılan claims tanımları
+            if (!claims.Any(c => c.Type == ClaimTypes.Name))
             {
-                new Claim(ClaimTypes.Name, emailVal),
-                new Claim(ClaimTypes.NameIdentifier, nameIdVal),
-                new Claim(ClaimTypes.Role, roleVal),
-                new Claim("SchoolId", schoolIdVal),
-                new Claim("AccessToken", jwtToken)
-            };
+                var emailClaim = claims.FirstOrDefault(c => c.Type == "email" || c.Type == ClaimTypes.Email)?.Value ?? model.Email;
+                claims.Add(new Claim(ClaimTypes.Name, emailClaim));
+            }
+            if (!claims.Any(c => c.Type == ClaimTypes.Role))
+            {
+                var roleClaim = claims.FirstOrDefault(c => c.Type == "role")?.Value ?? "Parent";
+                claims.Add(new Claim(ClaimTypes.Role, roleClaim));
+            }
+            if (!claims.Any(c => c.Type == ClaimTypes.NameIdentifier))
+            {
+                var subClaim = claims.FirstOrDefault(c => c.Type == "sub")?.Value ?? Guid.NewGuid().ToString();
+                claims.Add(new Claim(ClaimTypes.NameIdentifier, subClaim));
+            }
+
+            claims.Add(new Claim("AccessToken", jwtToken));
 
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var principal = new ClaimsPrincipal(identity);

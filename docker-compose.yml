@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  schoolinfo-db:
+    image: postgres:15-alpine
+    container_name: schoolinfo-db
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=SchoolInfoDb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=PYSoft11&*#@2026xYz
+    volumes:
+      - schoolinfo_postgres_data:/var/lib/postgresql/data
+    restart: always
+    networks:
+      - schoolinfo-net
+
+  schoolinfo-api:
+    image: schoolinfo-api
+    container_name: schoolinfo-api
+    build:
+      context: .
+      dockerfile: Dockerfile.schoolinfo-api
+    ports:
+      - "5100:5100"
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=schoolinfo-db;Port=5432;Database=SchoolInfoDb;Username=postgres;Password=PYSoft11&*#@2026xYz;Include Error Detail=true
+      - Jwt__Issuer=SchoolInfo
+      - Jwt__Audience=SchoolInfoUsers
+      - Jwt__Key=VerySecretAndLongSecurityKeyThatMeetsTheMinimumRequirementOf256Bits_1234567890
+      - AgentFramework__ApiKey=YOUR_GEMINI_API_KEY
+      - AgentFramework__Model=gemini-3.1-flash-lite
+      - AgentFramework__ProjectName=SchoolInfoAI
+    depends_on:
+      - schoolinfo-db
+    restart: always
+    networks:
+      - schoolinfo-net
+      - proxy-net
+
+  schoolinfo-web:
+    image: schoolinfo-web
+    container_name: schoolinfo-web
+    build:
+      context: .
+      dockerfile: Dockerfile.schoolinfo-web
+    ports:
+      - "5200:5200"
+    environment:
+      - SchoolInfoApiUrl=http://schoolinfo-api:5100
+    depends_on:
+      - schoolinfo-api
+    restart: always
+    networks:
+      - schoolinfo-net
+      - proxy-net
+
+volumes:
+  schoolinfo_postgres_data:
+
+networks:
+  schoolinfo-net:
+    driver: bridge
+  proxy-net:
+    external: true
+    name: proxy-net

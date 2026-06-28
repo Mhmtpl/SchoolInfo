@@ -32,13 +32,20 @@ public class SchoolInfoApiService
         _httpClient.BaseAddress = new Uri(apiUrl.TrimEnd('/') + "/");
     }
 
-    /// <summary>
-    /// Aktif kullanıcının JWT Access Token bilgisini Cookie claims üzerinden okur ve HTTP istek başlığına ekler.
-    /// </summary>
     private void AttachAuthorizationHeader()
     {
         var user = _httpContextAccessor.HttpContext?.User;
         var tokenClaim = user?.FindFirst("AccessToken")?.Value;
+
+        System.Console.WriteLine($"[DIAGNOSTIC] tokenClaim degeri: '{tokenClaim}'");
+        if (user?.Identity?.IsAuthenticated == true)
+        {
+            System.Console.WriteLine("[DIAGNOSTIC] Mevcut Claims:");
+            foreach (var c in user.Claims)
+            {
+                System.Console.WriteLine($"  Type: '{c.Type}', Value: '{c.Value}'");
+            }
+        }
 
         if (!string.IsNullOrEmpty(tokenClaim))
         {

@@ -25,7 +25,7 @@ public class DeleteMedicationRecordCommandHandler : IRequestHandler<DeleteMedica
 
     public async Task Handle(DeleteMedicationRecordCommand request, CancellationToken cancellationToken)
     {
-        if (_currentUserService.Role != "Teacher" && _currentUserService.Role != "Admin")
+        if (_currentUserService.Role != "Teacher" && _currentUserService.Role != "Admin" && _currentUserService.Role != "Parent")
         {
             throw new UnauthorizedAccessException("İlaç kaydını silmek için yetkiniz bulunmamaktadır.");
         }

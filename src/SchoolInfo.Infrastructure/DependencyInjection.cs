@@ -57,11 +57,14 @@ Kurallar:
 - Resmi deÄŸil, samimi dil kullan
 - Sadece Ã¶zet metni dÃ¶ndÃ¼r, baÅŸka hiÃ§bir ÅŸey yazma";
 
-        // Agent instance'Ä± DI ile singleton olarak register et
+        services.AddHttpClient();
+
+        // Agent instance'ını DI ile singleton olarak register et
         services.AddSingleton(provider => 
         {
-            var client = new OpenAIClient(apiKey);
-            var agent = new SchoolAIAgent(client, "SchoolSummaryAgent", instructions);
+            var httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
+            var httpClient = httpClientFactory.CreateClient();
+            var agent = new SchoolAIAgent(httpClient, apiKey, model, instructions);
             return agent;
         });
 

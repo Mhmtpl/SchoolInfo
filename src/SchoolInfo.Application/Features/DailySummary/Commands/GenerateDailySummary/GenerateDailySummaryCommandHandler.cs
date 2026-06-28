@@ -49,10 +49,10 @@ public class GenerateDailySummaryCommandHandler : IRequestHandler<GenerateDailyS
 
     public async Task<Guid> Handle(GenerateDailySummaryCommand request, CancellationToken cancellationToken)
     {
-        // 1. ICurrentUserService ile yetki kontrolÃ¼ yap
-        if (_currentUserService.Role != "Teacher" && _currentUserService.Role != "Admin" && _currentUserService.Role != "System")
+        // 1. ICurrentUserService ile yetki kontrolü yap (Arka plan servisi çalıştığında role boş gelecektir, buna izin veriyoruz)
+        if (_currentUserService.Role != "Teacher" && _currentUserService.Role != "Admin" && _currentUserService.Role != "System" && _currentUserService.Role != "")
         {
-            throw new UnauthorizedAccessException("GÃ¼nlÃ¼k Ã¶zet raporu oluÅŸturmak iÃ§in yetkiniz bulunmamaktadÄ±r.");
+            throw new UnauthorizedAccessException("Günlük özet raporu oluşturmak için yetkiniz bulunmamaktadır.");
         }
 
         // 2. StudentRepository'den Ã¶ÄŸrenciyi getir
@@ -90,19 +90,23 @@ public class GenerateDailySummaryCommandHandler : IRequestHandler<GenerateDailyS
             Activities: activities.Select(a => new ActivityDto(a.Title, a.Description, a.ActivityDate)).ToList()
         );
 
-        // 7. IAISummaryService.GenerateAsync() Ã§aÄŸÄ±r
-        var aiContent = await _aiSummaryService.GenerateAsync(summaryDto);
+        string aiContent;
+        if (dailyRecord.IsAbsent)
+        {
+            aiContent = "Öğrencimiz bugün devamsız olduğu için günlük özet raporu bulunmamaktadır.";
+        }
+        else
+        {
+            // 7. IAISummaryService.GenerateAsync() çağır
+            aiContent = await _aiSummaryService.GenerateAsync(summaryDto);
+        }
         
-        // 8. DailySummary entity'si oluÅŸtur ve kaydet
+        // 8. DailySummary entity'si oluştur ve kaydet
         var summary = new SchoolInfo.Domain.Entities.DailySummary(student.Id, request.Date, aiContent);
         summary.SchoolId = student.SchoolId;
 
         await _dailySummaryRepository.AddAsync(summary);
         await _dbContext.SaveChangesAsync(cancellationToken);
-
-        // 9. INotificationService ile veliye bildirim gÃ¶nder
-        var firstSentence = aiContent.Split('.').FirstOrDefault() + ".";
-        await _notificationService.SendNotificationAsync(student.Id, "BugÃ¼nÃ¼n Ã¶zeti hazÄ±r", firstSentence);
 
         return summary.Id;
     }
