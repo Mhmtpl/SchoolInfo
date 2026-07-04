@@ -10,6 +10,9 @@ import '../../domain/entities/classroom_summary.dart';
 import '../../domain/entities/student_meal_record.dart';
 import '../../domain/entities/weekly_meal_plan.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import '../../../../theme/app_theme.dart';
+import '../../../../theme/theme_provider.dart';
+import '../../../../theme/theme_provider.dart';
 
 class TeacherClassSelectionScreen extends ConsumerWidget {
   const TeacherClassSelectionScreen({super.key});
@@ -20,9 +23,23 @@ class TeacherClassSelectionScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
+        backgroundColor: theme.colorScheme.surface,
+        elevation: 0,
+        centerTitle: true,
         title: const Text('Öğretmen Paneli'),
+        foregroundColor: theme.colorScheme.onSurface,
         actions: [
+          IconButton(
+            icon: Icon(theme.brightness == Brightness.dark ? Icons.wb_sunny_outlined : Icons.nights_stay_outlined),
+            tooltip: 'Tema Değiştir',
+            onPressed: () {
+              final current = ref.read(appThemeModeProvider);
+              ref.read(appThemeModeProvider.notifier).state =
+                  current == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout_rounded),
             tooltip: 'Çıkış Yap',
@@ -30,10 +47,13 @@ class TeacherClassSelectionScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: classroomAsync.when(
-        data: (classrooms) => _buildClassroomList(context, classrooms),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Hata: $error')),
+      body: Container(
+        color: theme.colorScheme.surface,
+        child: classroomAsync.when(
+          data: (classrooms) => _buildClassroomList(context, classrooms),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => Center(child: Text('Hata: $error')),
+        ),
       ),
     );
   }
@@ -51,10 +71,10 @@ class TeacherClassSelectionScreen extends ConsumerWidget {
   ) {
     final theme = Theme.of(context);
     if (classrooms.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'Atanmış sınıf bulunamadı.',
-          style: TextStyle(color: Color(0xFF64748B), fontSize: 16),
+          style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.75), fontSize: 16),
         ),
       );
     }
@@ -63,42 +83,65 @@ class TeacherClassSelectionScreen extends ConsumerWidget {
 
     return ListView(
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       children: [
         // Hoş Geldiniz Kartı
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
-            boxShadow: const [
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: theme.colorScheme.primary.withOpacity(0.14), width: 1),
+            boxShadow: [
               BoxShadow(
-                color: Color.fromRGBO(15, 23, 42, 0.03),
-                blurRadius: 20,
-                offset: Offset(0, 8),
+                color: theme.brightness == Brightness.dark
+                    ? Colors.black.withOpacity(0.30)
+                    : Colors.black.withOpacity(0.07),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
               ),
             ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Container(
+                width: 56,
+                height: 6,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Container(
+                width: 64,
+                height: 6,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
                 'Hoş geldiniz, Öğretmenim! 👋',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
+                  color: theme.colorScheme.onSurface,
                   letterSpacing: -0.5,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Bugün sınıflarınızı hızlıca yönetebilir, uyku ve haftalık yemek programlarını düzenleyebilirsiniz.',
-                style: TextStyle(
-                  color: Color(0xFF64748B),
-                  fontSize: 14,
-                  height: 1.5,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withOpacity(0.72),
+                  height: 1.55,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -115,12 +158,12 @@ class TeacherClassSelectionScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 24),
         
-        const Text(
+        Text(
           'Sınıflarınız',
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 18,
             fontWeight: FontWeight.w800,
-            color: Color(0xFF0F172A),
+            color: theme.colorScheme.onBackground,
           ),
         ),
         const SizedBox(height: 12),
@@ -130,13 +173,15 @@ class TeacherClassSelectionScreen extends ConsumerWidget {
             padding: const EdgeInsets.only(bottom: 12),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
-                boxShadow: const [
+                border: Border.all(color: theme.colorScheme.primary.withOpacity(0.08), width: 1),
+                boxShadow: [
                   BoxShadow(
-                    color: Color.fromRGBO(15, 23, 42, 0.02),
-                    blurRadius: 10,
+                    color: theme.brightness == Brightness.dark
+                        ? Colors.black.withOpacity(0.18)
+                        : Colors.black.withOpacity(0.04),
+                    blurRadius: 14,
                   ),
                 ],
               ),
@@ -157,13 +202,22 @@ class TeacherClassSelectionScreen extends ConsumerWidget {
                     child: Row(
                       children: [
                         Container(
-                          width: 44,
-                          height: 44,
+                          width: 50,
+                          height: 50,
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withOpacity(0.08),
+                            color: theme.colorScheme.primary.withOpacity(0.18),
                             shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: theme.brightness == Brightness.dark
+                                    ? theme.colorScheme.primary.withOpacity(0.18)
+                                    : theme.colorScheme.primary.withOpacity(0.16),
+                                blurRadius: 14,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
                           ),
-                          child: Icon(Icons.school_rounded, color: theme.colorScheme.primary, size: 20),
+                          child: Icon(Icons.school_rounded, color: theme.colorScheme.primary, size: 22),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
@@ -172,21 +226,23 @@ class TeacherClassSelectionScreen extends ConsumerWidget {
                             children: [
                               Text(
                                 classroom.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                  color: Color(0xFF0F172A),
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: theme.colorScheme.onBackground,
                                 ),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 '${classroom.studentCount} kayıtlı öğrenci',
-                                style: const TextStyle(color: Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w500),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurface.withOpacity(0.72),
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ],
                           ),
                         ),
-                        const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8), size: 24),
+                        Icon(Icons.chevron_right_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), size: 24),
                       ],
                     ),
                   ),
@@ -200,13 +256,13 @@ class TeacherClassSelectionScreen extends ConsumerWidget {
   }
 
   Widget _dashboardMetric(BuildContext context, String label, String value, Color color) {
+    final theme = Theme.of(context);
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: color.withOpacity(0.08),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.12), width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,9 +279,8 @@ class TeacherClassSelectionScreen extends ConsumerWidget {
             const SizedBox(height: 4),
             Text(
               label,
-              style: const TextStyle(
-                color: Color(0xFF64748B),
-                fontSize: 13,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.62),
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -286,7 +341,8 @@ class _TeacherClassroomDetailScreenState
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 7, vsync: this);
+    // Removed the 'Sınıf' tab; total tabs now 6
+    _tabController = TabController(length: 6, vsync: this);
     _tabController.addListener(() => setState(() {}));
     _dailyScrollController = ScrollController();
     _dailyScrollController.addListener(() {
@@ -307,7 +363,7 @@ class _TeacherClassroomDetailScreenState
       final hasSpeech = await _speech.initialize(
         onError: (val) {
           setState(() {
-            _speechError = 'Hata: ${val.errorString}';
+            _speechError = 'Hata: ${val.errorMsg}';
             _isListening = false;
           });
         },
@@ -399,6 +455,7 @@ class _TeacherClassroomDetailScreenState
           _aiSuccessMessage = result.message;
           _aiUpdatedStudents = result.updatedStudents;
           _aiCommandController.clear();
+          _dailyEntriesInitialized = false;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -436,6 +493,7 @@ class _TeacherClassroomDetailScreenState
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final studentsAsync = ref.watch(
       classroomStudentsProvider(widget.classroom.id),
     );
@@ -454,28 +512,29 @@ class _TeacherClassroomDetailScreenState
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: theme.colorScheme.surface,
+        elevation: 0,
+        centerTitle: true,
         title: Text(widget.classroom.name),
+        foregroundColor: theme.colorScheme.onSurface,
         actions: [
+          IconButton(
+            icon: Icon(theme.brightness == Brightness.dark ? Icons.wb_sunny_outlined : Icons.nights_stay_outlined),
+            tooltip: 'Tema Değiştir',
+            onPressed: () {
+              final current = ref.read(appThemeModeProvider);
+              ref.read(appThemeModeProvider.notifier).state =
+                  current == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Çıkış Yap',
             onPressed: _logout,
           ),
         ],
-        bottom: TabBar(
-          isScrollable: true,
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.people), text: 'Sınıf'),
-            Tab(icon: Icon(Icons.schedule), text: 'Günlük'),
-            Tab(icon: Icon(Icons.restaurant), text: 'Yemek'),
-            Tab(icon: Icon(Icons.medication), text: 'İlaç'),
-            Tab(icon: Icon(Icons.calendar_today), text: 'Plan'),
-            Tab(icon: Icon(Icons.sports_handball), text: 'Aktiviteler'),
-            Tab(icon: Icon(Icons.auto_awesome_rounded), text: 'Yapay Zeka'),
-          ],
-        ),
       ),
+      backgroundColor: theme.colorScheme.background,
       body: Column(
         children: [
           _buildHeader(),
@@ -483,7 +542,6 @@ class _TeacherClassroomDetailScreenState
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildStudentsTab(studentsAsync),
                 _buildDailyTab(dailyAsync),
                 _buildMealTab(studentsAsync, mealsAsync),
                 _buildMedicationTab(studentsAsync),
@@ -495,13 +553,147 @@ class _TeacherClassroomDetailScreenState
           ),
         ],
       ),
-      floatingActionButton: _tabController.index == 5
+      bottomNavigationBar: _buildBottomNavigationBar(context),
+      floatingActionButton: _tabController.index == 4
           ? FloatingActionButton.extended(
               onPressed: _showCreateActivityDialog,
               icon: const Icon(Icons.add),
               label: const Text('Yeni Aktivite'),
             )
           : null,
+    );
+  }
+
+  Widget _buildBottomNavigationBar(BuildContext context) {
+    final theme = Theme.of(context);
+    final activeColor = theme.colorScheme.primary;
+    final inactiveColor = theme.brightness == Brightness.dark
+        ? Colors.white70
+        : theme.colorScheme.onSurface.withOpacity(0.65);
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+        child: Container(
+          height: 88,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: theme.brightness == Brightness.dark
+                    ? Colors.black.withOpacity(0.35)
+                    : Colors.black.withOpacity(0.10),
+                blurRadius: 22,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Positioned.fill(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildNavItem(context, icon: Icons.schedule, index: 0, label: 'Günlük', activeColor: activeColor, inactiveColor: inactiveColor),
+                          _buildNavItem(context, icon: Icons.restaurant, index: 1, label: 'Yemek', activeColor: activeColor, inactiveColor: inactiveColor),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 90),
+                    Expanded(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildNavItem(context, icon: Icons.medication, index: 2, label: 'İlaç', activeColor: activeColor, inactiveColor: inactiveColor),
+                          _buildNavItem(context, icon: Icons.calendar_today, index: 3, label: 'Hafta', activeColor: activeColor, inactiveColor: inactiveColor),
+                          _buildNavItem(context, icon: Icons.sports_handball, index: 4, label: 'Aktivite', activeColor: activeColor, inactiveColor: inactiveColor),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: -18,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: _buildCenterAiButton(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(
+    BuildContext context, {
+    required IconData icon,
+    required int index,
+    required String label,
+    required Color activeColor,
+    required Color inactiveColor,
+  }) {
+    final theme = Theme.of(context);
+    final isSelected = _tabController.index == index;
+    return GestureDetector(
+      onTap: () => _tabController.animateTo(index),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor.withOpacity(0.14) : Colors.transparent,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: isSelected ? activeColor : inactiveColor, size: 24),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: isSelected ? activeColor : inactiveColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCenterAiButton(BuildContext context) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: () => _tabController.animateTo(5),
+      child: Container(
+        width: 72,
+        height: 72,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: theme.colorScheme.primary.withOpacity(0.28),
+              blurRadius: 22,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 32),
+      ),
     );
   }
 
@@ -653,7 +845,7 @@ class _TeacherClassroomDetailScreenState
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -680,38 +872,7 @@ class _TeacherClassroomDetailScreenState
     );
   }
 
-  Widget _buildStudentsTab(AsyncValue<List<Student>> studentsAsync) {
-    return studentsAsync.when(
-      data: (students) {
-        if (students.isEmpty) {
-          return const Center(child: Text('Sınıfta öğrenci bulunamadı.'));
-        }
-        return RefreshIndicator(
-          onRefresh: () async {
-            ref.refresh(classroomStudentsProvider(widget.classroom.id));
-          },
-          child: ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: students.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              final student = students[index];
-              return Card(
-                child: ListTile(
-                  title: Text('${student.firstName} ${student.lastName}'),
-                  subtitle: Text(
-                    'Doğum: ${student.dateOfBirth.toLocal().toIso8601String().split('T').first}',
-                  ),
-                ),
-              );
-            },
-          ),
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Hata: $error')),
-    );
-  }
+  // 'Sınıf' tab removed — student list rendered elsewhere if needed.
 
   Widget _buildDailyTab(AsyncValue<List<ClassroomDailyRecord>> dailyAsync) {
     return dailyAsync.when(
@@ -761,9 +922,9 @@ class _TeacherClassroomDetailScreenState
                 padding: const EdgeInsets.all(16),
                 children: [
               Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 elevation: 2,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -928,7 +1089,7 @@ class _TeacherClassroomDetailScreenState
                     onPressed: _isDailySaving ? null : _saveDailyEntries,
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: const Color(0xFF6C5CE7),
+                      backgroundColor: AppColors.primary,
                     ),
                     child: Text(_isDailySaving ? 'Kaydediliyor...' : 'Günlük Kaydet'),
                   ),
@@ -1050,10 +1211,10 @@ class _TeacherClassroomDetailScreenState
                   const SizedBox(height: 16),
                   ..._mealEntries.map((entry) {
                     return Card(
-                      key: ValueKey(entry.studentId),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
+                            key: ValueKey(entry.studentId),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                       child: ExpansionTile(
                         title: Row(
                           children: [
@@ -1210,10 +1371,10 @@ class _TeacherClassroomDetailScreenState
               const SizedBox(height: 16),
               ..._medicationEntries.map((entry) {
                 return Card(
-                  key: ValueKey('med-${entry.studentId}'),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+                    key: ValueKey('med-${entry.studentId}'),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   child: ExpansionTile(
                     title: Row(
                       children: [

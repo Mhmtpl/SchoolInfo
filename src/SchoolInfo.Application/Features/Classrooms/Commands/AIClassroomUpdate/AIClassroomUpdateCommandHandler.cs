@@ -94,7 +94,9 @@ public class AIClassroomUpdateCommandHandler : IRequestHandler<AIClassroomUpdate
         {
             parsedResponse = JsonSerializer.Deserialize<AIUpdateResponse>(cleanJson, new JsonSerializerOptions
             {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                PropertyNameCaseInsensitive = true,
+                NumberHandling = JsonNumberHandling.AllowReadingFromString
             });
         }
         catch (Exception ex)
@@ -118,12 +120,49 @@ public class AIClassroomUpdateCommandHandler : IRequestHandler<AIClassroomUpdate
         // Her bir öğrenci güncellemesini uygula
         foreach (var updateItem in parsedResponse.Updates)
         {
+            var targetStudents = new List<Student>();
             var student = students.FirstOrDefault(s => s.Id == updateItem.StudentId);
-            if (student == null) continue; // Güvenlik kontrolü: Öğrenci gerçekten bu sınıfta mı?
+            if (student != null)
+            {
+                targetStudents.Add(student);
+            }
+            else if (!string.IsNullOrWhiteSpace(updateItem.StudentName))
+            {
+                var normalizedName = updateItem.StudentName.Trim();
+                if (normalizedName.Equals("herkes", StringComparison.OrdinalIgnoreCase) ||
+                    normalizedName.Equals("tüm sınıf", StringComparison.OrdinalIgnoreCase) ||
+                    normalizedName.Equals("tüm ogrenciler", StringComparison.OrdinalIgnoreCase) ||
+                    normalizedName.Contains("tüm") ||
+                    normalizedName.Contains("herkes"))
+                {
+                    targetStudents.AddRange(students);
+                }
+                else
+                {
+                    targetStudents.AddRange(students.Where(s =>
+                        string.Equals($"{s.FirstName} {s.LastName}", normalizedName, StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals($"{s.LastName} {s.FirstName}", normalizedName, StringComparison.OrdinalIgnoreCase)));
 
-            // DailyRecord kaydını bul veya oluştur
-            var dailyRecord = await _dbContext.DailyRecords
-                .FirstOrDefaultAsync(r => r.StudentId == student.Id && r.Date == targetDate && !r.IsDeleted, cancellationToken);
+                    if (!targetStudents.Any())
+                    {
+                        var firstNameMatches = students.Where(s =>
+                            string.Equals(s.FirstName, normalizedName, StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(s.LastName, normalizedName, StringComparison.OrdinalIgnoreCase)).ToList();
+                        if (firstNameMatches.Count == 1)
+                        {
+                            targetStudents.Add(firstNameMatches[0]);
+                        }
+                    }
+                }
+            }
+
+            if (!targetStudents.Any()) continue; // Güvenlik kontrolü: Öğrenci gerçekten bu sınıfta mı?
+
+            foreach (var targetStudent in targetStudents)
+            {
+                // DailyRecord kaydını bul veya oluştur
+                var dailyRecord = await _dbContext.DailyRecords
+                    .FirstOrDefaultAsync(r => r.StudentId == targetStudent.Id && r.Date == targetDate && !r.IsDeleted, cancellationToken);
 
             bool isNewRecord = false;
             if (dailyRecord == null)
@@ -137,27 +176,31 @@ public class AIClassroomUpdateCommandHandler : IRequestHandler<AIClassroomUpdate
             }
 
             var reportParts = new List<string>();
+            var dailyUpdateApplied = false;
 
             // 1. Günlük Kayıt (Daily Record) güncellemeleri
-            if (updateItem.UpdateDailyRecord)
+            if (updateItem.UpdateDailyRecord || updateItem.SleepStatus.HasValue || updateItem.WaterIntake.HasValue || updateItem.TeacherNote != null || updateItem.IsAbsent.HasValue)
             {
                 if (updateItem.SleepStatus.HasValue)
                 {
                     var sleepStatus = (SleepStatus)updateItem.SleepStatus.Value;
                     dailyRecord.UpdateSleepInfo(new SleepData(sleepStatus, targetDate.AddHours(13), targetDate.AddHours(14).AddMinutes(30)));
                     reportParts.Add($"Uyku: {GetSleepStatusText(sleepStatus)}");
+                    dailyUpdateApplied = true;
                 }
 
                 if (updateItem.WaterIntake.HasValue)
                 {
                     dailyRecord.UpdateWaterConsumption(new WaterIntake(updateItem.WaterIntake.Value));
                     reportParts.Add($"Su: {updateItem.WaterIntake.Value} ml");
+                    dailyUpdateApplied = true;
                 }
 
                 if (updateItem.TeacherNote != null)
                 {
                     dailyRecord.SetTeacherNote(updateItem.TeacherNote);
                     reportParts.Add($"Not: \"{updateItem.TeacherNote}\"");
+                    dailyUpdateApplied = true;
                 }
 
                 if (updateItem.IsAbsent.HasValue)
@@ -168,6 +211,7 @@ public class AIClassroomUpdateCommandHandler : IRequestHandler<AIClassroomUpdate
                     {
                         dailyRecord.SetTeacherNote("Öğrenci devamsız");
                     }
+                    dailyUpdateApplied = true;
                 }
             }
 

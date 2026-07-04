@@ -2,6 +2,7 @@ using System;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace SchoolInfo.Infrastructure.AI;
@@ -23,9 +24,9 @@ public class SchoolAIAgent
 
     public async Task<string> RunAsync(string input)
     {
-        if (string.IsNullOrEmpty(_apiKey) || _apiKey == "YOUR_API_KEY")
+        if (string.IsNullOrEmpty(_apiKey) || _apiKey == "YOUR_API_KEY" || _apiKey == "YOUR_GEMINI_API_KEY")
         {
-            return "Bugün okulda her şey harikaydı. Yemeklerini güzelce yedi.";
+            throw new InvalidOperationException("Gemini API anahtarı ayarlı değil. Lütfen appsettings.json içindeki AgentFramework:ApiKey değerini güncelleyin.");
         }
 
         // Gemini API URL
@@ -84,7 +85,32 @@ public class SchoolAIAgent
     {
         if (string.IsNullOrEmpty(_apiKey) || _apiKey == "YOUR_API_KEY" || _apiKey == "YOUR_GEMINI_API_KEY")
         {
-            return responseJson ? "{}" : "İşlem yapılamadı.";
+            // Local fallback: try to understand simple commands like "herkes 333 su içti"
+            if (responseJson)
+            {
+                try
+                {
+                    // Look for patterns like "herkes 333 su" or just a number followed by ml
+                    var lowered = input.ToLowerInvariant();
+                    var match = Regex.Match(lowered, @"herkes\s+(\d{1,4})\s*(ml|su)?")
+                                 ?? Regex.Match(lowered, @"(\d{1,4})\s*ml");
+
+                    if (match.Success && int.TryParse(match.Groups[1].Value, out var amount))
+                    {
+                        // Build a minimal AI JSON response that our handler understands
+                        var json = $"{{\"updates\":[{{\"studentName\":\"herkes\",\"updateDailyRecord\":true,\"waterIntake\":{amount}}}]}}";
+                        return json;
+                    }
+                }
+                catch
+                {
+                    // fall through to empty JSON
+                }
+
+                return "{}";
+            }
+
+            return "İşlem yapılamadı.";
         }
 
         // Gemini API URL
