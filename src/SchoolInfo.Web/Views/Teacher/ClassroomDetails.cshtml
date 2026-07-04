@@ -2415,21 +2415,13 @@
                 };
 
                 voiceRecognition.onresult = (event) => {
-                    let resultText = '';
-                    for (let i = event.resultIndex; i < event.results.length; ++i) {
-                        if (event.results[i].isFinal) {
-                            resultText += event.results[i][0].transcript;
-                        }
+                    const transcript = event.results[0][0].transcript;
+                    if (input.value) {
+                        input.value += ' ' + transcript;
+                    } else {
+                        input.value = transcript;
                     }
-                    if (resultText) {
-                        resultText = resultText.trim();
-                        if (input.value) {
-                            input.value += ' ' + resultText;
-                        } else {
-                            input.value = resultText;
-                        }
-                        statusText.innerHTML = '✓ Ses başarıyla metne çevrildi.';
-                    }
+                    statusText.innerHTML = '✓ Ses başarıyla metne çevrildi.';
                 };
 
                 voiceRecognition.onerror = (event) => {

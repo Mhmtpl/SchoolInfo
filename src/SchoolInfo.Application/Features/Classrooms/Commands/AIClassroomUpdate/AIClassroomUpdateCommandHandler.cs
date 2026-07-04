@@ -121,12 +121,6 @@ public class AIClassroomUpdateCommandHandler : IRequestHandler<AIClassroomUpdate
             var student = students.FirstOrDefault(s => s.Id == updateItem.StudentId);
             if (student == null) continue; // Güvenlik kontrolü: Öğrenci gerçekten bu sınıfta mı?
 
-            // Eğer hiçbir güncelleme yoksa boşuna veritabanı işlemi yapma
-            if (!updateItem.UpdateDailyRecord && (!updateItem.UpdateMeals || updateItem.Meals == null || !updateItem.Meals.Any()))
-            {
-                continue;
-            }
-
             // DailyRecord kaydını bul veya oluştur
             var dailyRecord = await _dbContext.DailyRecords
                 .FirstOrDefaultAsync(r => r.StudentId == student.Id && r.Date == targetDate && !r.IsDeleted, cancellationToken);
@@ -144,90 +138,83 @@ public class AIClassroomUpdateCommandHandler : IRequestHandler<AIClassroomUpdate
 
             var reportParts = new List<string>();
 
-            // Yoklama durumunu kontrol et ve güncelle
-            bool isCurrentlyAbsent = dailyRecord.IsAbsent;
-            if (updateItem.UpdateDailyRecord && updateItem.IsAbsent.HasValue)
+            // 1. Günlük Kayıt (Daily Record) güncellemeleri
+            if (updateItem.UpdateDailyRecord)
             {
-                isCurrentlyAbsent = updateItem.IsAbsent.Value;
-                dailyRecord.SetAbsentStatus(isCurrentlyAbsent);
-                reportParts.Add(isCurrentlyAbsent ? "Yoklama: Devamsız" : "Yoklama: Derste");
-                if (isCurrentlyAbsent && string.IsNullOrEmpty(dailyRecord.TeacherNote))
+                if (updateItem.SleepStatus.HasValue)
                 {
-                    dailyRecord.SetTeacherNote("Öğrenci devamsız");
+                    var sleepStatus = (SleepStatus)updateItem.SleepStatus.Value;
+                    dailyRecord.UpdateSleepInfo(new SleepData(sleepStatus, targetDate.AddHours(13), targetDate.AddHours(14).AddMinutes(30)));
+                    reportParts.Add($"Uyku: {GetSleepStatusText(sleepStatus)}");
+                }
+
+                if (updateItem.WaterIntake.HasValue)
+                {
+                    dailyRecord.UpdateWaterConsumption(new WaterIntake(updateItem.WaterIntake.Value));
+                    reportParts.Add($"Su: {updateItem.WaterIntake.Value} ml");
+                }
+
+                if (updateItem.TeacherNote != null)
+                {
+                    dailyRecord.SetTeacherNote(updateItem.TeacherNote);
+                    reportParts.Add($"Not: \"{updateItem.TeacherNote}\"");
+                }
+
+                if (updateItem.IsAbsent.HasValue)
+                {
+                    dailyRecord.SetAbsentStatus(updateItem.IsAbsent.Value);
+                    reportParts.Add(updateItem.IsAbsent.Value ? "Yoklama: Devamsız" : "Yoklama: Derste");
+                    if (updateItem.IsAbsent.Value && string.IsNullOrEmpty(dailyRecord.TeacherNote))
+                    {
+                        dailyRecord.SetTeacherNote("Öğrenci devamsız");
+                    }
                 }
             }
 
-            // Sadece öğrenci devamsız DEĞİLSE uyku, su ve yemek kayıtlarını güncelle
-            if (!isCurrentlyAbsent)
+            // 2. Yemek Kayıtları (Meal Records) güncellemeleri
+            if (updateItem.UpdateMeals && updateItem.Meals != null && updateItem.Meals.Any())
             {
-                // 1. Günlük Kayıt (Daily Record) güncellemeleri
-                if (updateItem.UpdateDailyRecord)
+                // Mevcut öğünleri çek
+                // (Eğer yeni kayıt ise zaten mevcut öğün yoktur)
+                var mealRecords = isNewRecord 
+                    ? new List<MealRecord>() 
+                    : await _dbContext.MealRecords
+                        .Where(m => m.DailyRecordId == dailyRecord.Id && !m.IsDeleted)
+                        .ToListAsync(cancellationToken);
+
+                foreach (var mealUpdate in updateItem.Meals)
                 {
-                    if (updateItem.SleepStatus.HasValue)
+                    var existingMeal = mealRecords
+                        .FirstOrDefault(m => m.MealName.Equals(mealUpdate.MealName, StringComparison.OrdinalIgnoreCase));
+
+                    var mealStatus = new MealStatus((MealStatusType)mealUpdate.StatusType, mealUpdate.StatusDescription ?? string.Empty);
+
+                    if (existingMeal == null)
                     {
-                        var sleepStatus = (SleepStatus)updateItem.SleepStatus.Value;
-                        dailyRecord.UpdateSleepInfo(new SleepData(sleepStatus, targetDate.AddHours(13), targetDate.AddHours(14).AddMinutes(30)));
-                        reportParts.Add($"Uyku: {GetSleepStatusText(sleepStatus)}");
-                    }
+                        // Yeni meal record oluştur
+                        var plan = weeklyPlans
+                            .FirstOrDefault(w => w.MealName.Equals(mealUpdate.MealName, StringComparison.OrdinalIgnoreCase));
 
-                    if (updateItem.WaterIntake.HasValue)
-                    {
-                        dailyRecord.UpdateWaterConsumption(new WaterIntake(updateItem.WaterIntake.Value));
-                        reportParts.Add($"Su: {updateItem.WaterIntake.Value} ml");
-                    }
-
-                    if (updateItem.TeacherNote != null)
-                    {
-                        dailyRecord.SetTeacherNote(updateItem.TeacherNote);
-                        reportParts.Add($"Not: \"{updateItem.TeacherNote}\"");
-                    }
-                }
-
-                // 2. Yemek Kayıtları (Meal Records) güncellemeleri
-                if (updateItem.UpdateMeals && updateItem.Meals != null && updateItem.Meals.Any())
-                {
-                    // Mevcut öğünleri çek
-                    // (Eğer yeni kayıt ise zaten mevcut öğün yoktur)
-                    var mealRecords = isNewRecord 
-                        ? new List<MealRecord>() 
-                        : await _dbContext.MealRecords
-                            .Where(m => m.DailyRecordId == dailyRecord.Id && !m.IsDeleted)
-                            .ToListAsync(cancellationToken);
-
-                    foreach (var mealUpdate in updateItem.Meals)
-                    {
-                        var existingMeal = mealRecords
-                            .FirstOrDefault(m => m.MealName.Equals(mealUpdate.MealName, StringComparison.OrdinalIgnoreCase));
-
-                        var mealStatus = new MealStatus((MealStatusType)mealUpdate.StatusType, mealUpdate.StatusDescription ?? string.Empty);
-
-                        if (existingMeal == null)
+                        var newMeal = new MealRecord(dailyRecord.Id, mealUpdate.MealName, mealStatus)
                         {
-                            // Yeni meal record oluştur
-                            var plan = weeklyPlans
-                                .FirstOrDefault(w => w.MealName.Equals(mealUpdate.MealName, StringComparison.OrdinalIgnoreCase));
+                            SchoolId = student.SchoolId
+                        };
 
-                            var newMeal = new MealRecord(dailyRecord.Id, mealUpdate.MealName, mealStatus)
-                            {
-                                SchoolId = student.SchoolId
-                            };
-
-                            if (plan != null)
-                            {
-                                newMeal.SetNutrition(plan.PlannedCalories, plan.FoodContent, plan.ProteinGrams, plan.CarbsGrams);
-                            }
-
-                            await _dbContext.MealRecords.AddAsync(newMeal, cancellationToken);
-                        }
-                        else
+                        if (plan != null)
                         {
-                            // Mevcut meal record güncelle
-                            existingMeal.UpdateStatus(mealStatus);
-                            _dbContext.MealRecords.Update(existingMeal);
+                            newMeal.SetNutrition(plan.PlannedCalories, plan.FoodContent, plan.ProteinGrams, plan.CarbsGrams);
                         }
 
-                        reportParts.Add($"{mealUpdate.MealName}: {GetMealStatusText((MealStatusType)mealUpdate.StatusType)}");
+                        await _dbContext.MealRecords.AddAsync(newMeal, cancellationToken);
                     }
+                    else
+                    {
+                        // Mevcut meal record güncelle
+                        existingMeal.UpdateStatus(mealStatus);
+                        _dbContext.MealRecords.Update(existingMeal);
+                    }
+
+                    reportParts.Add($"{mealUpdate.MealName}: {GetMealStatusText((MealStatusType)mealUpdate.StatusType)}");
                 }
             }
 
