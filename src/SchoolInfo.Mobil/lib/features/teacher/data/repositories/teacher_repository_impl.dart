@@ -12,7 +12,7 @@ import '../../domain/repositories/teacher_repository.dart';
 import '../../../auth/domain/entities/student.dart';
 
 class TeacherRepositoryImpl implements TeacherRepository {
-  static const _baseUrl = 'http://10.0.2.2:53079';
+  static const _baseUrl = 'http://85.235.74.24:53079';
   final String token;
 
   TeacherRepositoryImpl(this.token);
