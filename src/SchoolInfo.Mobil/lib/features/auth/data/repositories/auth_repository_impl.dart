@@ -13,7 +13,7 @@ import '../../domain/repositories/auth_repository.dart';
 class AuthRepositoryImpl implements AuthRepository {
   // Android emulator için `10.0.2.2` adresi kullanılır.
   // Fiziksel cihazda veya Windows/macOS'da çalıştırırken sunucu adresini uygun şekilde güncelleyin.
-  static const String _baseUrl = 'http://10.0.2.2:53079';
+  static const String _baseUrl = 'https://api.veliport.com.tr';
   static const String _loginPath = '/api/auth/login';
 
   @override
