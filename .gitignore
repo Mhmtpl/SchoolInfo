@@ -484,3 +484,8 @@ $RECYCLE.BIN/
 # Local publish outputs
 schoolinfo-api-publish/
 schoolinfo-web-publish/
+
+# Deployment and Environment Secrets
+deploy.bat
+.env
+.env.production

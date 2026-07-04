@@ -9,7 +9,7 @@ services:
     environment:
       - POSTGRES_DB=SchoolInfoDb
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=PYSoft11&*#@2026xYz
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - schoolinfo_postgres_data:/var/lib/postgresql/data
     restart: always
@@ -25,11 +25,11 @@ services:
     ports:
       - "5100:5100"
     environment:
-      - ConnectionStrings__DefaultConnection=Host=schoolinfo-db;Port=5432;Database=SchoolInfoDb;Username=postgres;Password=PYSoft11&*#@2026xYz;Include Error Detail=true
+      - ConnectionStrings__DefaultConnection=Host=schoolinfo-db;Port=5432;Database=SchoolInfoDb;Username=postgres;Password=${POSTGRES_PASSWORD};Include Error Detail=true
       - Jwt__Issuer=SchoolInfo
       - Jwt__Audience=SchoolInfoUsers
-      - Jwt__Key=VerySecretAndLongSecurityKeyThatMeetsTheMinimumRequirementOf256Bits_1234567890
-      - AgentFramework__ApiKey=YOUR_GEMINI_API_KEY
+      - Jwt__Key=${JWT_KEY}
+      - AgentFramework__ApiKey=${GEMINI_API_KEY}
       - AgentFramework__Model=gemini-3.1-flash-lite
       - AgentFramework__ProjectName=SchoolInfoAI
     depends_on:
@@ -65,3 +65,4 @@ networks:
   proxy-net:
     external: true
     name: proxy-net
+
