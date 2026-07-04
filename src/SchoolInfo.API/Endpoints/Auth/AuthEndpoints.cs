@@ -3,7 +3,6 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -46,40 +45,16 @@ public class AuthEndpoints : IEndpoint
     }
 
     private static async Task<IResult> LoginAsync(
-        HttpRequest httpRequest,
+        LoginRequest request,
         AppDbContext dbContext,
         IConfiguration configuration)
     {
-        LoginRequest? request = null;
-        try
-        {
-            httpRequest.EnableBuffering();
-            using var reader = new StreamReader(httpRequest.Body, leaveOpen: true);
-            var body = await reader.ReadToEndAsync();
-            httpRequest.Body.Position = 0;
-
-            if (!string.IsNullOrWhiteSpace(body))
-            {
-                request = JsonSerializer.Deserialize<LoginRequest>(body, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
-            }
-        }
-        catch
-        {
-            request = null;
-        }
-
-        if (request == null || string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+        if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             return Results.BadRequest("E-posta ve şifre gereklidir.");
 
         var user = await dbContext.Users
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(u => u.Email == request.Email && !u.IsDeleted);
-
-        if (user == null)
-            return Results.Unauthorized();
 
         // Hem BCrypt doğrulamasını hem de düz metin karşılaştırmasını (fallback) destekliyoruz
         bool isPasswordValid = false;
@@ -98,7 +73,7 @@ public class AuthEndpoints : IEndpoint
             isPasswordValid = true;
         }
 
-        if (!isPasswordValid)
+        if (user == null || !isPasswordValid)
             return Results.Unauthorized();
 
         var accessToken = GenerateAccessToken(user, configuration);

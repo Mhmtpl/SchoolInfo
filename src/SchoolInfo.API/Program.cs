@@ -37,10 +37,6 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 // 4. Endpoints Registration (Reflection ile tüm IEndpoint'ler)
 builder.Services.AddEndpoints();
-builder.Services.ConfigureHttpJsonOptions(options =>
-{
-    options.SerializerOptions.PropertyNameCaseInsensitive = true;
-});
 
 // 5. JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -126,11 +122,8 @@ var app = builder.Build();
 // Middleware: Exception Handling
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-// HTTPS Yönlendirme: sadece production ortamında aktif olsun
-if (!app.Environment.IsDevelopment())
-{
-    app.UseHttpsRedirection();
-}
+// HTTPS Yönlendirme (Production'da zorunlu)
+app.UseHttpsRedirection();
 
 // Swagger yalnızca Development ortamında açık olsun
 if (app.Environment.IsDevelopment())

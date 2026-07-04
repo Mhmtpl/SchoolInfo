@@ -11,8 +11,9 @@ import '../../domain/repositories/auth_repository.dart';
 // AuthRepository'nin gerçek uygulaması.
 // Şu anda SchoolInfo API'sine HTTP POST isteği gönderir.
 class AuthRepositoryImpl implements AuthRepository {
-  // Sunucu IP adresi üzerinden internet erişimi için kullanılır.
-  static const String _baseUrl = 'http://85.235.74.24:53079';
+  // Android emulator için `10.0.2.2` adresi kullanılır.
+  // Fiziksel cihazda veya Windows/macOS'da çalıştırırken sunucu adresini uygun şekilde güncelleyin.
+  static const String _baseUrl = 'http://10.0.2.2:53079';
   static const String _loginPath = '/api/auth/login';
 
   @override
