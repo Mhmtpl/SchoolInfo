@@ -9,6 +9,7 @@ import '../../domain/entities/classroom_daily_record.dart';
 import '../../domain/entities/classroom_summary.dart';
 import '../../domain/entities/student_meal_record.dart';
 import '../../domain/entities/weekly_meal_plan.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class TeacherClassSelectionScreen extends ConsumerWidget {
   const TeacherClassSelectionScreen({super.key});
@@ -271,10 +272,21 @@ class _TeacherClassroomDetailScreenState
   bool _weeklyPlanEditMode = false;
   List<WeeklyMealPlan> _weeklyPlanEdits = [];
 
+  // Yapay Zeka Güncelleme Değişkenleri
+  late final stt.SpeechToText _speech;
+  bool _speechInitialized = false;
+  bool _isListening = false;
+  String _speechError = '';
+  final _aiCommandController = TextEditingController();
+  DateTime _aiSelectedDate = DateTime.now();
+  bool _aiIsSubmitting = false;
+  String? _aiSuccessMessage;
+  List<String>? _aiUpdatedStudents;
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 7, vsync: this);
     _tabController.addListener(() => setState(() {}));
     _dailyScrollController = ScrollController();
     _dailyScrollController.addListener(() {
@@ -285,6 +297,131 @@ class _TeacherClassroomDetailScreenState
         });
       }
     });
+
+    _speech = stt.SpeechToText();
+    _initSpeech();
+  }
+
+  Future<void> _initSpeech() async {
+    try {
+      final hasSpeech = await _speech.initialize(
+        onError: (val) {
+          setState(() {
+            _speechError = 'Hata: ${val.errorString}';
+            _isListening = false;
+          });
+        },
+        onStatus: (val) {
+          if (val == 'done' || val == 'notListening') {
+            setState(() {
+              _isListening = false;
+            });
+          }
+        },
+      );
+      if (mounted) {
+        setState(() {
+          _speechInitialized = hasSpeech;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _speechError = 'Konuşma tanıma başlatılamadı: $e';
+        });
+      }
+    }
+  }
+
+  Future<void> _toggleListening() async {
+    if (!_speechInitialized) {
+      await _initSpeech();
+    }
+    if (_isListening) {
+      await _speech.stop();
+      setState(() {
+        _isListening = false;
+      });
+    } else {
+      if (_speechInitialized) {
+        setState(() {
+          _isListening = true;
+          _speechError = '';
+        });
+        await _speech.listen(
+          onResult: (val) {
+            setState(() {
+              if (val.recognizedWords.isNotEmpty) {
+                final currentText = _aiCommandController.text.trim();
+                _aiCommandController.text = currentText.isEmpty
+                    ? val.recognizedWords
+                    : '$currentText ${val.recognizedWords}';
+              }
+            });
+          },
+          localeId: 'tr_TR',
+        );
+      } else {
+        setState(() {
+          _speechError = 'Mikrofon veya ses tanıma sistemi hazır değil.';
+        });
+      }
+    }
+  }
+
+  Future<void> _submitAICommand() async {
+    final command = _aiCommandController.text.trim();
+    if (command.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lütfen önce bir komut yazın veya ses kaydı alın.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _aiIsSubmitting = true;
+      _aiSuccessMessage = null;
+      _aiUpdatedStudents = null;
+    });
+
+    try {
+      final repository = ref.read(teacherRepositoryProvider);
+      final dateStr = '${_aiSelectedDate.year}-${_aiSelectedDate.month.toString().padLeft(2, '0')}-${_aiSelectedDate.day.toString().padLeft(2, '0')}';
+      
+      final result = await repository.aiUpdateClassroom(
+        classroomId: widget.classroom.id,
+        command: command,
+        dateStr: dateStr,
+      );
+
+      if (mounted) {
+        setState(() {
+          _aiSuccessMessage = result.message;
+          _aiUpdatedStudents = result.updatedStudents;
+          _aiCommandController.clear();
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result.message)),
+        );
+
+        // Refresh classroom daily and meal records to reflect the AI updates
+        ref.refresh(classroomDailyRecordsProvider(widget.classroom.id));
+        ref.refresh(classroomMealRecordsProvider(widget.classroom.id));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Hata oluştu: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _aiIsSubmitting = false;
+        });
+      }
+    }
   }
 
   @override
@@ -293,6 +430,7 @@ class _TeacherClassroomDetailScreenState
     _tabController.dispose();
     _titleController.dispose();
     _descriptionController.dispose();
+    _aiCommandController.dispose();
     super.dispose();
   }
 
@@ -334,6 +472,7 @@ class _TeacherClassroomDetailScreenState
             Tab(icon: Icon(Icons.medication), text: 'İlaç'),
             Tab(icon: Icon(Icons.calendar_today), text: 'Plan'),
             Tab(icon: Icon(Icons.sports_handball), text: 'Aktiviteler'),
+            Tab(icon: Icon(Icons.auto_awesome_rounded), text: 'Yapay Zeka'),
           ],
         ),
       ),
@@ -350,6 +489,7 @@ class _TeacherClassroomDetailScreenState
                 _buildMedicationTab(studentsAsync),
                 _buildWeeklyMealPlanTab(weeklyPlansAsync),
                 _buildActivitiesTab(activitiesAsync),
+                _buildAIUpdateTab(),
               ],
             ),
           ),
@@ -1763,7 +1903,281 @@ class _TeacherClassroomDetailScreenState
       }
     }
   }
+
+  Widget _buildAIUpdateTab() {
+    final theme = Theme.of(context);
+    final formattedDate = '${_aiSelectedDate.day} ${_getTurkishMonthName(_aiSelectedDate.month)} ${_aiSelectedDate.year}';
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Bilgi Kartı
+          Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 1,
+            color: theme.colorScheme.primary.withOpacity(0.04),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.auto_awesome_rounded, color: theme.colorScheme.primary, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Yapay Zeka Sınıf Güncellemesi',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Öğrencilerinizin uyku, yemek, su tüketimi ve devamsızlık durumlarını tek bir sesli veya yazılı komutla güncelleyebilirsiniz.',
+                    style: TextStyle(fontSize: 13, height: 1.4, color: Color(0xFF475569)),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Örnek: "Ali yemeğini bitirdi, Mehmet uyumadı ve Ayşe bugün gelmedi."',
+                    style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Color(0xFF64748B)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Tarih Seçici
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Hedef Tarih',
+                      style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      formattedDate,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    ),
+                  ],
+                ),
+                TextButton.icon(
+                  onPressed: () async {
+                    final selected = await showDatePicker(
+                      context: context,
+                      initialDate: _aiSelectedDate,
+                      firstDate: DateTime.now().subtract(const Duration(days: 7)),
+                      lastDate: DateTime.now().add(const Duration(days: 1)),
+                    );
+                    if (selected != null) {
+                      setState(() {
+                        _aiSelectedDate = selected;
+                      });
+                    }
+                  },
+                  icon: const Icon(Icons.calendar_month_rounded, size: 18),
+                  label: const Text('Değiştir'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Mikrofon / Ses Tanıma Alanı
+          Center(
+            child: Column(
+              children: [
+                GestureDetector(
+                  onTap: _toggleListening,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isListening
+                          ? const Color(0xFF10B981)
+                          : theme.colorScheme.secondary.withOpacity(0.08),
+                      border: Border.all(
+                        color: _isListening
+                            ? const Color(0xFF34D399)
+                            : theme.colorScheme.secondary.withOpacity(0.2),
+                        width: _isListening ? 6 : 2,
+                      ),
+                      boxShadow: _isListening
+                          ? [
+                              BoxShadow(
+                                color: const Color(0xFF10B981).withOpacity(0.4),
+                                blurRadius: 20,
+                                spreadRadius: 4,
+                              )
+                            ]
+                          : [],
+                    ),
+                    child: Icon(
+                      _isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
+                      color: _isListening ? Colors.white : theme.colorScheme.secondary,
+                      size: 32,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _isListening
+                      ? '🎙️ Dinleniyor... Lütfen konuşun'
+                      : 'Ses kaydı yapmak için mikrofona dokunun',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _isListening ? const Color(0xFF10B981) : const Color(0xFF64748B),
+                  ),
+                ),
+                if (_speechError.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _speechError,
+                    style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.w500),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Metin Alanı
+          TextFormField(
+            controller: _aiCommandController,
+            maxLines: 4,
+            decoration: InputDecoration(
+              hintText: 'Komutunuzu buraya yazın veya seslendirin...',
+              labelText: 'Komut İçeriği',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              suffixIcon: IconButton(
+                onPressed: () => setState(() => _aiCommandController.clear()),
+                icon: const Icon(Icons.clear_rounded),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Uygula Butonu
+          FilledButton.icon(
+            onPressed: _aiIsSubmitting ? null : _submitAICommand,
+            icon: _aiIsSubmitting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.auto_awesome_rounded),
+            label: Text(_aiIsSubmitting ? 'Analiz ediliyor...' : 'Yapay Zeka ile Uygula'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ),
+
+          // Güncelleme Raporu Box
+          if (_aiSuccessMessage != null || (_aiUpdatedStudents != null && _aiUpdatedStudents!.isNotEmpty)) ...[
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.green.shade200, width: 1),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _aiSuccessMessage ?? 'Başarıyla uygulandı.',
+                          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF0F5132), fontSize: 14),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_aiUpdatedStudents != null && _aiUpdatedStudents!.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Güncellenen Öğrenciler:',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF155724)),
+                    ),
+                    const SizedBox(height: 6),
+                    ..._aiUpdatedStudents!.map(
+                      (report) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('• ', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF155724))),
+                            Expanded(
+                              child: Text(
+                                report,
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF1C7430), height: 1.4),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _getTurkishMonthName(int month) => const [
+        '',
+        'Ocak',
+        'Şubat',
+        'Mart',
+        'Nisan',
+        'Mayıs',
+        'Haziran',
+        'Temmuz',
+        'Ağustos',
+        'Eylül',
+        'Ekim',
+        'Kasım',
+        'Aralık'
+      ][month];
 }
+
 
 class _TeacherDailyEntry {
   final String studentId;

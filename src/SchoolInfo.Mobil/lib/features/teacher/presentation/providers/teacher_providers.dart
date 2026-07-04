@@ -5,6 +5,7 @@ import '../../domain/entities/classroom_daily_record.dart';
 import '../../domain/entities/classroom_summary.dart';
 import '../../domain/entities/student_meal_record.dart';
 import '../../domain/entities/weekly_meal_plan.dart';
+import '../../domain/entities/ai_classroom_update_result.dart';
 import '../../domain/repositories/teacher_repository.dart';
 import '../../data/repositories/teacher_repository_impl.dart';
 import '../../../auth/domain/entities/login_result.dart';
@@ -62,3 +63,35 @@ final classroomActivitiesProvider =
         return repository.getClassroomActivities(classroomId);
       },
     );
+
+class AIClassroomUpdateStateNotifier extends StateNotifier<AsyncValue<AIClassroomUpdateResult?>?> {
+  final TeacherRepository _repository;
+  AIClassroomUpdateStateNotifier(this._repository) : super(null);
+
+  Future<void> submitCommand(String classroomId, String command, String dateStr) async {
+    state = const AsyncValue.loading();
+    try {
+      final result = await _repository.aiUpdateClassroom(
+        classroomId: classroomId,
+        command: command,
+        dateStr: dateStr,
+      );
+      state = AsyncValue.data(result);
+    } catch (e, stack) {
+      state = AsyncValue.error(e, stack);
+    }
+  }
+
+  void reset() {
+    state = null;
+  }
+}
+
+final aiClassroomUpdateProvider = StateNotifierProvider.family<
+    AIClassroomUpdateStateNotifier,
+    AsyncValue<AIClassroomUpdateResult?>?,
+    String
+>((ref, classroomId) {
+  final repository = ref.watch(teacherRepositoryProvider);
+  return AIClassroomUpdateStateNotifier(repository);
+});

@@ -4,6 +4,7 @@ import '../entities/classroom_summary.dart';
 import '../entities/student_daily_record.dart';
 import '../entities/student_meal_record.dart';
 import '../entities/weekly_meal_plan.dart';
+import '../entities/ai_classroom_update_result.dart';
 import '../../../auth/domain/entities/student.dart';
 
 abstract class TeacherRepository {
@@ -51,5 +52,11 @@ abstract class TeacherRepository {
     required String time,
     required bool taken,
     String? note,
+  });
+
+  Future<AIClassroomUpdateResult> aiUpdateClassroom({
+    required String classroomId,
+    required String command,
+    required String dateStr,
   });
 }

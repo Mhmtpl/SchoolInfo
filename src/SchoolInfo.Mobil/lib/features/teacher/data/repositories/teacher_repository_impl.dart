@@ -8,6 +8,7 @@ import '../../domain/entities/classroom_summary.dart';
 import '../../domain/entities/student_daily_record.dart';
 import '../../domain/entities/student_meal_record.dart';
 import '../../domain/entities/weekly_meal_plan.dart';
+import '../../domain/entities/ai_classroom_update_result.dart';
 import '../../domain/repositories/teacher_repository.dart';
 import '../../../auth/domain/entities/student.dart';
 
@@ -294,6 +295,35 @@ class TeacherRepositoryImpl implements TeacherRepository {
     final response = await http.put(uri, headers: _headers);
     if (response.statusCode != 204 && response.statusCode != 200) {
       throw Exception('Aktivite tamamlanamadı: ${response.statusCode}');
+    }
+  }
+
+  @override
+  Future<AIClassroomUpdateResult> aiUpdateClassroom({
+    required String classroomId,
+    required String command,
+    required String dateStr,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/api/classrooms/$classroomId/ai-update');
+    final body = jsonEncode({
+      'command': command,
+      'dateStr': dateStr,
+    });
+
+    final response = await http.post(uri, headers: _headers, body: body);
+    final responseBody = jsonDecode(response.body);
+
+    if (response.statusCode != 200) {
+      final message = responseBody is Map<String, dynamic>
+          ? (responseBody['message'] as String? ?? responseBody['Message'] as String? ?? 'Yapay zeka güncellenirken hata oluştu.')
+          : 'Yapay zeka güncellenirken hata oluştu.';
+      throw Exception(message);
+    }
+
+    if (responseBody is Map<String, dynamic>) {
+      return AIClassroomUpdateResult.fromJson(responseBody);
+    } else {
+      throw Exception('API yanıtı çözümlenemedi.');
     }
   }
 }
