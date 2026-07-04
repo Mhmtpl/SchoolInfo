@@ -50,6 +50,29 @@ public class UpdateMealRecordCommandHandler : IRequestHandler<UpdateMealRecordCo
         if (request.MealRecordId != Guid.Empty)
         {
             mealRecord = await _mealRecordRepository.GetByIdAsync(request.MealRecordId);
+            if (mealRecord != null)
+            {
+                if (mealRecord.SchoolId != _currentUserService.SchoolId)
+                {
+                    throw new UnauthorizedAccessException("Bu öğün kaydını güncellemek için yetkiniz bulunmamaktadır.");
+                }
+
+                if (_currentUserService.Role == "Teacher")
+                {
+                    var dailyRecord = await _dailyRecordRepository.GetByIdAsync(mealRecord.DailyRecordId);
+                    if (dailyRecord == null)
+                        throw new KeyNotFoundException("İlişkili günlük kayıt bulunamadı.");
+
+                    var isAssigned = await ((DbContext)_dbContext).Set<Classroom>()
+                        .Where(c => c.SchoolId == _currentUserService.SchoolId && !c.IsDeleted)
+                        .AnyAsync(c => c.Students.Any(s => s.Id == dailyRecord.StudentId) && c.Teachers.Any(t => t.Id == _currentUserService.UserId), cancellationToken);
+
+                    if (!isAssigned)
+                    {
+                        throw new UnauthorizedAccessException("Bu öğrencinin öğün kaydını güncellemek için yetkiniz bulunmamaktadır.");
+                    }
+                }
+            }
         }
         else if (request.StudentId.HasValue && !string.IsNullOrEmpty(request.MealName))
         {
@@ -62,7 +85,25 @@ public class UpdateMealRecordCommandHandler : IRequestHandler<UpdateMealRecordCo
                 throw new StudentNotFoundException(request.StudentId.Value);
             }
 
+            if (student.SchoolId != _currentUserService.SchoolId)
+            {
+                throw new UnauthorizedAccessException("Bu öğrencinin öğün kaydını güncellemek için yetkiniz bulunmamaktadır.");
+            }
+
+            if (_currentUserService.Role == "Teacher")
+            {
+                var isAssigned = await ((DbContext)_dbContext).Set<Classroom>()
+                    .Where(c => c.SchoolId == _currentUserService.SchoolId && !c.IsDeleted)
+                    .AnyAsync(c => c.Id == student.ClassroomId && c.Teachers.Any(t => t.Id == _currentUserService.UserId), cancellationToken);
+
+                if (!isAssigned)
+                {
+                    throw new UnauthorizedAccessException("Bu öğrencinin öğün kaydını güncellemek için yetkiniz bulunmamaktadır.");
+                }
+            }
+
             if (dailyRecord == null)
+
             {
                 dailyRecord = new DailyRecord(request.StudentId.Value, today)
                 {

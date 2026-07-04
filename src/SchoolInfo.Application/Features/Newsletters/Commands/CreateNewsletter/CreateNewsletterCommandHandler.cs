@@ -1,7 +1,9 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using SchoolInfo.Application.Common.Interfaces;
 using SchoolInfo.Domain.Entities;
 
@@ -20,6 +22,33 @@ public class CreateNewsletterCommandHandler : IRequestHandler<CreateNewsletterCo
 
     public async Task<Guid> Handle(CreateNewsletterCommand request, CancellationToken cancellationToken)
     {
+        if (_currentUserService.Role != "Admin" && _currentUserService.Role != "Teacher")
+        {
+            throw new UnauthorizedAccessException("Bülten oluşturmak için yetkiniz bulunmamaktadır.");
+        }
+
+        if (_currentUserService.Role == "Teacher")
+        {
+            var isAssigned = await _dbContext.Classrooms
+                .Where(c => c.SchoolId == _currentUserService.SchoolId && !c.IsDeleted)
+                .AnyAsync(c => c.Id == request.ClassroomId && c.Teachers.Any(t => t.Id == _currentUserService.UserId), cancellationToken);
+
+            if (!isAssigned)
+            {
+                throw new UnauthorizedAccessException("Bu sınıfa bülten oluşturmak için yetkiniz bulunmamaktadır.");
+            }
+        }
+        else if (_currentUserService.Role == "Admin")
+        {
+            var classroomExists = await _dbContext.Classrooms
+                .AnyAsync(c => c.Id == request.ClassroomId && c.SchoolId == _currentUserService.SchoolId && !c.IsDeleted, cancellationToken);
+
+            if (!classroomExists)
+            {
+                throw new UnauthorizedAccessException("Sınıf bulunamadı veya bu sınıfa erişim yetkiniz yok.");
+            }
+        }
+
         var newsletter = new Newsletter(
             request.Title,
             request.Content ?? "",
@@ -42,3 +71,4 @@ public class CreateNewsletterCommandHandler : IRequestHandler<CreateNewsletterCo
         return newsletter.Id;
     }
 }
+

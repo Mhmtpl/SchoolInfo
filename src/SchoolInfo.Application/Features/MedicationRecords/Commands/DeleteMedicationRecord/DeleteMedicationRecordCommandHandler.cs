@@ -1,8 +1,12 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using SchoolInfo.Application.Common.Interfaces;
+using SchoolInfo.Domain.Entities;
 using SchoolInfo.Domain.Interfaces;
 
 namespace SchoolInfo.Application.Features.MedicationRecords.Commands.DeleteMedicationRecord;
@@ -36,8 +40,38 @@ public class DeleteMedicationRecordCommandHandler : IRequestHandler<DeleteMedica
             throw new KeyNotFoundException("İlaç kaydı bulunamadı.");
         }
 
+        if (medicationRecord.SchoolId != _currentUserService.SchoolId)
+        {
+            throw new UnauthorizedAccessException("Bu kaydı silmek için yetkiniz bulunmamaktadır.");
+        }
+
+        if (_currentUserService.Role == "Teacher")
+        {
+            var isAssigned = await ((DbContext)_dbContext).Set<Classroom>()
+                .Where(c => c.SchoolId == _currentUserService.SchoolId && !c.IsDeleted)
+                .AnyAsync(c => c.Students.Any(s => s.Id == medicationRecord.StudentId) && c.Teachers.Any(t => t.Id == _currentUserService.UserId), cancellationToken);
+
+            if (!isAssigned)
+            {
+                throw new UnauthorizedAccessException("Bu öğrencinin ilaç kaydını silmek için yetkiniz bulunmamaktadır.");
+            }
+        }
+        else if (_currentUserService.Role == "Parent")
+        {
+            var isMyChild = await ((DbContext)_dbContext).Set<Student>()
+                .Where(s => s.Id == medicationRecord.StudentId && !s.IsDeleted)
+                .SelectMany(s => s.Parents)
+                .AnyAsync(p => p.Id == _currentUserService.UserId, cancellationToken);
+
+            if (!isMyChild)
+            {
+                throw new UnauthorizedAccessException("Bu öğrencinin ilaç kaydını silmek için yetkiniz bulunmamaktadır.");
+            }
+        }
+
         medicationRecord.Delete();
         await _medicationRecordRepository.UpdateAsync(medicationRecord);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }
+

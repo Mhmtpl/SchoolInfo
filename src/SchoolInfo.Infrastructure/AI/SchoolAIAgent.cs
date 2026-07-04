@@ -98,8 +98,8 @@ public class SchoolAIAgent
                     if (match.Success && int.TryParse(match.Groups[1].Value, out var amount))
                     {
                         // Build a minimal AI JSON response that our handler understands
-                        var json = $"{{\"updates\":[{{\"studentName\":\"herkes\",\"updateDailyRecord\":true,\"waterIntake\":{amount}}}]}}";
-                        return json;
+                        var fallbackJson = $"{{\"updates\":[{{\"studentName\":\"herkes\",\"updateDailyRecord\":true,\"waterIntake\":{amount}}}]}}";
+                        return fallbackJson;
                     }
                 }
                 catch

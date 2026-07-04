@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using SchoolInfo.Application.Common.Interfaces;
 using SchoolInfo.Domain.Entities;
 using SchoolInfo.Domain.Interfaces;
@@ -31,7 +32,30 @@ public class CreateActivityCommandHandler : IRequestHandler<CreateActivityComman
     {
         if (_currentUserService.Role != "Teacher" && _currentUserService.Role != "Admin")
         {
-            throw new UnauthorizedAccessException("Aktivite oluÅŸturmak iÃ§in yetkiniz bulunmamaktadÄ±r.");
+            throw new UnauthorizedAccessException("Aktivite oluşturmak için yetkiniz bulunmamaktadır.");
+        }
+
+        // Sınıfın okulla eşleştiğini doğrula ve öğretmenin bu sınıfa atanıp atanmadığını kontrol et
+        if (_currentUserService.Role == "Teacher")
+        {
+            var isAssigned = await ((DbContext)_dbContext).Set<Classroom>()
+                .Where(c => c.SchoolId == _currentUserService.SchoolId && !c.IsDeleted)
+                .AnyAsync(c => c.Id == request.ClassroomId && c.Teachers.Any(t => t.Id == _currentUserService.UserId), cancellationToken);
+
+            if (!isAssigned)
+            {
+                throw new UnauthorizedAccessException("Bu sınıfta etkinlik oluşturmak için yetkiniz bulunmamaktadır.");
+            }
+        }
+        else if (_currentUserService.Role == "Admin")
+        {
+            var classroomExists = await ((DbContext)_dbContext).Set<Classroom>()
+                .AnyAsync(c => c.Id == request.ClassroomId && c.SchoolId == _currentUserService.SchoolId && !c.IsDeleted, cancellationToken);
+
+            if (!classroomExists)
+            {
+                throw new UnauthorizedAccessException("Sınıf bulunamadı veya bu sınıfa erişim yetkiniz yok.");
+            }
         }
 
         var activity = new Activity(request.Title, request.Description, request.ActivityDate, request.StartTime, request.EndTime, request.Type, request.ClassroomId);
@@ -42,4 +66,5 @@ public class CreateActivityCommandHandler : IRequestHandler<CreateActivityComman
 
         return activity.Id;
     }
+
 }

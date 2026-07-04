@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
+
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -39,6 +41,29 @@ public class AIClassroomUpdateCommandHandler : IRequestHandler<AIClassroomUpdate
             throw new UnauthorizedAccessException("Yapay zeka ile veri girişi yapmak için yetkiniz bulunmamaktadır.");
         }
 
+        // Sınıfın okulla eşleştiğini doğrula ve öğretmenin bu sınıfa atanıp atanmadığını kontrol et
+        if (_currentUserService.Role == "Teacher")
+        {
+            var isAssigned = await _dbContext.Classrooms
+                .Where(c => c.SchoolId == _currentUserService.SchoolId && !c.IsDeleted)
+                .AnyAsync(c => c.Id == request.ClassroomId && c.Teachers.Any(t => t.Id == _currentUserService.UserId), cancellationToken);
+
+            if (!isAssigned)
+            {
+                throw new UnauthorizedAccessException("Bu sınıf üzerinde işlem yapmak için yetkiniz bulunmamaktadır.");
+            }
+        }
+        else if (_currentUserService.Role == "Admin")
+        {
+            var classroomExists = await _dbContext.Classrooms
+                .AnyAsync(c => c.Id == request.ClassroomId && c.SchoolId == _currentUserService.SchoolId && !c.IsDeleted, cancellationToken);
+
+            if (!classroomExists)
+            {
+                throw new UnauthorizedAccessException("Sınıf bulunamadı veya bu sınıfa erişim yetkiniz yok.");
+            }
+        }
+
         // Tarih bilgisini UTC olarak ayarla
         DateTime targetDate;
         if (!DateTime.TryParse(request.DateStr, out targetDate))
@@ -56,6 +81,7 @@ public class AIClassroomUpdateCommandHandler : IRequestHandler<AIClassroomUpdate
         {
             return new AIClassroomUpdateResultDto(false, "Bu sınıfta aktif öğrenci bulunamadı.", new List<string>());
         }
+
 
         // Öğrenci listesini JSON'a dönüştür
         var studentListDto = students.Select(s => new
@@ -167,9 +193,9 @@ public class AIClassroomUpdateCommandHandler : IRequestHandler<AIClassroomUpdate
             bool isNewRecord = false;
             if (dailyRecord == null)
             {
-                dailyRecord = new DailyRecord(student.Id, targetDate)
+                dailyRecord = new DailyRecord(targetStudent.Id, targetDate)
                 {
-                    SchoolId = student.SchoolId
+                    SchoolId = targetStudent.SchoolId
                 };
                 await _dbContext.DailyRecords.AddAsync(dailyRecord, cancellationToken);
                 isNewRecord = true;
@@ -241,7 +267,7 @@ public class AIClassroomUpdateCommandHandler : IRequestHandler<AIClassroomUpdate
 
                         var newMeal = new MealRecord(dailyRecord.Id, mealUpdate.MealName, mealStatus)
                         {
-                            SchoolId = student.SchoolId
+                            SchoolId = targetStudent.SchoolId
                         };
 
                         if (plan != null)
@@ -267,15 +293,17 @@ public class AIClassroomUpdateCommandHandler : IRequestHandler<AIClassroomUpdate
             {
                 // Eski AI özetini silerek veli sayfasında yeniden üretilmesini sağla
                 var existingSummary = await _dbContext.DailySummaries
-                    .FirstOrDefaultAsync(s => s.StudentId == student.Id && s.Date == targetDate, cancellationToken);
+                    .FirstOrDefaultAsync(s => s.StudentId == targetStudent.Id && s.Date == targetDate, cancellationToken);
                 if (existingSummary != null)
                 {
                     _dbContext.DailySummaries.Remove(existingSummary);
                 }
 
-                updatedStudentsReport.Add($"{student.FirstName} {student.LastName} ({string.Join(", ", reportParts)})");
+                updatedStudentsReport.Add($"{targetStudent.FirstName} {targetStudent.LastName} ({string.Join(", ", reportParts)})");
             }
         }
+    }
+
 
         // Değişiklikleri kaydet
         await _dbContext.SaveChangesAsync(cancellationToken);

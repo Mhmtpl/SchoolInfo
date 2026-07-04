@@ -27,12 +27,20 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Lax;
     });
 
-// API Haberleşme Servisi (Typed HttpClient) ile SSL bypass (localhost için)
+// API Haberleşme Servisi (Typed HttpClient) ile SSL bypass (sadece Development ortamında localhost için)
 builder.Services.AddHttpClient<SchoolInfoApiService>()
     .ConfigurePrimaryHttpMessageHandler(() => new System.Net.Http.HttpClientHandler
     {
-        ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+        ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => 
+        {
+            if (builder.Environment.IsDevelopment())
+            {
+                return true;
+            }
+            return errors == System.Net.Security.SslPolicyErrors.None;
+        }
     });
+
 
 var app = builder.Build();
 

@@ -264,8 +264,40 @@ public class ClassroomEndpoints : IEndpoint
         .WithDescription("Belirtilen öğretmeni sınıftan kaldırır. Sadece Admin yapabilir.")
         .RequireAuthorization(policy => policy.RequireRole(SchoolInfo.Domain.Enums.UserRole.Admin.ToString()));
 
-        group.MapGet("/{id:guid}/weekly-meal-plans", async (System.Guid id, SchoolInfo.Application.Common.Interfaces.IAppDbContext dbContext) =>
+        group.MapGet("/{id:guid}/weekly-meal-plans", async (System.Guid id, SchoolInfo.Application.Common.Interfaces.IAppDbContext dbContext, SchoolInfo.Application.Common.Interfaces.ICurrentUserService currentUserService) =>
         {
+            var classroom = await dbContext.Classrooms
+                .Include(c => c.Teachers)
+                .Include(c => c.Students)
+                .ThenInclude(s => s.Parents)
+                .FirstOrDefaultAsync(c => c.Id == id && c.SchoolId == currentUserService.SchoolId && !c.IsDeleted);
+
+            if (classroom == null)
+            {
+                return Results.NotFound("Sınıf bulunamadı veya bu sınıfa erişim yetkiniz yok.");
+            }
+
+            if (currentUserService.Role == "Teacher")
+            {
+                var isAssigned = classroom.Teachers.Any(t => t.Id == currentUserService.UserId);
+                if (!isAssigned)
+                {
+                    return Results.Forbid();
+                }
+            }
+            else if (currentUserService.Role == "Parent")
+            {
+                var hasChild = classroom.Students.Any(s => s.Parents.Any(p => p.Id == currentUserService.UserId));
+                if (!hasChild)
+                {
+                    return Results.Forbid();
+                }
+            }
+            else if (currentUserService.Role != "Admin")
+            {
+                return Results.Forbid();
+            }
+
             var plans = await dbContext.WeeklyMealPlans
                 .Where(w => w.ClassroomId == id && !w.IsDeleted)
                 .OrderBy(w => w.DayOfWeek)
@@ -289,10 +321,27 @@ public class ClassroomEndpoints : IEndpoint
 
         group.MapPut("/{id:guid}/weekly-meal-plans", async (System.Guid id, UpdateClassroomWeeklyMealPlanRequest request, SchoolInfo.Application.Common.Interfaces.IAppDbContext dbContext, SchoolInfo.Application.Common.Interfaces.ICurrentUserService currentUserService) =>
         {
-            var classroom = await dbContext.Classrooms.FindAsync(id);
+            if (currentUserService.Role != "Teacher" && currentUserService.Role != "Admin")
+            {
+                return Results.Forbid();
+            }
+
+            var classroom = await dbContext.Classrooms
+                .Include(c => c.Teachers)
+                .FirstOrDefaultAsync(c => c.Id == id && c.SchoolId == currentUserService.SchoolId && !c.IsDeleted);
+
             if (classroom == null)
             {
-                return Results.NotFound("Sınıf bulunamadı.");
+                return Results.NotFound("Sınıf bulunamadı veya bu sınıfa erişim yetkiniz yok.");
+            }
+
+            if (currentUserService.Role == "Teacher")
+            {
+                var isAssigned = classroom.Teachers.Any(t => t.Id == currentUserService.UserId);
+                if (!isAssigned)
+                {
+                    return Results.Forbid();
+                }
             }
 
             var schoolId = classroom.SchoolId;
@@ -323,6 +372,7 @@ public class ClassroomEndpoints : IEndpoint
         .WithName("UpdateClassroomWeeklyMealPlans")
         .WithSummary("Sınıfın haftalık yemek şablonlarını günceller veya yeni ekler.")
         .RequireAuthorization();
+
 
         group.MapGet("/{id:guid}/weekly-schedule", async (System.Guid id, IMediator mediator) =>
         {

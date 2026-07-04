@@ -15,16 +15,36 @@ public record ApplyWeeklyScheduleCommand(Guid ClassroomId) : IRequest<bool>;
 public class ApplyWeeklyScheduleCommandHandler : IRequestHandler<ApplyWeeklyScheduleCommand, bool>
 {
     private readonly IAppDbContext _dbContext;
+    private readonly ICurrentUserService _currentUserService;
 
-    public ApplyWeeklyScheduleCommandHandler(IAppDbContext dbContext)
+    public ApplyWeeklyScheduleCommandHandler(IAppDbContext dbContext, ICurrentUserService currentUserService)
     {
         _dbContext = dbContext;
+        _currentUserService = currentUserService;
     }
 
     public async Task<bool> Handle(ApplyWeeklyScheduleCommand request, CancellationToken cancellationToken)
     {
-        var classroom = await _dbContext.Classrooms.FindAsync(new object[] { request.ClassroomId }, cancellationToken);
+        if (_currentUserService.Role != "Admin" && _currentUserService.Role != "Teacher")
+        {
+            throw new UnauthorizedAccessException("Haftalık ders programı uygulamak için yetkiniz bulunmamaktadır.");
+        }
+
+        var classroom = await _dbContext.Classrooms
+            .Include(c => c.Teachers)
+            .FirstOrDefaultAsync(c => c.Id == request.ClassroomId && c.SchoolId == _currentUserService.SchoolId && !c.IsDeleted, cancellationToken);
+
         if (classroom == null) return false;
+
+        if (_currentUserService.Role == "Teacher")
+        {
+            var isAssigned = classroom.Teachers.Any(t => t.Id == _currentUserService.UserId);
+            if (!isAssigned)
+            {
+                throw new UnauthorizedAccessException("Bu sınıfın haftalık ders programını uygulama yetkiniz bulunmamaktadır.");
+            }
+        }
+
 
         var templateSchedules = await _dbContext.ClassroomWeeklySchedules
             .Where(x => x.ClassroomId == request.ClassroomId)

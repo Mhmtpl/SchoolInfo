@@ -39,6 +39,27 @@ public class GetClassroomNewslettersQueryHandler : IRequestHandler<GetClassroomN
 
     public async Task<List<NewsletterDto>> Handle(GetClassroomNewslettersQuery request, CancellationToken cancellationToken)
     {
+        if (_currentUserService.Role == "Parent")
+        {
+            var hasChildInClass = await _dbContext.Students
+                .AnyAsync(s => s.ClassroomId == request.ClassroomId && !s.IsDeleted && s.Parents.Any(p => p.Id == _currentUserService.UserId), cancellationToken);
+
+            if (!hasChildInClass)
+                throw new UnauthorizedAccessException("Çocuğunuzun bulunmadığı bir sınıfın bültenlerine erişemezsiniz.");
+        }
+        else if (_currentUserService.Role == "Teacher")
+        {
+            var isAssigned = await _dbContext.Classrooms
+                .AnyAsync(c => c.Id == request.ClassroomId && !c.IsDeleted && c.Teachers.Any(t => t.Id == _currentUserService.UserId), cancellationToken);
+
+            if (!isAssigned)
+                throw new UnauthorizedAccessException("Atanmadığınız bir sınıfın bültenlerine erişemezsiniz.");
+        }
+        else if (_currentUserService.Role != "Admin")
+        {
+            throw new UnauthorizedAccessException("Bültenlere erişim yetkiniz bulunmamaktadır.");
+        }
+
         var isParent = _currentUserService.Role == "Parent";
         
         var query = _dbContext.Newsletters
@@ -51,6 +72,7 @@ public class GetClassroomNewslettersQueryHandler : IRequestHandler<GetClassroomN
         {
             query = query.Where(n => n.Status == SchoolInfo.Domain.Enums.NewsletterStatus.Published);
         }
+
 
         var newsletters = await query
             .OrderByDescending(n => n.CreatedAt)

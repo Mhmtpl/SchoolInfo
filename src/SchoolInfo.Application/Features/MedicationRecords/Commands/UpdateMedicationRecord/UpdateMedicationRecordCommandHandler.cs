@@ -1,8 +1,12 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using SchoolInfo.Application.Common.Interfaces;
+using SchoolInfo.Domain.Entities;
 using SchoolInfo.Domain.Exceptions;
 using SchoolInfo.Domain.Interfaces;
 
@@ -37,6 +41,23 @@ public class UpdateMedicationRecordCommandHandler : IRequestHandler<UpdateMedica
             throw new KeyNotFoundException("İlaç kaydı bulunamadı.");
         }
 
+        if (medicationRecord.SchoolId != _currentUserService.SchoolId)
+        {
+            throw new UnauthorizedAccessException("Bu kaydı güncellemek için yetkiniz bulunmamaktadır.");
+        }
+
+        if (_currentUserService.Role == "Teacher")
+        {
+            var isAssigned = await ((DbContext)_dbContext).Set<Classroom>()
+                .Where(c => c.SchoolId == _currentUserService.SchoolId && !c.IsDeleted)
+                .AnyAsync(c => c.Students.Any(s => s.Id == medicationRecord.StudentId) && c.Teachers.Any(t => t.Id == _currentUserService.UserId), cancellationToken);
+
+            if (!isAssigned)
+            {
+                throw new UnauthorizedAccessException("Bu öğrencinin ilaç kaydını güncellemek için yetkiniz bulunmamaktadır.");
+            }
+        }
+
         medicationRecord.UpdateDetails(
             request.MedicineName,
             request.Dosage,
@@ -48,3 +69,4 @@ public class UpdateMedicationRecordCommandHandler : IRequestHandler<UpdateMedica
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }
+

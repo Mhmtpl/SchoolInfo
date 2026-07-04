@@ -18,16 +18,35 @@ public record UpdateClassroomWeeklyScheduleCommand(Guid ClassroomId, List<Weekly
 public class UpdateClassroomWeeklyScheduleCommandHandler : IRequestHandler<UpdateClassroomWeeklyScheduleCommand, bool>
 {
     private readonly IAppDbContext _dbContext;
+    private readonly ICurrentUserService _currentUserService;
 
-    public UpdateClassroomWeeklyScheduleCommandHandler(IAppDbContext dbContext)
+    public UpdateClassroomWeeklyScheduleCommandHandler(IAppDbContext dbContext, ICurrentUserService currentUserService)
     {
         _dbContext = dbContext;
+        _currentUserService = currentUserService;
     }
 
     public async Task<bool> Handle(UpdateClassroomWeeklyScheduleCommand request, CancellationToken cancellationToken)
     {
-        var classroom = await _dbContext.Classrooms.FindAsync(new object[] { request.ClassroomId }, cancellationToken);
+        if (_currentUserService.Role != "Admin" && _currentUserService.Role != "Teacher")
+        {
+            throw new UnauthorizedAccessException("Haftalık ders programı güncellemek için yetkiniz bulunmamaktadır.");
+        }
+
+        var classroom = await _dbContext.Classrooms
+            .Include(c => c.Teachers)
+            .FirstOrDefaultAsync(c => c.Id == request.ClassroomId && c.SchoolId == _currentUserService.SchoolId && !c.IsDeleted, cancellationToken);
+
         if (classroom == null) return false;
+
+        if (_currentUserService.Role == "Teacher")
+        {
+            var isAssigned = classroom.Teachers.Any(t => t.Id == _currentUserService.UserId);
+            if (!isAssigned)
+            {
+                throw new UnauthorizedAccessException("Bu sınıfın haftalık ders programını güncelleme yetkiniz bulunmamaktadır.");
+            }
+        }
 
         // Silinecekleri sil (eski şablon)
         var existingSchedules = await _dbContext.ClassroomWeeklySchedules
@@ -57,3 +76,4 @@ public class UpdateClassroomWeeklyScheduleCommandHandler : IRequestHandler<Updat
         return true;
     }
 }
+

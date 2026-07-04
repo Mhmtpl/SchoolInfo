@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -21,13 +22,31 @@ public class PublishNewsletterCommandHandler : IRequestHandler<PublishNewsletter
 
     public async Task Handle(PublishNewsletterCommand request, CancellationToken cancellationToken)
     {
+        if (_currentUserService.Role != "Admin" && _currentUserService.Role != "Teacher")
+        {
+            throw new UnauthorizedAccessException("Bülten yayınlamak için yetkiniz bulunmamaktadır.");
+        }
+
         var newsletter = await _dbContext.Newsletters
             .FirstOrDefaultAsync(n => n.Id == request.Id && n.SchoolId == _currentUserService.SchoolId, cancellationToken);
 
         if (newsletter == null)
-            throw new System.Collections.Generic.KeyNotFoundException("Bülten bulunamadı.");
+            throw new System.Collections.Generic.KeyNotFoundException("Bülten bulunamadı veya bu bültene erişim yetkiniz yok.");
+
+        if (_currentUserService.Role == "Teacher")
+        {
+            var isAssigned = await _dbContext.Classrooms
+                .Where(c => c.SchoolId == _currentUserService.SchoolId && !c.IsDeleted)
+                .AnyAsync(c => c.Id == newsletter.ClassroomId && c.Teachers.Any(t => t.Id == _currentUserService.UserId), cancellationToken);
+
+            if (!isAssigned)
+            {
+                throw new UnauthorizedAccessException("Bu sınıfın bültenini yayınlamak için yetkiniz bulunmamaktadır.");
+            }
+        }
 
         newsletter.Publish();
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }
+

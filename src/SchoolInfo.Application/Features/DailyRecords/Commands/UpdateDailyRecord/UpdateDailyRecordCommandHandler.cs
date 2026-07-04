@@ -33,14 +33,32 @@ public class UpdateDailyRecordCommandHandler : IRequestHandler<UpdateDailyRecord
     {
         if (_currentUserService.Role != "Teacher" && _currentUserService.Role != "Admin")
         {
-            throw new UnauthorizedAccessException("GÃ¼nlÃ¼k kaydÄ± gÃ¼ncellemek iÃ§in yetkiniz bulunmamaktadÄ±r.");
+            throw new UnauthorizedAccessException("Günlük kaydı güncellemek için yetkiniz bulunmamaktadır.");
         }
 
         var dailyRecord = await _dailyRecordRepository.GetByIdAsync(request.DailyRecordId);
         if (dailyRecord == null)
         {
-            throw new DomainException($"Id'si {request.DailyRecordId} olan gÃ¼nlÃ¼k kayÄ±t bulunamadÄ±.");
+            throw new DomainException($"Id'si {request.DailyRecordId} olan günlük kayıt bulunamadı.");
         }
+
+        if (dailyRecord.SchoolId != _currentUserService.SchoolId)
+        {
+            throw new UnauthorizedAccessException("Bu günlük kaydını güncellemek için yetkiniz bulunmamaktadır.");
+        }
+
+        if (_currentUserService.Role == "Teacher")
+        {
+            var isAssigned = await ((DbContext)_dbContext).Set<SchoolInfo.Domain.Entities.Classroom>()
+                .Where(c => c.SchoolId == _currentUserService.SchoolId && !c.IsDeleted)
+                .AnyAsync(c => c.Students.Any(s => s.Id == dailyRecord.StudentId) && c.Teachers.Any(t => t.Id == _currentUserService.UserId), cancellationToken);
+
+            if (!isAssigned)
+            {
+                throw new UnauthorizedAccessException("Bu öğrencinin günlük kaydını güncellemek için yetkiniz bulunmamaktadır.");
+            }
+        }
+
 
         dailyRecord.UpdateSleepInfo(new SleepData(request.SleepStatus, request.SleepStartTime, request.SleepEndTime));
         dailyRecord.UpdateWaterConsumption(new WaterIntake(request.WaterAmountInMilliliters));
