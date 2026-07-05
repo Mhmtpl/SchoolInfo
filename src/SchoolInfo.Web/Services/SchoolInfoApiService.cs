@@ -74,7 +74,20 @@ public class SchoolInfoApiService
         return await response.Content.ReadFromJsonAsync<T>();
     }
 
+    public async Task<byte[]> GetByteArrayAsync(string relativeUri)
+    {
+        AttachAuthorizationHeader();
+        var response = await _httpClient.GetAsync(relativeUri);
+
+        if (response.StatusCode == HttpStatusCode.Forbidden || response.StatusCode == HttpStatusCode.Unauthorized)
+            throw new UnauthorizedAccessException("Bu işlem için yetkiniz bulunmamaktadır.");
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsByteArrayAsync();
+    }
+
     public async Task<TResponse?> PostAsync<TRequest, TResponse>(string relativeUri, TRequest payload)
+
     {
         AttachAuthorizationHeader();
         var response = await _httpClient.PostAsJsonAsync(relativeUri, payload);

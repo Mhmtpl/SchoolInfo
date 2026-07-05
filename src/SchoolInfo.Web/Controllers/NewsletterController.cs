@@ -7,7 +7,7 @@ using SchoolInfo.Web.Services;
 
 namespace SchoolInfo.Web.Controllers;
 
-[Authorize(Roles = "Teacher")]
+[Authorize(Roles = "Teacher,Parent")]
 public class NewsletterController : Controller
 {
     private readonly SchoolInfoApiService _apiService;
@@ -18,6 +18,7 @@ public class NewsletterController : Controller
     }
 
     [HttpPost]
+    [Authorize(Roles = "Teacher")]
     public async Task<IActionResult> CreateNewsletter([FromForm] CreateNewsletterCommand command, Microsoft.AspNetCore.Http.IFormFile? CoverImage)
     {
         try
@@ -46,6 +47,7 @@ public class NewsletterController : Controller
     }
 
     [HttpPost]
+    [Authorize(Roles = "Teacher")]
     public async Task<IActionResult> PublishNewsletter(Guid id, Guid classroomId)
     {
         try
@@ -61,6 +63,7 @@ public class NewsletterController : Controller
     }
 
     [HttpPost]
+    [Authorize(Roles = "Teacher")]
     public async Task<IActionResult> UpdateNewsletter(Guid id, [FromForm] CreateNewsletterCommand command, Microsoft.AspNetCore.Http.IFormFile? CoverImage)
     {
         try
@@ -89,6 +92,7 @@ public class NewsletterController : Controller
     }
 
     [HttpDelete("api/newsletters/{id}")]
+    [Authorize(Roles = "Teacher")]
     public async Task<IActionResult> DeleteNewsletter(Guid id)
     {
         try
@@ -99,6 +103,26 @@ public class NewsletterController : Controller
         catch (Exception ex)
         {
             return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> DownloadPdf(Guid id)
+    {
+        try
+        {
+            var pdfBytes = await _apiService.GetByteArrayAsync($"api/newsletters/{id}/pdf");
+            return File(pdfBytes, "application/pdf", $"bulten_{id}.pdf");
+        }
+        catch (Exception ex)
+        {
+            TempData["ErrorMessage"] = "Bülten indirilirken hata oluştu: " + ex.Message;
+            var referer = Request.Headers["Referer"].ToString();
+            if (!string.IsNullOrEmpty(referer))
+            {
+                return Redirect(referer);
+            }
+            return RedirectToAction("Index", "Home");
         }
     }
 }

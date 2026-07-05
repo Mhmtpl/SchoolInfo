@@ -8,6 +8,7 @@ using SchoolInfo.Application.Features.Newsletters.Commands.CreateNewsletter;
 using SchoolInfo.Application.Features.Newsletters.Commands.PublishNewsletter;
 using SchoolInfo.Application.Features.Newsletters.Commands.UpdateNewsletter;
 using SchoolInfo.Application.Features.Newsletters.Queries.GetClassroomNewsletters;
+using SchoolInfo.Application.Features.Newsletters.Queries.GetNewsletterPdf;
 
 namespace SchoolInfo.API.Endpoints.Newsletters;
 
@@ -33,6 +34,10 @@ public class NewsletterEndpoints : IEndpoint
             .WithName("GetClassroomNewsletters")
             .WithSummary("Sınıfa ait bültenleri listeler.");
 
+        group.MapGet("/{id:guid}/pdf", GetNewsletterPdfAsync)
+            .WithName("GetNewsletterPdf")
+            .WithSummary("Bülteni PDF dosyası olarak indirir.");
+
         group.MapDelete("/{id:guid}", DeleteNewsletterAsync)
             .WithName("DeleteNewsletter")
             .WithSummary("Bülteni (taslak veya yayınlanmış) siler.");
@@ -56,6 +61,12 @@ public class NewsletterEndpoints : IEndpoint
         return Results.Ok(result);
     }
 
+    private static async Task<IResult> GetNewsletterPdfAsync(Guid id, IMediator mediator)
+    {
+        var pdfBytes = await mediator.Send(new GetNewsletterPdfQuery(id));
+        return Results.File(pdfBytes, "application/pdf", $"bulten_{id}.pdf");
+    }
+
     private static async Task<IResult> UpdateNewsletterAsync(Guid id, UpdateNewsletterCommand command, IMediator mediator)
     {
         command.Id = id;
@@ -69,3 +80,4 @@ public class NewsletterEndpoints : IEndpoint
         return success ? Results.NoContent() : Results.NotFound();
     }
 }
+

@@ -20,6 +20,7 @@ using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
 // 1. Domain (Herhangi bir servis kaydı yok)
 
 // 2. Application
