@@ -499,6 +499,39 @@
 
     <!-- TAB 3: VELİ BÜLTENLERİ -->
     <div id="tab-newsletters" class="modern-tab-content">
+    @{
+        Func<string, string> getPrimaryColor = (theme) => theme switch
+        {
+            "Playful" => "#8B5CF6", // Violet
+            "Nature" => "#047857",  // Emerald
+            "Sunset" => "#D97706",  // Amber
+            _ => "var(--primary-color)"
+        };
+
+        Func<string, string> getAccentColor = (theme) => theme switch
+        {
+            "Playful" => "#EC4899", // Pink
+            "Nature" => "#10B981",  // Mint
+            "Sunset" => "#F97316",  // Orange
+            _ => "var(--accent-blue)"
+        };
+
+        Func<string, string> getCardBgColor = (theme) => theme switch
+        {
+            "Playful" => "rgba(253, 244, 255, 0.75)",
+            "Nature" => "rgba(240, 253, 244, 0.75)",
+            "Sunset" => "rgba(255, 251, 235, 0.75)",
+            _ => "rgba(255, 255, 255, 0.7)"
+        };
+
+        Func<string, string> getBorderColor = (theme) => theme switch
+        {
+            "Playful" => "#F5D0FE",
+            "Nature" => "#BBF7D0",
+            "Sunset" => "#FEF3C7",
+            _ => "var(--border-color)"
+        };
+    }
     <!-- BÜLTEN YÖNETİMİ -->
     <div class="glass-card">
         <div class="section-card-header" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
@@ -530,10 +563,10 @@
                 
                 @foreach (var newsletter in draftNewsletters)
                 {
-                    <div style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; background: rgba(255,255,255,0.7); box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column;">
+                    <div style="border: 1px solid @getBorderColor(newsletter.Theme); border-radius: 12px; padding: 1.5rem; background: @getCardBgColor(newsletter.Theme); box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; transition: all 0.3s;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 1rem;">
                             <div>
-                                <h3 style="font-size: 1.25rem; margin-bottom: 0.2rem; color: var(--primary-color);">@newsletter.Title</h3>
+                                <h3 style="font-size: 1.25rem; margin-bottom: 0.2rem; color: @getPrimaryColor(newsletter.Theme);">@newsletter.Title</h3>
                                 <div style="font-size: 0.85rem; color: var(--text-muted);">@newsletter.WeekName</div>
                             </div>
                             <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -557,8 +590,8 @@
                             <div style="margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem;">
                                 @foreach (var sec in newsletter.Sections)
                                 {
-                                    <div style="background: rgba(240, 242, 245, 0.5); padding: 0.8rem; border-radius: 8px; border-left: 3px solid var(--accent-blue);">
-                                        <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.4rem; color: var(--text-primary);">@sec.Subject</div>
+                                    <div style="background: rgba(255, 255, 255, 0.65); padding: 0.8rem; border-radius: 8px; border-left: 4px solid @getAccentColor(newsletter.Theme); border: 1px solid @getBorderColor(newsletter.Theme);">
+                                        <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.4rem; color: @getPrimaryColor(newsletter.Theme);">@sec.Subject</div>
                                         <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.3rem;"><strong>Bu Hafta:</strong> @sec.ThisWeekSummary</div>
                                         <div style="font-size: 0.8rem; color: var(--text-secondary);"><strong>Gelecek Hafta:</strong> @sec.NextWeekTopic</div>
                                     </div>
@@ -585,10 +618,10 @@
                 
                 @foreach (var newsletter in publishedNewsletters)
                 {
-                    <div id="newsletter-pdf-@newsletter.Id" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; background: rgba(255,255,255,0.7); box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column;">
+                    <div id="newsletter-pdf-@newsletter.Id" style="border: 1px solid @getBorderColor(newsletter.Theme); border-radius: 12px; padding: 1.5rem; background: @getCardBgColor(newsletter.Theme); box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; flex-direction: column; transition: all 0.3s;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 1rem;">
                             <div>
-                                <h3 style="font-size: 1.25rem; margin-bottom: 0.2rem; color: var(--primary-color);">@newsletter.Title</h3>
+                                <h3 style="font-size: 1.25rem; margin-bottom: 0.2rem; color: @getPrimaryColor(newsletter.Theme);">@newsletter.Title</h3>
                                 <div style="font-size: 0.85rem; color: var(--text-muted);">@newsletter.WeekName</div>
                             </div>
                             <div style="display: flex; gap: 0.5rem; align-items: center;" data-html2canvas-ignore>
@@ -614,8 +647,8 @@
                             <div style="margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem;">
                                 @foreach (var sec in newsletter.Sections)
                                 {
-                                    <div style="background: rgba(240, 242, 245, 0.5); padding: 0.8rem; border-radius: 8px; border-left: 3px solid var(--accent-blue);">
-                                        <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.4rem; color: var(--text-primary);">@sec.Subject</div>
+                                    <div style="background: rgba(255, 255, 255, 0.65); padding: 0.8rem; border-radius: 8px; border-left: 4px solid @getAccentColor(newsletter.Theme); border: 1px solid @getBorderColor(newsletter.Theme);">
+                                        <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.4rem; color: @getPrimaryColor(newsletter.Theme);">@sec.Subject</div>
                                         <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.3rem;"><strong>Bu Hafta:</strong> @sec.ThisWeekSummary</div>
                                         <div style="font-size: 0.8rem; color: var(--text-secondary);"><strong>Gelecek Hafta:</strong> @sec.NextWeekTopic</div>
                                     </div>
@@ -932,14 +965,19 @@
                     <label for="newsletterWeekName">Hafta (Opsiyonel)</label>
                     <input type="text" id="newsletterWeekName" name="weekName" class="form-control" placeholder="Örn: 9-13 Ekim" />
                 </div>
-                <div class="form-group" style="flex: 1;">
+                <div class="form-group" style="flex: 1; min-width: 140px;">
                     <label for="newsletterTheme">Şablon Teması</label>
-                    <select id="newsletterTheme" name="theme" class="form-control">
+                    <select id="newsletterTheme" name="theme" class="form-control" onchange="updateThemePreview(this.value)">
                         <option value="Default">Klasik (Lacivert)</option>
                         <option value="Playful">Eğlenceli (Pembe/Mor)</option>
                         <option value="Nature">Doğa (Yeşil/Nane)</option>
                         <option value="Sunset">Gün Batımı (Turuncu/Altın)</option>
                     </select>
+                    <div id="themePreview" style="margin-top: 0.4rem; display: flex; gap: 0.4rem; align-items: center; background: rgba(0,0,0,0.03); padding: 0.25rem 0.5rem; border-radius: 6px;">
+                        <span style="font-size: 0.72rem; font-weight: 600; color: var(--text-muted);">Renkler:</span>
+                        <div id="themeColor1" style="width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1); background: #0F172A; transition: all 0.2s;"></div>
+                        <div id="themeColor2" style="width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1); background: #E94560; transition: all 0.2s;"></div>
+                    </div>
                 </div>
             </div>
 
@@ -1359,6 +1397,22 @@
         function closeModal() {
             document.getElementById('activityModal').style.display = 'none';
         }
+        function updateThemePreview(theme) {
+            const colors = {
+                'Default': ['#0F172A', '#E94560'],
+                'Playful': ['#8B5CF6', '#EC4899'],
+                'Nature': ['#047857', '#10B981'],
+                'Sunset': ['#D97706', '#F97316']
+            };
+            const palette = colors[theme] || colors['Default'];
+            const c1 = document.getElementById('themeColor1');
+            const c2 = document.getElementById('themeColor2');
+            if (c1 && c2) {
+                c1.style.backgroundColor = palette[0];
+                c2.style.backgroundColor = palette[1];
+            }
+        }
+
         function openNewsletterModal() {
             document.getElementById('newsletterModalTitle').innerText = "Yeni Bülten Oluştur";
             document.getElementById('newsletterForm').action = "/Newsletter/CreateNewsletter";
@@ -1366,6 +1420,7 @@
             document.getElementById('newsletterTitle').value = "";
             document.getElementById('newsletterWeekName').value = "";
             document.getElementById('newsletterTheme').value = "Default";
+            updateThemePreview("Default");
             document.getElementById('imageUrl').value = "";
             document.getElementById('newsletterContent').value = "";
             document.getElementById('newsletterSectionsContainer').innerHTML = "";
@@ -1383,6 +1438,7 @@
             document.getElementById('newsletterTitle').value = newsletter.title || "";
             document.getElementById('newsletterWeekName').value = newsletter.weekName || "";
             document.getElementById('newsletterTheme').value = newsletter.theme || "Default";
+            updateThemePreview(newsletter.theme || "Default");
             document.getElementById('imageUrl').value = newsletter.imageUrl || "";
             document.getElementById('newsletterContent').value = newsletter.content || "";
             

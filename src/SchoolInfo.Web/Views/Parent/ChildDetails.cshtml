@@ -562,6 +562,39 @@
 
             <!-- TAB 3: BÜLTENLER BÖLÜMÜ -->
             <div id="tab-parent-newsletters" class="modern-tab-content">
+                @{
+                    Func<string, string> getPrimaryColor = (theme) => theme switch
+                    {
+                        "Playful" => "#8B5CF6", // Violet
+                        "Nature" => "#047857",  // Emerald
+                        "Sunset" => "#D97706",  // Amber
+                        _ => "var(--primary-color)"
+                    };
+
+                    Func<string, string> getAccentColor = (theme) => theme switch
+                    {
+                        "Playful" => "#EC4899", // Pink
+                        "Nature" => "#10B981",  // Mint
+                        "Sunset" => "#F97316",  // Orange
+                        _ => "var(--accent-blue)"
+                    };
+
+                    Func<string, string> getCardBgColor = (theme) => theme switch
+                    {
+                        "Playful" => "rgba(253, 244, 255, 0.75)",
+                        "Nature" => "rgba(240, 253, 244, 0.75)",
+                        "Sunset" => "rgba(255, 251, 235, 0.75)",
+                        _ => "rgba(255, 255, 255, 0.7)"
+                    };
+
+                    Func<string, string> getBorderColor = (theme) => theme switch
+                    {
+                        "Playful" => "#F5D0FE",
+                        "Nature" => "#BBF7D0",
+                        "Sunset" => "#FEF3C7",
+                        _ => "var(--border-color)"
+                    };
+                }
                 <div class="glass-card" style="padding: 2rem;">
                     <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
                         📰 Haftalık Sınıf Bültenleri
@@ -578,13 +611,13 @@
                         <div style="display: flex; flex-direction: column; gap: 1rem;">
                             @foreach (var newsletter in newsletters)
                             {
-                                <div id="newsletter-pdf-@newsletter.Id" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 1.2rem; background: rgba(255,255,255,0.6); box-shadow: 0 4px 15px rgba(0,0,0,0.02); position: relative;">
+                                <div id="newsletter-pdf-@newsletter.Id" style="border: 1px solid @getBorderColor(newsletter.Theme); border-radius: 12px; padding: 1.2rem; background: @getCardBgColor(newsletter.Theme); box-shadow: 0 4px 15px rgba(0,0,0,0.02); position: relative; transition: all 0.3s;">
                                     <div data-html2canvas-ignore style="position: absolute; right: 1rem; top: 1rem;">
                                         <button onclick="downloadNewsletterPdf('@newsletter.Id', '@newsletter.Title')" class="btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem; display: flex; align-items: center; gap: 0.3rem;" title="Bülteni PDF Olarak İndir">
                                             <span>📥</span> PDF İndir
                                         </button>
                                     </div>
-                                    <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem; color: var(--accent-blue); padding-right: 6rem;">@newsletter.Title</h3>
+                                    <h3 style="font-size: 1.15rem; margin-bottom: 0.5rem; color: @getPrimaryColor(newsletter.Theme); padding-right: 6rem;">@newsletter.Title</h3>
                                     <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.5;">@newsletter.Content</p>
                                     @if (!string.IsNullOrEmpty(newsletter.ImageUrl))
                                     {
