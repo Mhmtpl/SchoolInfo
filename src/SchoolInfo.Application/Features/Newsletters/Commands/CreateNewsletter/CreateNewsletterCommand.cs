@@ -12,5 +12,6 @@ public record CreateNewsletterCommand(
     string Content,
     string? ImageUrl,
     string? WeekName,
-    List<NewsletterSectionDto> Sections
+    List<NewsletterSectionDto> Sections,
+    string? Theme
 ) : IRequest<Guid>;

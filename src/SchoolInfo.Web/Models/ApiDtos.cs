@@ -183,6 +183,7 @@ public class NewsletterDto
     public string Content { get; set; } = string.Empty;
     public string ImageUrl { get; set; } = string.Empty;
     public string? WeekName { get; set; }
+    public string Theme { get; set; } = "Default";
     public List<NewsletterSectionDto> Sections { get; set; } = new();
     public int Status { get; set; }
     public DateTime? PublishedAt { get; set; }
@@ -196,6 +197,7 @@ public class CreateNewsletterCommand
     public string Content { get; set; } = string.Empty;
     public string? ImageUrl { get; set; }
     public string? WeekName { get; set; }
+    public string Theme { get; set; } = "Default";
     public List<NewsletterSectionDto> Sections { get; set; } = new();
 }
 

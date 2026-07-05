@@ -12,5 +12,6 @@ public class UpdateNewsletterCommand : IRequest<bool>
     public string Content { get; set; } = string.Empty;
     public string? ImageUrl { get; set; }
     public string? WeekName { get; set; }
+    public string? Theme { get; set; }
     public List<NewsletterSectionDto> Sections { get; set; } = new();
 }

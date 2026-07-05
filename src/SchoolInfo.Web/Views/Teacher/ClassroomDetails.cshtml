@@ -932,6 +932,15 @@
                     <label for="newsletterWeekName">Hafta (Opsiyonel)</label>
                     <input type="text" id="newsletterWeekName" name="weekName" class="form-control" placeholder="Örn: 9-13 Ekim" />
                 </div>
+                <div class="form-group" style="flex: 1;">
+                    <label for="newsletterTheme">Şablon Teması</label>
+                    <select id="newsletterTheme" name="theme" class="form-control">
+                        <option value="Default">Klasik (Lacivert)</option>
+                        <option value="Playful">Eğlenceli (Pembe/Mor)</option>
+                        <option value="Nature">Doğa (Yeşil/Nane)</option>
+                        <option value="Sunset">Gün Batımı (Turuncu/Altın)</option>
+                    </select>
+                </div>
             </div>
 
             <div class="form-group">
@@ -1356,6 +1365,7 @@
             document.getElementById('newsletterId').value = "";
             document.getElementById('newsletterTitle').value = "";
             document.getElementById('newsletterWeekName').value = "";
+            document.getElementById('newsletterTheme').value = "Default";
             document.getElementById('imageUrl').value = "";
             document.getElementById('newsletterContent').value = "";
             document.getElementById('newsletterSectionsContainer').innerHTML = "";
@@ -1372,6 +1382,7 @@
             document.getElementById('newsletterId').value = newsletter.id;
             document.getElementById('newsletterTitle').value = newsletter.title || "";
             document.getElementById('newsletterWeekName').value = newsletter.weekName || "";
+            document.getElementById('newsletterTheme').value = newsletter.theme || "Default";
             document.getElementById('imageUrl').value = newsletter.imageUrl || "";
             document.getElementById('newsletterContent').value = newsletter.content || "";
             

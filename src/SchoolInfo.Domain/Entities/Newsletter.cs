@@ -14,26 +14,29 @@ public class Newsletter : BaseEntity
     public Guid ClassroomId { get; private set; }
     public NewsletterStatus Status { get; private set; }
     public DateTime? PublishedAt { get; private set; }
+    public string Theme { get; private set; } = "Default";
 
     private readonly List<NewsletterSection> _sections = new();
     public IReadOnlyCollection<NewsletterSection> Sections => _sections.AsReadOnly();
 
-    public Newsletter(string title, string content, string imageUrl, string? weekName, Guid classroomId)
+    public Newsletter(string title, string content, string imageUrl, string? weekName, Guid classroomId, string theme = "Default")
     {
         Title = title;
         Content = content;
         ImageUrl = imageUrl;
         WeekName = weekName;
         ClassroomId = classroomId;
+        Theme = string.IsNullOrEmpty(theme) ? "Default" : theme;
         Status = NewsletterStatus.Draft;
     }
 
-    public void UpdateDraft(string title, string content, string imageUrl, string? weekName)
+    public void UpdateDraft(string title, string content, string imageUrl, string? weekName, string theme = "Default")
     {
         Title = title;
         Content = content;
         ImageUrl = imageUrl;
         WeekName = weekName;
+        Theme = string.IsNullOrEmpty(theme) ? "Default" : theme;
         UpdateTimestamp();
     }
 

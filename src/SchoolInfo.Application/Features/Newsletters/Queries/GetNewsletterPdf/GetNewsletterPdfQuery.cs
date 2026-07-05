@@ -87,6 +87,50 @@ public class NewsletterDocument : IDocument
 
     public DocumentMetadata GetMetadata() => DocumentMetadata.Default;
 
+    private string GetPrimaryColor()
+    {
+        return _newsletter.Theme switch
+        {
+            "Playful" => "#8B5CF6", // Violet
+            "Nature" => "#047857",  // Emerald
+            "Sunset" => "#D97706",  // Amber
+            _ => "#0F172A"          // Slate (Default)
+        };
+    }
+
+    private string GetAccentColor()
+    {
+        return _newsletter.Theme switch
+        {
+            "Playful" => "#EC4899", // Pink
+            "Nature" => "#10B981",  // Mint
+            "Sunset" => "#F97316",  // Orange
+            _ => "#E94560"          // Coral/Red (Default)
+        };
+    }
+
+    private string GetCardBackgroundColor()
+    {
+        return _newsletter.Theme switch
+        {
+            "Playful" => "#FDF4FF", // Light purple
+            "Nature" => "#F0FDF4",  // Light green
+            "Sunset" => "#FFFBEB",  // Light amber
+            _ => "#F8FAFC"          // Light slate (Default)
+        };
+    }
+
+    private string GetBorderColor()
+    {
+        return _newsletter.Theme switch
+        {
+            "Playful" => "#F5D0FE", // Purple border
+            "Nature" => "#BBF7D0",  // Green border
+            "Sunset" => "#FEF3C7",  // Amber border
+            _ => "#E2E8F0"          // Slate border (Default)
+        };
+    }
+
     public void Compose(IDocumentContainer container)
     {
         container.Page(page =>
@@ -102,9 +146,17 @@ public class NewsletterDocument : IDocument
         });
     }
 
+    private void ComposeHeader(IDocumentContainer container)
+    {
+        // Not used, using page.Header().Element(ComposeHeader) which passes IContainer
+    }
+
     private void ComposeHeader(IContainer container)
     {
-        container.BorderBottom(1.5f).BorderColor("#E2E8F0").PaddingBottom(10).Row(row =>
+        var primaryColor = GetPrimaryColor();
+        var accentColor = GetAccentColor();
+
+        container.BorderBottom(2f).BorderColor(accentColor).PaddingBottom(10).Row(row =>
         {
             row.RelativeItem().Column(column =>
             {
@@ -116,14 +168,14 @@ public class NewsletterDocument : IDocument
                 column.Item().Text(_newsletter.Title)
                     .FontSize(22)
                     .Bold()
-                    .FontColor("#0F172A");
+                    .FontColor(primaryColor);
 
                 if (!string.IsNullOrEmpty(_newsletter.WeekName))
                 {
                     column.Item().Text(_newsletter.WeekName)
                         .FontSize(12)
                         .SemiBold()
-                        .FontColor("#E94560");
+                        .FontColor(accentColor);
                 }
             });
 
@@ -136,15 +188,20 @@ public class NewsletterDocument : IDocument
 
     private void ComposeContent(IContainer container)
     {
+        var primaryColor = GetPrimaryColor();
+        var accentColor = GetAccentColor();
+        var cardBg = GetCardBackgroundColor();
+        var borderCol = GetBorderColor();
+
         container.PaddingTop(15).Column(column =>
         {
             // Main Body Content
-            column.Item().Background("#F8FAFC").Border(1).BorderColor("#E2E8F0").Padding(14).Column(card =>
+            column.Item().Background(cardBg).Border(1).BorderColor(borderCol).Padding(14).Column(card =>
             {
                 card.Item().Text("Öğretmenimizin Notu")
                     .FontSize(13)
                     .Bold()
-                    .FontColor("#475569");
+                    .FontColor(primaryColor);
 
                 card.Item().PaddingTop(6).Text(_newsletter.Content)
                     .FontSize(11)
@@ -162,7 +219,7 @@ public class NewsletterDocument : IDocument
 
                 foreach (var section in _newsletter.Sections)
                 {
-                    column.Item().PaddingTop(10).Background("#FFFFFF").Border(1).BorderColor("#E2E8F0").Padding(12).Column(sectionCard =>
+                    column.Item().PaddingTop(10).Background("#FFFFFF").Border(1).BorderColor(borderCol).Padding(12).Column(sectionCard =>
                     {
                         // Header row of the section
                         sectionCard.Item().Row(row =>
@@ -170,7 +227,7 @@ public class NewsletterDocument : IDocument
                             row.RelativeItem().Text(section.Subject)
                                 .FontSize(13)
                                 .Bold()
-                                .FontColor("#E94560");
+                                .FontColor(accentColor);
 
                             if (!string.IsNullOrEmpty(section.InstructorName))
                             {
@@ -187,7 +244,7 @@ public class NewsletterDocument : IDocument
                         {
                             sectionCard.Item().Text(x =>
                             {
-                                x.Span("Bu Hafta Neler Yaptık: ").Bold().FontSize(10).FontColor("#475569");
+                                x.Span("Bu Hafta Neler Yaptık: ").Bold().FontSize(10).FontColor(primaryColor);
                                 x.Span(section.ThisWeekSummary).FontSize(10).FontColor("#334155");
                             });
                         }
@@ -196,7 +253,7 @@ public class NewsletterDocument : IDocument
                         {
                             sectionCard.Item().PaddingTop(4).Text(x =>
                             {
-                                x.Span("Gelecek Hafta Planımız: ").Bold().FontSize(10).FontColor("#475569");
+                                x.Span("Gelecek Hafta Planımız: ").Bold().FontSize(10).FontColor(primaryColor);
                                 x.Span(section.NextWeekTopic).FontSize(10).FontColor("#334155");
                             });
                         }

@@ -54,7 +54,8 @@ public class CreateNewsletterCommandHandler : IRequestHandler<CreateNewsletterCo
             request.Content ?? "",
             request.ImageUrl ?? "",
             request.WeekName,
-            request.ClassroomId);
+            request.ClassroomId,
+            request.Theme ?? "Default");
 
         if (request.Sections != null)
         {

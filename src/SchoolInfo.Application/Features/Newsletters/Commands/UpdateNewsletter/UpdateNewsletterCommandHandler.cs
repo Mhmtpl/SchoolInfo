@@ -50,7 +50,7 @@ public class UpdateNewsletterCommandHandler : IRequestHandler<UpdateNewsletterCo
         if (newsletter.Status != SchoolInfo.Domain.Enums.NewsletterStatus.Draft)
             throw new Exception("Sadece taslak halindeki bültenler düzenlenebilir.");
 
-        newsletter.UpdateDraft(request.Title, request.Content, request.ImageUrl, request.WeekName);
+        newsletter.UpdateDraft(request.Title, request.Content, request.ImageUrl, request.WeekName, request.Theme ?? "Default");
 
         // Remove old sections
         _context.NewsletterSections.RemoveRange(newsletter.Sections);
