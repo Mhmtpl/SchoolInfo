@@ -38,6 +38,8 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 // 4. Endpoints Registration (Reflection ile tüm IEndpoint'ler)
 builder.Services.AddEndpoints();
+builder.Services.AddSignalR();
+builder.Services.AddScoped<SchoolInfo.Application.Common.Interfaces.IBiometricNotificationService, SchoolInfo.API.Hubs.BiometricNotificationService>();
 
 // 5. JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -54,6 +56,20 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]
                     ?? throw new InvalidOperationException("Jwt:Key yapılandırması eksik!")))
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
         };
     });
 builder.Services.AddAuthorization();
@@ -156,5 +172,6 @@ app.UseAuthorization();
 
 // Endpoint Mapping
 app.MapEndpoints();
+app.MapHub<SchoolInfo.API.Hubs.BiometricHub>("/hubs/biometrics");
 
 app.Run();

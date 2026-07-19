@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SchoolInfo.Domain.Entities;
 
@@ -15,6 +15,7 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
         builder.Property(s => s.FirstName).IsRequired().HasMaxLength(100);
         builder.Property(s => s.LastName).IsRequired().HasMaxLength(100);
         builder.Property(s => s.DateOfBirth).IsRequired();
+        builder.Property(s => s.SmartBandMacAddress).HasMaxLength(50).IsRequired(false);
 
         builder.HasMany(s => s.Parents)
             .WithMany(u => u.Students)

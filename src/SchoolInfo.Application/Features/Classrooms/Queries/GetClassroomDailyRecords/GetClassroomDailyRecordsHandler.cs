@@ -47,7 +47,8 @@ public class GetClassroomDailyRecordsHandler : IRequestHandler<GetClassroomDaily
                 hasRecord ? record?.SleepInfo?.Status : null,
                 hasRecord ? record?.WaterConsumption?.AmountInMilliliters : null,
                 hasRecord ? (record?.TeacherNote ?? "") : "",
-                hasRecord && (record?.IsAbsent ?? false)
+                hasRecord && (record?.IsAbsent ?? false),
+                student.SmartBandMacAddress
             );
         }).ToList();
 

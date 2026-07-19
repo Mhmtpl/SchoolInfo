@@ -98,6 +98,9 @@
 <!-- html2pdf.js for PDF export -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
+<!-- SignalR client CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
+
 <div class="teacher-workspace">
     <!-- Geri Dönüş Linki -->
     <div style="margin-bottom: 0.5rem;">
@@ -208,6 +211,52 @@
                         </div>
                     </div>
 
+                </div>
+            </div>
+
+            <!-- BİYOMETRİK SAĞLIK TAKİBİ -->
+            <div class="glass-card" style="padding: 2rem; margin-top: 1.5rem; margin-bottom: 1.5rem;">
+                <div class="section-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+                    <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        ❤️ Canlı Biyometrik Sağlık Takibi (Xiaomi IoT)
+                    </h2>
+                    <span id="biometrics-connection-status" style="background: #fee2e2; color: #b91c1c; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 0.35rem;">
+                        <span style="width: 8px; height: 8px; background: #b91c1c; border-radius: 50%; display: inline-block;" id="biometrics-dot"></span>
+                        <span id="biometrics-status-text">Bağlantı Yok</span>
+                    </span>
+                </div>
+
+                <!-- Son ölçülen değerler -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                    <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
+                        <span style="font-size: 2rem;">❤️</span>
+                        <div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">Kalp Atış Hızı</div>
+                            <div style="font-size: 1.6rem; font-weight: 800; color: #dc2626;"><span id="live-heartrate">--</span> <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted);">BPM</span></div>
+                        </div>
+                    </div>
+                    <div style="display: none; background: rgba(14, 165, 233, 0.05); border: 1px solid rgba(14, 165, 233, 0.15); border-radius: 12px; padding: 1rem; align-items: center; gap: 1rem;">
+                        <span style="font-size: 2rem;">🫁</span>
+                        <div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">Oksijen Doygunluğu (SpO2)</div>
+                            <div style="font-size: 1.6rem; font-weight: 800; color: #0284c7;"><span id="live-spo2">--</span> <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted);">%</span></div>
+                        </div>
+                    </div>
+                    <div style="display: none; background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.15); border-radius: 12px; padding: 1rem; align-items: center; gap: 1rem;">
+                        <span style="font-size: 2rem;">🌡️</span>
+                        <div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">Vücut Sıcaklığı</div>
+                            <div style="font-size: 1.6rem; font-weight: 800; color: #d97706;"><span id="live-temp">--</span> <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted);">°C</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grafik Alanı -->
+                <div style="position: relative; height: 300px; width: 100%; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem; box-sizing: border-box;">
+                    <canvas id="biometricsChart"></canvas>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; text-align: right;" id="last-update-wrapper">
+                    Son güncelleme: <span id="live-timestamp">Veri Alınmadı</span>
                 </div>
             </div>
 
@@ -942,4 +991,187 @@
                 alert("İletişim hatası.");
             }
         }
+
+        // --- BİYOMETRİK CANLI VERİ & GRAFİK KURGUSU ---
+        (function() {
+            const initialBiometrics = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.Biometrics)) || [];
+            
+            const chartLabels = [];
+            const heartRateData = [];
+            const spo2Data = [];
+            const tempData = [];
+
+            // Başlangıç verilerini doldur
+            initialBiometrics.forEach(item => {
+                const timeStr = new Date(item.RecordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                chartLabels.push(timeStr);
+                heartRateData.push(item.HeartRate);
+                spo2Data.push(item.SpO2);
+                tempData.push(item.BodyTemperature);
+            });
+
+            // Son değerleri ekranda göster
+            if (initialBiometrics.length > 0) {
+                const lastRecord = initialBiometrics[initialBiometrics.length - 1];
+                if (lastRecord.HeartRate) document.getElementById('live-heartrate').innerText = lastRecord.HeartRate;
+                if (lastRecord.SpO2) document.getElementById('live-spo2').innerText = lastRecord.SpO2;
+                if (lastRecord.BodyTemperature) document.getElementById('live-temp').innerText = lastRecord.BodyTemperature.toFixed(1);
+                document.getElementById('live-timestamp').innerText = new Date(lastRecord.RecordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            }
+
+            // Chart.js Tanımlaması
+            const ctx = document.getElementById('biometricsChart').getContext('2d');
+            const biometricsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [
+                        {
+                            label: 'Kalp Atışı (BPM)',
+                            data: heartRateData,
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            yAxisID: 'y-heart'
+                        },
+                        {
+                            label: 'Oksijen (SpO2 %)',
+                            data: spo2Data,
+                            borderColor: '#0284c7',
+                            backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            yAxisID: 'y-spo2',
+                            hidden: true
+                        },
+                        {
+                            label: 'Ateş (°C)',
+                            data: tempData,
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            yAxisID: 'y-temp',
+                            hidden: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: { display: false }
+                        },
+                        'y-heart': {
+                            type: 'linear',
+                            position: 'left',
+                            min: 50,
+                            max: 160,
+                            title: { display: true, text: 'BPM' }
+                        },
+                        'y-spo2': {
+                            display: false,
+                            type: 'linear',
+                            position: 'right',
+                            min: 80,
+                            max: 100,
+                            grid: { drawOnChartArea: false },
+                            title: { display: true, text: 'SpO2 %' }
+                        },
+                        'y-temp': {
+                            display: false,
+                            type: 'linear',
+                            position: 'right',
+                            min: 35,
+                            max: 42,
+                            grid: { drawOnChartArea: false },
+                            title: { display: true, text: 'Ateş °C' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { 
+                                boxWidth: 15,
+                                filter: function(item, chart) {
+                                    return item.text.includes('Kalp Atışı');
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // SignalR Hub Entegrasyonu
+            const accessToken = '@ViewBag.AccessToken';
+            const apiUrl = '@ViewBag.ApiUrl';
+
+            if (accessToken && apiUrl) {
+                // SignalR hub adresi
+                const hubUrl = apiUrl.replace(/\/$/, '') + '/hubs/biometrics';
+
+                const connection = new signalR.HubConnectionBuilder()
+                    .withUrl(hubUrl, {
+                        accessTokenFactory: () => accessToken
+                    })
+                    .withAutomaticReconnect()
+                    .build();
+
+                // Canlı güncelleme dinleyicisi
+                connection.on("ReceiveBiometricUpdate", function (update) {
+                    console.log("Canlı biyometrik güncelleme:", update);
+
+                    const timeStr = new Date(update.recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const fullTimeStr = new Date(update.recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                    // Canlı kutuları güncelle
+                    if (update.heartRate) {
+                        document.getElementById('live-heartrate').innerText = update.heartRate;
+                        biometricsChart.data.datasets[0].data.push(update.heartRate);
+                    }
+                    if (update.spO2) {
+                        document.getElementById('live-spo2').innerText = update.spO2;
+                        biometricsChart.data.datasets[1].data.push(update.spO2);
+                    }
+                    if (update.bodyTemperature) {
+                        document.getElementById('live-temp').innerText = update.bodyTemperature.toFixed(1);
+                        biometricsChart.data.datasets[2].data.push(update.bodyTemperature);
+                    }
+                    document.getElementById('live-timestamp').innerText = fullTimeStr;
+
+                    // Zaman etiketini ekle
+                    biometricsChart.data.labels.push(timeStr);
+
+                    // Ekranda çok fazla nokta birikmesini önlemek için ilk elemanı sil
+                    if (biometricsChart.data.labels.length > 25) {
+                        biometricsChart.data.labels.shift();
+                        biometricsChart.data.datasets.forEach(dataset => dataset.data.shift());
+                    }
+
+                    biometricsChart.update();
+                });
+
+                // Hub bağlantısını başlat
+                connection.start()
+                    .then(function () {
+                        const statusContainer = document.getElementById('biometrics-connection-status');
+                        const statusDot = document.getElementById('biometrics-dot');
+                        const statusText = document.getElementById('biometrics-status-text');
+
+                        if (statusContainer) statusContainer.style.background = '#dcfce7';
+                        if (statusContainer) statusContainer.style.color = '#15803d';
+                        if (statusDot) statusDot.style.background = '#15803d';
+                        if (statusText) statusText.innerText = 'Canlı Bağlantı';
+
+                        // Gruba katıl
+                        connection.invoke("JoinStudentGroup", '@ViewBag.StudentId')
+                            .catch(err => console.error("SignalR Gruba Katılamadı: ", err.toString()));
+                    })
+                    .catch(function (err) {
+                        console.error("SignalR Bağlantısı Kurulamadı: ", err.toString());
+                    });
+            }
+        })();
     </script>

@@ -41,6 +41,7 @@ public class ClassroomDailyRecordDto
     public int? WaterIntake { get; set; }
     public string? TeacherNotes { get; set; }
     public bool IsAbsent { get; set; }
+    public string? SmartBandMacAddress { get; set; }
 }
 
 // --- MEALS ---
@@ -269,6 +270,15 @@ public class AIClassroomUpdateResponseWeb
     public bool Success { get; set; }
     public string Message { get; set; } = string.Empty;
     public List<string> UpdatedStudents { get; set; } = new();
+}
+
+public class StudentBiometricWebDto
+{
+    public Guid Id { get; set; }
+    public int? HeartRate { get; set; }
+    public double? SpO2 { get; set; }
+    public double? BodyTemperature { get; set; }
+    public DateTime RecordedAt { get; set; }
 }
 
 

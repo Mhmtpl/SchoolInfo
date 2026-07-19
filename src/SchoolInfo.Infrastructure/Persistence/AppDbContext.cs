@@ -30,6 +30,7 @@ public class AppDbContext : DbContext, IAppDbContext
     public DbSet<DailySummary> DailySummaries => Set<DailySummary>();
     public DbSet<WeeklyMealPlan> WeeklyMealPlans => Set<WeeklyMealPlan>();
     public DbSet<ClassroomWeeklySchedule> ClassroomWeeklySchedules => Set<ClassroomWeeklySchedule>();
+    public DbSet<StudentBiometricRecord> StudentBiometricRecords => Set<StudentBiometricRecord>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options, IMediator mediator) : base(options)
     {
@@ -54,6 +55,7 @@ public class AppDbContext : DbContext, IAppDbContext
         modelBuilder.Entity<DailySummary>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<WeeklyMealPlan>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<ClassroomWeeklySchedule>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<StudentBiometricRecord>().HasQueryFilter(e => !e.IsDeleted);
 
         base.OnModelCreating(modelBuilder);
     }

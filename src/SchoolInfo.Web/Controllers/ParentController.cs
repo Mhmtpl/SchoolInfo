@@ -191,6 +191,17 @@ public class ParentController : Controller
                 // Sessizce yut
             }
 
+            // 8. Biyometrik Verileri Çekelim
+            var biometrics = new List<StudentBiometricWebDto>();
+            try
+            {
+                biometrics = await _apiService.GetAsync<List<StudentBiometricWebDto>>($"api/students/{id}/biometrics?date={dateStr}") ?? new List<StudentBiometricWebDto>();
+            }
+            catch
+            {
+                // Sessizce yut
+            }
+
             ViewBag.StudentId = id;
             ViewBag.StudentName = $"{studentInfo["firstName"]} {studentInfo["lastName"]}";
             ViewBag.ClassroomName = classroomName;
@@ -201,7 +212,10 @@ public class ParentController : Controller
             ViewBag.AiSummary = aiSummaryText;
             ViewBag.Newsletters = newsletters;
             ViewBag.MedicationRecords = medicationRecords;
+            ViewBag.Biometrics = biometrics;
             ViewBag.SelectedDate = dateStr;
+            ViewBag.AccessToken = User.FindFirst("AccessToken")?.Value;
+            ViewBag.ApiUrl = _apiService.ApiUrl;
 
             return View();
         }

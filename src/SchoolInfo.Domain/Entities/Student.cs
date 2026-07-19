@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using SchoolInfo.Domain.Common;
 
@@ -13,6 +13,7 @@ public class Student : BaseEntity
     public string LastName { get; private set; }
     public DateTime DateOfBirth { get; private set; }
     public Guid ClassroomId { get; private set; }
+    public string? SmartBandMacAddress { get; private set; }
 
     private readonly List<User> _parents = new();
     public IReadOnlyCollection<User> Parents => _parents.AsReadOnly();
@@ -67,5 +68,14 @@ public class Student : BaseEntity
             _parents.Remove(parent);
             UpdateTimestamp();
         }
+    }
+
+    /// <summary>
+    /// Akilli bileklik MAC adresini gunceller.
+    /// </summary>
+    public void SetSmartBandMac(string? macAddress)
+    {
+        SmartBandMacAddress = macAddress;
+        UpdateTimestamp();
     }
 }

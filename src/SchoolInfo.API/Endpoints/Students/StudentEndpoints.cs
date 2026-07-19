@@ -89,5 +89,16 @@ public class StudentEndpoints : IEndpoint
         .WithName("GetMyChildren")
         .WithSummary("Giriş yapan velinin çocuklarını listeler.")
         .RequireAuthorization(policy => policy.RequireRole(SchoolInfo.Domain.Enums.UserRole.Parent.ToString()));
+
+        group.MapPut("/{id:guid}/mac", async (Guid id, UpdateStudentMacRequest request, IMediator mediator) =>
+        {
+            await mediator.Send(new SchoolInfo.Application.Features.Students.Commands.UpdateStudentMac.UpdateStudentMacCommand(id, request.MacAddress));
+            return Results.NoContent();
+        })
+        .WithName("UpdateStudentMac")
+        .WithSummary("Öğrencinin akıllı bileklik MAC adresini günceller.")
+        .WithDescription("Öğrencinin akıllı bileklik MAC adresini günceller. Sadece Admin veya Öğretmen yapabilir.");
     }
 }
+
+public record UpdateStudentMacRequest(string? MacAddress);

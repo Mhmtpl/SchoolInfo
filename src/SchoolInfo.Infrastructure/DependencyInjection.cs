@@ -12,6 +12,7 @@ using SchoolInfo.Infrastructure.Notifications;
 using SchoolInfo.Infrastructure.Persistence;
 using SchoolInfo.Infrastructure.Persistence.Repositories;
 using SchoolInfo.Infrastructure.BackgroundServices;
+using SchoolInfo.Infrastructure.Biometrics;
 
 namespace SchoolInfo.Infrastructure;
 
@@ -76,6 +77,10 @@ Kurallar:
 
         // Background Services
         services.AddHostedService<DailySummaryScheduler>();
+
+        // Biometric Services
+        services.AddSingleton<IBiometricBackgroundQueue, BiometricBackgroundQueue>();
+        services.AddHostedService<BiometricQueueProcessor>();
 
         return services;
     }

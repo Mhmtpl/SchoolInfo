@@ -78,6 +78,8 @@ public class TeacherController : Controller
             ViewBag.MedicationRecords = medicationRecords ?? new List<MedicationRecordDto>();
             ViewBag.DetailedMeals = detailedMeals ?? new List<StudentDetailedMealsResponse>();
             ViewBag.SelectedDate = dateStr;
+            ViewBag.AccessToken = User.FindFirst("AccessToken")?.Value;
+            ViewBag.ApiUrl = _apiService.ApiUrl;
 
             return View();
         }
@@ -452,4 +454,20 @@ public class TeacherController : Controller
             return Json(new { success = false, message = ex.Message });
         }
     }
+
+    [HttpPost]
+    public async Task<IActionResult> UpdateStudentMac([FromBody] UpdateStudentMacWebRequest request)
+    {
+        try
+        {
+            await _apiService.PutAsync($"api/students/{request.StudentId}/mac", new { MacAddress = request.MacAddress });
+            return Json(new { success = true });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
 }
+
+public record UpdateStudentMacWebRequest(Guid StudentId, string? MacAddress);

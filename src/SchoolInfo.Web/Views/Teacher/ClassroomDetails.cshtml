@@ -166,6 +166,12 @@
                                 <div class="student-info">
                                     @record.FirstName @record.LastName
                                     <span id="badge-absent-@rowId" style="display: @(record.IsAbsent ? "inline-block" : "none"); margin-left: 0.5rem; font-size: 0.7rem; color: #dc2626; background: #fee2e2; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight:600;">Devamsız</span>
+                                    <span class="student-mac-badge" id="mac-badge-@rowId" onclick="openMacModal('@rowId', '@record.FirstName @record.LastName', '@(record.SmartBandMacAddress ?? "")')" style="cursor:pointer; font-size:0.7rem; color:#4f46e5; background:rgba(79, 70, 229, 0.08); padding:0.15rem 0.4rem; border-radius:4px; margin-left:0.5rem; font-weight:600; display:inline-flex; align-items:center; gap:0.2rem;" title="Akıllı Bileklik MAC Adresini Düzenle">
+                                        ⌚ <span id="mac-text-@rowId">@(string.IsNullOrEmpty(record.SmartBandMacAddress) ? "Bileklik Tanımla" : record.SmartBandMacAddress)</span>
+                                    </span>
+                                    <span id="live-heart-badge-@rowId" style="display: @(string.IsNullOrEmpty(record.SmartBandMacAddress) ? "none" : "inline-flex"); align-items:center; gap:0.2rem; font-size:0.7rem; color:#6b7280; background:rgba(107, 114, 128, 0.08); padding:0.15rem 0.4rem; border-radius:4px; margin-left:0.5rem; font-weight:700;" title="Canlı Nabız">
+                                        ❤️ <span id="live-heart-rate-val-@rowId">--</span> <span style="font-size:0.6rem; opacity:0.8;">BPM</span>
+                                    </span>
                                 </div>
                                 <span id="record-status-@rowId" style="font-size: 0.75rem; color: @(record.HasRecordToday ? "#059669" : "var(--text-muted)"); font-weight: @(record.HasRecordToday ? "600" : "normal");">
                                     @(record.HasRecordToday ? "Kayıt girildi" : "Kayıt girilmedi")
@@ -377,6 +383,29 @@
                 <div style="display: flex; gap: 1rem; margin-top: 2rem;">
                     <button type="button" onclick="closeMedicationModal()" class="btn-secondary" style="flex: 1;">İptal</button>
                     <button type="button" onclick="saveNewMedication()" class="btn-primary" style="flex: 1; margin-top: 0;">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AKILLI BİLEKLİK MAC TANIMLAMA MODALI -->
+    <div id="macModal" class="simple-modal">
+        <div class="glass-card simple-modal-content" style="max-width: 450px; background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.25rem; font-weight: 700; margin: 0; color: var(--text-primary);">⌚ Akıllı Bileklik Tanımla</h2>
+                <button onclick="closeMacModal()" style="background:none; border:none; color:var(--text-muted); font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+            <div>
+                <p id="macModalStudentName" style="font-weight: 700; color: #4f46e5; margin-bottom: 1rem; font-size: 1rem;"></p>
+                <input type="hidden" id="macStudentId" />
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label for="macAddressInput" style="display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; color: var(--text-primary);">Bileklik MAC Adresi</label>
+                    <input type="text" id="macAddressInput" class="form-control" placeholder="Örn: AA:BB:CC:DD:EE:FF" style="width: 100%; padding: 0.6rem; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-size: 0.95rem; text-transform: uppercase;" />
+                    <small style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 0.25rem;">Harfleri BÜYÜK yazın ve aralara iki nokta (:) koyun.</small>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="button" onclick="closeMacModal()" class="btn-secondary" style="flex: 1; margin-top: 0;">İptal</button>
+                    <button type="button" onclick="saveStudentMac()" class="btn-primary" style="flex: 1; margin-top: 0; background: linear-gradient(135deg, #4f46e5, #7c3aed); border: none;">Kaydet</button>
                 </div>
             </div>
         </div>
@@ -1219,11 +1248,86 @@
         from { opacity: 0; transform: scale(0.95); }
         to { opacity: 1; transform: scale(1); }
     }
+    @@keyframes heartPulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.3; }
+        100% { opacity: 1; }
+    }
+    .pulse-animation {
+        animation: heartPulse 1.2s infinite ease-in-out;
+    }
 </style>
 
 @section Scripts {
+    <!-- SignalR client CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.1/signalr.min.js"></script>
     <script>
         const classroomId = '@classroom?.Id';
+        let connection = null;
+
+        // Canlı nabız takibi için MAC -> Öğrenci Eşleşme Haritası
+        const studentMacMap = {
+            @foreach(var record in dailyRecords) {
+                if (!string.IsNullOrEmpty(record.SmartBandMacAddress)) {
+                    <text>'@record.SmartBandMacAddress.ToUpper()': '@record.StudentId',</text>
+                }
+            }
+        };
+
+        // SignalR Hub Entegrasyonu
+        const accessToken = '@ViewBag.AccessToken';
+        const apiUrl = '@ViewBag.ApiUrl';
+
+        if (accessToken && apiUrl) {
+            const hubUrl = apiUrl.replace(/\/$/, '') + '/hubs/biometrics';
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl(hubUrl, {
+                    accessTokenFactory: () => accessToken
+                })
+                .withAutomaticReconnect()
+                .build();
+
+            connection.on("ReceiveBiometricUpdate", function (update) {
+                console.log("Öğretmen paneli canlı güncelleme:", update);
+                if (update.macAddress && update.heartRate) {
+                    const studentId = studentMacMap[update.macAddress.toUpperCase()];
+                    if (studentId) {
+                        const rateValEl = document.getElementById(`live-heart-rate-val-${studentId}`);
+                        const badgeEl = document.getElementById(`live-heart-badge-${studentId}`);
+                        if (rateValEl && badgeEl) {
+                            rateValEl.innerText = update.heartRate;
+                            
+                            // Duruma göre renk ataması
+                            if (update.heartRate > 130) {
+                                badgeEl.style.background = 'rgba(239, 68, 68, 0.15)';
+                                badgeEl.style.color = '#dc2626';
+                                badgeEl.classList.add('pulse-animation');
+                            } else if (update.heartRate > 100) {
+                                badgeEl.style.background = 'rgba(245, 158, 11, 0.1)';
+                                badgeEl.style.color = '#d97706';
+                                badgeEl.classList.remove('pulse-animation');
+                            } else {
+                                badgeEl.style.background = 'rgba(16, 185, 129, 0.1)';
+                                badgeEl.style.color = '#059669';
+                                badgeEl.classList.remove('pulse-animation');
+                            }
+                        }
+                    }
+                }
+            });
+
+            connection.start()
+                .then(() => {
+                    console.log("Öğretmen paneli SignalR bağlantısı başarılı.");
+                    // Sınıftaki tüm aktif öğrenciler için gruplara katılalım
+                    for (const mac in studentMacMap) {
+                        const studentId = studentMacMap[mac];
+                        connection.invoke("JoinStudentGroup", studentId)
+                            .catch(err => console.error("SignalR Gruba Katılamadı (" + studentId + "): ", err.toString()));
+                    }
+                })
+                .catch(err => console.error("SignalR Bağlantısı Kurulamadı: ", err.toString()));
+        }
 
         function changeClassroomDate(val) {
             const urlParams = new URLSearchParams(window.location.search);
@@ -2575,6 +2679,91 @@
                 statusText.innerHTML = '❌ Sunucuyla iletişim kurulurken bir hata oluştu.';
                 btnApply.disabled = false;
                 btnRecord.disabled = false;
+            }
+        }
+
+        // --- AKILLI BİLEKLİK MAC MODAL YÖNETİMİ ---
+        function openMacModal(studentId, studentName, currentMac) {
+            document.getElementById('macStudentId').value = studentId;
+            document.getElementById('macModalStudentName').innerText = studentName;
+            document.getElementById('macAddressInput').value = currentMac || '';
+            document.getElementById('macModal').style.display = 'flex';
+        }
+
+        function closeMacModal() {
+            document.getElementById('macModal').style.display = 'none';
+        }
+
+        async function saveStudentMac() {
+            const studentId = document.getElementById('macStudentId').value;
+            const macAddress = document.getElementById('macAddressInput').value.trim();
+
+            // Opsiyonel MAC format doğrulaması (eğer girilmişse)
+            if (macAddress && !/^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(macAddress)) {
+                alert("Lütfen geçerli bir MAC adresi girin! Örn: AA:BB:CC:DD:EE:FF veya boş bırakın.");
+                return;
+            }
+
+            try {
+                const response = await fetch('/Teacher/UpdateStudentMac', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentId: studentId,
+                        macAddress: macAddress || null
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Sayfadaki ilgili rozeti güncelle
+                    const textEl = document.getElementById(`mac-text-${studentId}`);
+                    if (textEl) {
+                        textEl.innerText = macAddress || 'Bileklik Tanımla';
+                    }
+                    
+                    // Modalın onclick özelliğini yeni MAC adresi ile güncelle
+                    const badgeEl = document.getElementById(`mac-badge-${studentId}`);
+                    if (badgeEl) {
+                        const studentName = document.getElementById('macModalStudentName').innerText;
+                        badgeEl.setAttribute('onclick', `openMacModal('${studentId}', '${studentName}', '${macAddress}')`);
+                    }
+
+                    // Canlı kalp rozetini ve haritayı güncelle
+                    const heartBadge = document.getElementById(`live-heart-badge-${studentId}`);
+                    if (heartBadge) {
+                        heartBadge.style.display = macAddress ? 'inline-flex' : 'none';
+                        if (!macAddress) {
+                            document.getElementById(`live-heart-rate-val-${studentId}`).innerText = '--';
+                            heartBadge.style.background = 'rgba(107, 114, 128, 0.08)';
+                            heartBadge.style.color = '#6b7280';
+                            heartBadge.classList.remove('pulse-animation');
+                        }
+                    }
+
+                    // SignalR grubuna yeni MAC girilmişse katılalım
+                    if (macAddress && connection && connection.state === signalR.HubConnectionState.Connected) {
+                        connection.invoke("JoinStudentGroup", studentId)
+                            .catch(err => console.error("SignalR Gruba Katılamadı (" + studentId + "): ", err.toString()));
+                    }
+
+                    // Eski eşleşmeyi haritadan silip yenisini ekle
+                    for (const mac in studentMacMap) {
+                        if (studentMacMap[mac] === studentId) {
+                            delete studentMacMap[mac];
+                        }
+                    }
+                    if (macAddress) {
+                        studentMacMap[macAddress.toUpperCase()] = studentId;
+                    }
+
+                    closeMacModal();
+                } else {
+                    alert("MAC adresi güncellenirken hata oluştu: " + data.message);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("İletişim hatası oluştu.");
             }
         }
     </script>

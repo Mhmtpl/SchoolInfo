@@ -19,6 +19,8 @@ public class SchoolInfoApiService
     private readonly HttpClient _httpClient;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
+    public string ApiUrl => _httpClient.BaseAddress?.ToString() ?? "";
+
     public SchoolInfoApiService(
         HttpClient httpClient, 
         IHttpContextAccessor httpContextAccessor, 
