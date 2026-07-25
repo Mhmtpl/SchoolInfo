@@ -50,8 +50,8 @@ public class BiometricQueueProcessor : BackgroundService
                     bool shouldSaveToDb = true;
                     if (_lastSaveTimes.TryGetValue(record.StudentId, out var lastSave))
                     {
-                        // Son 1 dakika içinde kayıt atıldıysa veritabanına yazma, sadece SignalR ile canlı yayınla
-                        if (DateTime.UtcNow - lastSave < TimeSpan.FromMinutes(1))
+                        // Son 10 saniye içinde kayıt atıldıysa veritabanına yazma, sadece SignalR ile canlı yayınla
+                        if (DateTime.UtcNow - lastSave < TimeSpan.FromSeconds(10))
                         {
                             shouldSaveToDb = false;
                         }
