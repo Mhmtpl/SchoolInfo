@@ -10,6 +10,7 @@
  */
 
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <WiFiMulti.h>
 #include <HTTPClient.h>
 #include <BLEDevice.h>
@@ -37,7 +38,7 @@ const int wifiCount = sizeof(wifiNetworks) / sizeof(wifiNetworks[0]);
 
 // 2. SchoolInfo API Sunucu Adresi
 // Not: Canlı sunucu adresini veya yerel bilgisayar IP'sini girin
-const char* serverUrl = "http://85.235.74.24:5100/api/iot/biometrics"; 
+const char* serverUrl = "https://api.veliport.com.tr/api/iot/biometrics"; 
 const char* iotDeviceToken = "DefaultSecretIoTToken1234!";
 
 // 3. İzlenecek Saatlerin/Bilekliklerin MAC Adresleri veya Benzersiz İsimleri Dizisi
@@ -248,7 +249,17 @@ void sendBiometricData(String mac, int hr) {
   }
 
   HTTPClient http;
-  http.begin(serverUrl);
+  String urlStr = String(serverUrl);
+  
+  if (urlStr.startsWith("https")) {
+    WiFiClientSecure client;
+    client.setInsecure();
+    http.begin(client, serverUrl);
+  } else {
+    WiFiClient client;
+    http.begin(client, serverUrl);
+  }
+
   http.addHeader("Content-Type", "application/json");
   http.addHeader("X-IoT-Device-Token", iotDeviceToken);
 
