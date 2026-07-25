@@ -489,3 +489,5 @@ schoolinfo-web-publish/
 deploy.bat
 .env
 .env.production
+src/secrets.h
+secrets.h

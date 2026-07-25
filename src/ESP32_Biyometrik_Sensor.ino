@@ -17,29 +17,16 @@
 #include <BLEUtils.h>
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
+#include "secrets.h" // Hassas şifreler ve token bu dosyada saklanır (Git'e eklenmez)
 
 WiFiMulti wifiMulti;
 
 // ==================== YAPILANDIRMA ====================
 
-// 1. Wi-Fi Bilgileri (Birden fazla ağ tanımlayabilirsiniz, en güçlü olana otomatik bağlanır)
-struct WiFiNetwork {
-    const char* ssid;
-    const char* password;
-};
-
-const WiFiNetwork wifiNetworks[] = {
-    {"Keenetic-8550", "g2e44GrKbDT5vrSGLCoY++"},
-    {"TurkNet1000Mbps_16EDA", "RbZEUP7s"},
-    {"TURKNET_ADBAB", "SfzufsC3"},
-    {"mPala", "12345678p"} // Mobil Hotspot
-};
-const int wifiCount = sizeof(wifiNetworks) / sizeof(wifiNetworks[0]);
-
-// 2. SchoolInfo API Sunucu Adresi
+// 1. SchoolInfo API Sunucu Adresi
 // Not: Canlı sunucu adresini veya yerel bilgisayar IP'sini girin
 const char* serverUrl = "http://api.veliport.com.tr/api/iot/biometrics"; 
-const char* iotDeviceToken = "DefaultSecretIoTToken1234!";
+
 
 // 3. İzlenecek Saatlerin/Bilekliklerin MAC Adresleri veya Benzersiz İsimleri Dizisi
 // Not: Cihazların MAC adreslerini veya telefonda görünen bluetooth isimlerini (örn: HUAWEI Band 10-73D) yazabilirsiniz.
@@ -81,6 +68,7 @@ class MyClientCallback : public BLEClientCallbacks {
     Serial.println("   -> Cihaz bağlantısı sonlandırıldı.");
   }
 };
+static MyClientCallback myClientCallback;
 
 // BLE Bildirim (Notify) Callback'i
 static void notifyCallback(
@@ -115,7 +103,7 @@ bool connectToDevice() {
     Serial.println(myDevice->getAddress().toString().c_str());
     
     pClient = BLEDevice::createClient();
-    pClient->setClientCallbacks(new MyClientCallback());
+    pClient->setClientCallbacks(&myClientCallback);
 
     if (!pClient->connect(myDevice)) {
         Serial.println("   [!] Bağlantı denemesi başarısız oldu.");
@@ -220,6 +208,7 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     }
   }
 };
+static MyAdvertisedDeviceCallbacks myAdvertisedDeviceCallbacks;
 
 // Wi-Fi Bağlantısı
 void connectToWiFi() {
@@ -257,9 +246,10 @@ void sendBiometricData(String mac, int hr) {
   HTTPClient http;
 
   String urlStr = String(serverUrl);
-  String jsonPayload = "{\"macAddress\":\"" + mac + 
-                       "\",\"heartRate\":" + String(hr) + 
-                       ",\"spO2\":null,\"bodyTemperature\":null}";
+  char jsonPayload[128];
+  snprintf(jsonPayload, sizeof(jsonPayload), 
+           "{\"macAddress\":\"%s\",\"heartRate\":%d,\"spO2\":null,\"bodyTemperature\":null}", 
+           mac.c_str(), hr);
 
   if (urlStr.startsWith("https")) {
     clientSecure.setInsecure();
@@ -300,7 +290,7 @@ void setup() {
   BLEDevice::init("SchoolInfo-Gateway");
   
   BLEScan* pBLEScan = BLEDevice::getScan();
-  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+  pBLEScan->setAdvertisedDeviceCallbacks(&myAdvertisedDeviceCallbacks);
   pBLEScan->setInterval(1349);
   pBLEScan->setWindow(449);
   pBLEScan->setActiveScan(true);
