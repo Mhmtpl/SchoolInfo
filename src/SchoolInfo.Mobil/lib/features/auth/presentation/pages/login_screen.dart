@@ -65,6 +65,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           MaterialPageRoute(
             builder: (_) => HomeScreen(
               schoolId: result.schoolId,
+              token: result.token,
               userFirstName: result.firstName,
               userLastName: result.lastName,
               students: result.students,

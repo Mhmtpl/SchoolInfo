@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../../../../core/tenant/school_id.dart';
 import '../../../auth/domain/entities/student.dart';
 import '../../../auth/presentation/pages/login_screen.dart';
@@ -10,6 +12,8 @@ import 'medication_screen.dart';
 import 'meal_screen.dart';
 import 'profile_screen.dart';
 import 'sleep_screen.dart';
+import '../widgets/biometric_dashboard_card.dart';
+import 'biometrics_history_screen.dart';
 
 // Ana sayfa ekranı. Login sonrası gösterilir ve okul kimliğine göre özet verilerini yükler.
 class HomeScreen extends StatefulWidget {
@@ -17,10 +21,12 @@ class HomeScreen extends StatefulWidget {
   final String? userFirstName;
   final String? userLastName;
   final List<Student>? students;
+  final String token;
 
   const HomeScreen({
     super.key,
     required this.schoolId,
+    required this.token,
     this.userFirstName,
     this.userLastName,
     this.students,
@@ -33,6 +39,10 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late final GetHomeSummary _getHomeSummary;
   int _selectedChildIndex = 0;
+  String _classroomName = 'Yükleniyor...';
+  List<dynamic> _newsletters = [];
+  bool _isClassroomLoading = false;
+  bool _isNewslettersLoading = false;
   late String _currentFirstName;
   late String _currentLastName;
   late String _currentEmail;
@@ -57,6 +67,104 @@ class _HomeScreenState extends State<HomeScreen> {
     _currentEmail = '';
     _currentClassroom = '';
     _currentPhone = '';
+
+    // İlk seçili çocuğun sınıf ve bülten verilerini çekelim
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final initialChild = _selectedChild;
+      if (initialChild != null) {
+        _loadDynamicClassroomAndNewsletters(initialChild.classroomId);
+      }
+    });
+  }
+
+  int _calculateAge(DateTime? dob) {
+    if (dob == null) return 4;
+    final today = DateTime.now();
+    int age = today.year - dob.year;
+    if (today.month < dob.month || (today.month == dob.month && today.day < dob.day)) {
+      age--;
+    }
+    return age;
+  }
+
+  Future<void> _loadDynamicClassroomAndNewsletters(String classroomId) async {
+    if (classroomId.isEmpty) return;
+    
+    setState(() {
+      _classroomName = 'Yükleniyor...';
+      _newsletters = [];
+      _isClassroomLoading = true;
+      _isNewslettersLoading = true;
+    });
+
+    final String baseUrl = 'https://api.veliport.com.tr';
+
+    // 1. Sınıf Detayını Çek
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/classrooms/$classroomId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+      );
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body) as Map<String, dynamic>;
+        final String? name = data['name'] as String? ?? data['Name'] as String?;
+        if (mounted) {
+          setState(() {
+            _classroomName = name ?? 'Bilinmeyen Sınıf';
+            _isClassroomLoading = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _classroomName = 'Sınıf Bilgisi Alınamadı';
+            _isClassroomLoading = false;
+          });
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _classroomName = 'Bağlantı Hatası';
+          _isClassroomLoading = false;
+        });
+      }
+    }
+
+    // 2. Sınıf Bültenlerini/Duyurularını Çek
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/newsletters/classroom/$classroomId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+      );
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body) as List<dynamic>;
+        if (mounted) {
+          setState(() {
+            _newsletters = data;
+            _isNewslettersLoading = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _isNewslettersLoading = false;
+          });
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isNewslettersLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _openProfileScreen() async {
@@ -119,6 +227,10 @@ class _HomeScreenState extends State<HomeScreen> {
             child: RefreshIndicator(
               onRefresh: () async {
                 setState(() {});
+                final child = _selectedChild;
+                if (child != null) {
+                  await _loadDynamicClassroomAndNewsletters(child.classroomId);
+                }
               },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -133,16 +245,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (widget.students != null && widget.students!.isNotEmpty) ...[
-                            _buildChildrenSection(widget.students!, summary.classroom),
+                            _buildChildrenSection(widget.students!, _classroomName),
                             const SizedBox(height: 20),
                           ],
                           
-                          // At a glance summary (Sleep, Meal, Activity)
-                          _buildAtAGlanceSection(summary),
-                          const SizedBox(height: 24),
-                          
                           if (selectedChild != null) ...[
-                            _buildSelectedChildSummary(selectedChild, summary.classroom),
+                            // Canlı Biyometrik Takip Modülü (EKG) - UX gereği en üstte konumlandırıldı
+                            BiometricDashboardCard(
+                              studentId: selectedChild.id,
+                              studentName: '${selectedChild.firstName} ${selectedChild.lastName}',
+                              studentAge: _calculateAge(selectedChild.dateOfBirth),
+                              token: widget.token,
+                            ),
+                            const SizedBox(height: 20),
+
+                            _buildSelectedChildSummary(selectedChild, _classroomName),
                             const SizedBox(height: 24),
                           ],
 
@@ -151,7 +268,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             'En sık ziyaret edilen alanlara hızlıca ulaşın',
                           ),
                           const SizedBox(height: 12),
-                          _buildQuickActionsRow(context),
+                          _buildQuickActionsRow(context, selectedChild),
                           const SizedBox(height: 28),
                           
                           _buildSectionTitle(
@@ -316,9 +433,13 @@ class _HomeScreenState extends State<HomeScreen> {
               final initials = s.firstName.isNotEmpty ? s.firstName[0] : '';
               
               return GestureDetector(
-                onTap: () => setState(() {
-                  _selectedChildIndex = index;
-                }),
+                onTap: () {
+                  if (_selectedChildIndex == index) return;
+                  setState(() {
+                    _selectedChildIndex = index;
+                  });
+                  _loadDynamicClassroomAndNewsletters(s.classroomId);
+                },
                 child: Column(
                   children: [
                     AnimatedContainer(
@@ -647,64 +768,42 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildQuickActionsRow(BuildContext context) {
+  Widget _buildQuickActionsRow(BuildContext context, Student? selectedChild) {
     final theme = Theme.of(context);
     return SizedBox(
       height: 40,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
+      child: Row(
         children: [
-          _buildQuickActionChip(
-            context,
-            icon: Icons.bedtime_rounded,
-            label: 'Uyku',
-            color: const Color(0xFFF59E0B),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SleepScreen()),
+          if (selectedChild != null) ...[
+            Expanded(
+              child: _buildQuickActionChip(
+                context,
+                icon: Icons.analytics_rounded,
+                label: 'Sağlık Geçmişi',
+                color: const Color(0xFF6366F1),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => BiometricsHistoryScreen(
+                      studentId: selectedChild.id,
+                      studentName: '${selectedChild.firstName} ${selectedChild.lastName}',
+                      token: widget.token,
+                      studentAge: _calculateAge(selectedChild.dateOfBirth),
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          _buildQuickActionChip(
-            context,
-            icon: Icons.restaurant_rounded,
-            label: 'Yemek',
-            color: const Color(0xFFF97316),
-            onTap: () => Navigator.push(
+            const SizedBox(width: 10),
+          ],
+          Expanded(
+            child: _buildQuickActionChip(
               context,
-              MaterialPageRoute(builder: (_) => const MealScreen()),
+              icon: Icons.person_rounded,
+              label: 'Veli Profili',
+              color: theme.colorScheme.primary,
+              onTap: _openProfileScreen,
             ),
-          ),
-          const SizedBox(width: 8),
-          _buildQuickActionChip(
-            context,
-            icon: Icons.sports_tennis_rounded,
-            label: 'Etkinlik',
-            color: const Color(0xFF10B981),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ActivityScreen()),
-            ),
-          ),
-          const SizedBox(width: 8),
-          _buildQuickActionChip(
-            context,
-            icon: Icons.medical_services_rounded,
-            label: 'İlaç',
-            color: const Color(0xFFEF4444),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MedicationScreen()),
-            ),
-          ),
-          const SizedBox(width: 8),
-          _buildQuickActionChip(
-            context,
-            icon: Icons.person_rounded,
-            label: 'Profil',
-            color: theme.colorScheme.primary,
-            onTap: _openProfileScreen,
           ),
         ],
       ),
@@ -923,42 +1022,88 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildAnnouncementsSection() {
     final theme = Theme.of(context);
     
-    // Örnek Duyurular Listesi
-    final announcements = [
-      _AnnouncementItem(
-        title: 'Resim Atölyesi Etkinliği',
-        body: 'Bugün saat 15:00’te tüm sınıflarımızın katılımıyla okul bahçesinde resim atölyesi yapılacaktır. Çocuklarımızın yedek kıyafetlerini getirmeyi unutmayınız.',
-        date: 'Bugün, 09:30',
-        isNew: true,
-        category: 'Etkinlik',
-        icon: Icons.palette_rounded,
-        iconColor: const Color(0xFFEA580C),
-      ),
-      _AnnouncementItem(
-        title: 'Veli Bilgilendirme Toplantısı',
-        body: 'Yeni dönem eğitim planı ve okul içi düzenlemeler hakkında görüşmek üzere Cuma günü saat 18:00’de konferans salonunda toplantı yapılacaktır.',
-        date: 'Dün, 14:15',
-        isNew: false,
-        category: 'Toplantı',
-        icon: Icons.groups_rounded,
-        iconColor: theme.colorScheme.primary,
-      ),
-    ];
+    if (_isNewslettersLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: CircularProgressIndicator(color: Color(0xFF6366F1)),
+        ),
+      );
+    }
+
+    if (_newsletters.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: const Center(
+          child: Text(
+            'Sınıfa ait güncel bülten veya duyuru bulunmamaktadır.',
+            style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    String formatNewsletterDate(String? dateStr) {
+      if (dateStr == null) return '';
+      try {
+        final dt = DateTime.parse(dateStr).toLocal();
+        final today = DateTime.now();
+        if (dt.year == today.year && dt.month == today.month && dt.day == today.day) {
+          return 'Bugün, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+        }
+        final diff = today.difference(dt).inDays;
+        if (diff == 1) {
+          return 'Dün, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+        }
+        return '${dt.day}/${dt.month}/${dt.year}';
+      } catch (_) {
+        return '';
+      }
+    }
+
+    bool isNewsletterNew(String? dateStr) {
+      if (dateStr == null) return false;
+      try {
+        final dt = DateTime.parse(dateStr).toLocal();
+        return DateTime.now().difference(dt).inHours < 24;
+      } catch (_) {
+        return false;
+      }
+    }
 
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: announcements.length,
+      itemCount: _newsletters.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final item = announcements[index];
+        final item = _newsletters[index] as Map<String, dynamic>;
+        
+        final String title = item['title'] as String? ?? item['Title'] as String? ?? 'Duyuru';
+        final String body = item['content'] as String? ?? item['Content'] as String? ?? '';
+        final String publishedAtStr = item['publishedAt'] as String? ?? item['PublishedAt'] as String? ?? item['createdAt'] as String? ?? item['CreatedAt'] as String? ?? '';
+        final String category = item['weekName'] as String? ?? item['WeekName'] as String? ?? 'Duyuru';
+        
+        final bool isNew = isNewsletterNew(publishedAtStr);
+        final String formattedDate = formatNewsletterDate(publishedAtStr);
+        
+        final IconData icon = Icons.newspaper_rounded;
+        final Color iconColor = theme.colorScheme.primary;
+
         return Container(
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: item.isNew ? theme.colorScheme.secondary.withOpacity(0.2) : const Color(0xFFE2E8F0),
-              width: item.isNew ? 1.2 : 1,
+              color: isNew ? theme.colorScheme.secondary.withOpacity(0.2) : const Color(0xFFE2E8F0),
+              width: isNew ? 1.2 : 1,
             ),
             boxShadow: const [
               BoxShadow(
@@ -978,10 +1123,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: item.iconColor.withOpacity(0.06),
+                      color: iconColor.withOpacity(0.06),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(item.icon, color: item.iconColor, size: 18),
+                    child: Icon(icon, color: iconColor, size: 18),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -993,21 +1138,21 @@ class _HomeScreenState extends State<HomeScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: item.isNew 
+                                color: isNew 
                                     ? theme.colorScheme.secondary.withOpacity(0.1)
                                     : const Color(0xFFF1F5F9),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                item.category,
+                                category,
                                 style: TextStyle(
-                                  color: item.isNew ? theme.colorScheme.secondary : const Color(0xFF64748B),
+                                  color: isNew ? theme.colorScheme.secondary : const Color(0xFF64748B),
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
-                            if (item.isNew) ...[
+                            if (isNew) ...[
                               const SizedBox(width: 6),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
@@ -1030,7 +1175,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          item.date,
+                          formattedDate,
                           style: const TextStyle(
                             color: Color(0xFF94A3B8),
                             fontSize: 10,
@@ -1044,7 +1189,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                item.title,
+                title,
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
@@ -1054,7 +1199,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                item.body,
+                body,
                 style: const TextStyle(
                   fontSize: 12,
                   color: Color(0xFF475569),
@@ -1070,22 +1215,4 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _AnnouncementItem {
-  final String title;
-  final String body;
-  final String date;
-  final bool isNew;
-  final String category;
-  final IconData icon;
-  final Color iconColor;
 
-  _AnnouncementItem({
-    required this.title,
-    required this.body,
-    required this.date,
-    required this.isNew,
-    required this.category,
-    required this.icon,
-    required this.iconColor,
-  });
-}
