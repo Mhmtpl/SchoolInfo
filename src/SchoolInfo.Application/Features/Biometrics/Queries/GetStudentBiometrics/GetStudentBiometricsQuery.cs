@@ -65,8 +65,11 @@ public class GetStudentBiometricsQueryHandler : IRequestHandler<GetStudentBiomet
         if (!string.IsNullOrEmpty(request.Range))
         {
             int days = request.Range == "30days" ? 30 : 7;
-            var start = DateTime.UtcNow.AddHours(3).Date.AddDays(-days);
-            var end = DateTime.UtcNow.AddHours(3).Date.AddDays(1); // Yarına kadar
+            var startLocal = DateTime.UtcNow.AddHours(3).Date.AddDays(-days);
+            var endLocal = DateTime.UtcNow.AddHours(3).Date.AddDays(1); // Yarına kadar
+            
+            var start = DateTime.SpecifyKind(startLocal.AddHours(-3), DateTimeKind.Utc);
+            var end = DateTime.SpecifyKind(endLocal.AddHours(-3), DateTimeKind.Utc);
 
             var raw = await _dbContext.StudentBiometricRecords
                 .Where(r => r.StudentId == request.StudentId && 
@@ -93,7 +96,8 @@ public class GetStudentBiometricsQueryHandler : IRequestHandler<GetStudentBiomet
 
         // 4. Tek bir tarihteki biyometrik kayıtları getir (Canlı akış grafiği için)
         var targetDate = request.Date ?? DateTime.UtcNow.AddHours(3).Date;
-        var startDate = DateTime.SpecifyKind(targetDate.Date, DateTimeKind.Utc);
+        // Turkey timezone (UTC+3) offset correction
+        var startDate = DateTime.SpecifyKind(targetDate.Date.AddHours(-3), DateTimeKind.Utc);
         var endDate = startDate.AddDays(1);
 
         var records = await _dbContext.StudentBiometricRecords

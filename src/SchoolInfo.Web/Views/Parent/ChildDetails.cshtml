@@ -1035,7 +1035,7 @@
 
             // Başlangıç verilerini doldur
             initialBiometrics.forEach(item => {
-                const timeStr = new Date(item.RecordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const timeStr = new Date(item.RecordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 chartLabels.push(timeStr);
                 heartRateData.push(item.HeartRate);
                 spo2Data.push(item.SpO2);
@@ -1649,7 +1649,7 @@
                     data.forEach(item => {
                         let label = "";
                         if (filterType === 'today') {
-                            label = new Date(item.recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            label = new Date(item.recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                         } else {
                             label = formatDateTurkish(item.recordedAt);
                         }
@@ -1692,7 +1692,7 @@
                     console.log("Canlı biyometrik güncelleme:", update);
                     lastUpdateTime = Date.now();
  
-                    const timeStr = new Date(update.recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const timeStr = new Date(update.recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                     const fullTimeStr = new Date(update.recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
  
                     // Canlı üst durum kutularını her zaman güncelle
