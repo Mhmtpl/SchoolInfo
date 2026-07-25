@@ -250,36 +250,50 @@ void sendBiometricData(String mac, int hr) {
 
   HTTPClient http;
   String urlStr = String(serverUrl);
-  
-  if (urlStr.startsWith("https")) {
-    WiFiClientSecure client;
-    client.setInsecure();
-    http.begin(client, serverUrl);
-  } else {
-    WiFiClient client;
-    http.begin(client, serverUrl);
-  }
-
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("X-IoT-Device-Token", iotDeviceToken);
-
-  // Genişletilebilir veri paketi
   String jsonPayload = "{\"macAddress\":\"" + mac + 
                        "\",\"heartRate\":" + String(hr) + 
                        ",\"spO2\":null,\"bodyTemperature\":null}";
 
-  Serial.print("   API Gönderimi: ");
-  Serial.println(jsonPayload);
-
-  int httpResponseCode = http.POST(jsonPayload);
-  if (httpResponseCode > 0) {
-    Serial.print("   API Yanıtı: ");
-    Serial.println(httpResponseCode);
+  if (urlStr.startsWith("https")) {
+    WiFiClientSecure client;
+    client.setInsecure();
+    http.begin(client, serverUrl);
+    
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("X-IoT-Device-Token", iotDeviceToken);
+    
+    Serial.print("   API Gönderimi: ");
+    Serial.println(jsonPayload);
+    
+    int httpResponseCode = http.POST(jsonPayload);
+    if (httpResponseCode > 0) {
+      Serial.print("   API Yanıtı: ");
+      Serial.println(httpResponseCode);
+    } else {
+      Serial.print("   [!] API Gönderim Hatası! Kodu: ");
+      Serial.println(httpResponseCode);
+    }
+    http.end();
   } else {
-    Serial.print("   [!] API Gönderim Hatası! Kodu: ");
-    Serial.println(httpResponseCode);
+    WiFiClient client;
+    http.begin(client, serverUrl);
+    
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("X-IoT-Device-Token", iotDeviceToken);
+    
+    Serial.print("   API Gönderimi: ");
+    Serial.println(jsonPayload);
+    
+    int httpResponseCode = http.POST(jsonPayload);
+    if (httpResponseCode > 0) {
+      Serial.print("   API Yanıtı: ");
+      Serial.println(httpResponseCode);
+    } else {
+      Serial.print("   [!] API Gönderim Hatası! Kodu: ");
+      Serial.println(httpResponseCode);
+    }
+    http.end();
   }
-  http.end();
 }
 
 void setup() {

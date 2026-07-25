@@ -1,35 +1,45 @@
 using System;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SchoolInfo.Application.Common.Interfaces;
 using SchoolInfo.Domain.Entities;
 
 namespace SchoolInfo.Application.Features.Biometrics.Commands.SaveBiometricData;
 
 public record SaveBiometricDataCommand(
-    string MacAddress,
-    int? HeartRate,
-    double? SpO2,
-    double? BodyTemperature
+    [property: JsonPropertyName("macAddress")] string MacAddress,
+    [property: JsonPropertyName("heartRate")] int? HeartRate,
+    [property: JsonPropertyName("spO2")] double? SpO2,
+    [property: JsonPropertyName("bodyTemperature")] double? BodyTemperature
 ) : IRequest<bool>;
 
 public class SaveBiometricDataCommandHandler : IRequestHandler<SaveBiometricDataCommand, bool>
 {
     private readonly IAppDbContext _dbContext;
     private readonly IBiometricBackgroundQueue _backgroundQueue;
+    private readonly ILogger<SaveBiometricDataCommandHandler> _logger;
 
-    public SaveBiometricDataCommandHandler(IAppDbContext dbContext, IBiometricBackgroundQueue backgroundQueue)
+    public SaveBiometricDataCommandHandler(
+        IAppDbContext dbContext, 
+        IBiometricBackgroundQueue backgroundQueue,
+        ILogger<SaveBiometricDataCommandHandler> logger)
     {
         _dbContext = dbContext;
         _backgroundQueue = backgroundQueue;
+        _logger = logger;
     }
 
     public async Task<bool> Handle(SaveBiometricDataCommand request, CancellationToken cancellationToken)
     {
+        _logger.LogWarning($"[BIOMETRIC] Received request: MacAddress='{request.MacAddress}', HeartRate='{request.HeartRate}'");
+
         if (string.IsNullOrWhiteSpace(request.MacAddress))
         {
+            _logger.LogWarning("[BIOMETRIC] MacAddress is null or empty!");
             return false;
         }
 
@@ -41,24 +51,29 @@ public class SaveBiometricDataCommandHandler : IRequestHandler<SaveBiometricData
             var allStudents = await _dbContext.Students
                 .Select(s => new { s.Id, s.FirstName, s.LastName, s.SmartBandMacAddress, s.IsDeleted })
                 .ToListAsync(cancellationToken);
+            _logger.LogWarning($"[BIOMETRIC] Total active/inactive students in database: {allStudents.Count}");
             foreach (var s in allStudents)
             {
-                Console.WriteLine($"DEBUG STUDENT: {s.FirstName} {s.LastName} | ID: {s.Id} | MAC: '{s.SmartBandMacAddress}' | IsDeleted: {s.IsDeleted}");
+                _logger.LogWarning($"[BIOMETRIC] DB Student: {s.FirstName} {s.LastName} | ID: {s.Id} | MAC: '{s.SmartBandMacAddress}' | IsDeleted: {s.IsDeleted}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"DEBUG STUDENT ERROR: {ex.Message}");
+            _logger.LogWarning($"[BIOMETRIC] DB Student debug fetch error: {ex.Message}");
         }
 
-        var student = await _dbContext.Students
-            .FirstOrDefaultAsync(s => s.SmartBandMacAddress != null && 
-                                      s.SmartBandMacAddress.Replace("-", ":").ToUpper() == targetMac && 
-                                      !s.IsDeleted, cancellationToken);
+        var students = await _dbContext.Students
+            .Where(s => s.SmartBandMacAddress != null && !s.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        _logger.LogWarning($"[BIOMETRIC] Found {students.Count} students in DB with non-null SmartBandMacAddress");
+
+        var student = students.FirstOrDefault(s => 
+            s.SmartBandMacAddress!.Trim().Replace("-", ":").ToUpperInvariant() == targetMac);
 
         if (student == null)
         {
-            Console.WriteLine($"DEBUG STUDENT NOT FOUND FOR MAC: '{targetMac}'");
+            _logger.LogWarning($"[BIOMETRIC] Student not found in-memory for targetMac: '{targetMac}'");
             return false;
         }
 

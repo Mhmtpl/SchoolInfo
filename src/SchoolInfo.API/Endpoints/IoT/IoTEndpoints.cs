@@ -47,7 +47,7 @@ public class IoTEndpoints : IEndpoint
     }
 
     private static async Task<IResult> SaveBiometricDataAsync(
-        SaveBiometricDataCommand command, 
+        [Microsoft.AspNetCore.Mvc.FromBody] SaveBiometricDataCommand command, 
         HttpContext context, 
         IConfiguration configuration, 
         IMediator mediator)
