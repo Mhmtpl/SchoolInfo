@@ -35,7 +35,7 @@ public class SaveBiometricDataCommandHandler : IRequestHandler<SaveBiometricData
 
     public async Task<bool> Handle(SaveBiometricDataCommand request, CancellationToken cancellationToken)
     {
-        _logger.LogWarning($"[BIOMETRIC] Received request: MacAddress='{request.MacAddress}', HeartRate='{request.HeartRate}'");
+        _logger.LogInformation($"[BIOMETRIC] Received request: MacAddress='{request.MacAddress}', HeartRate='{request.HeartRate}'");
 
         if (string.IsNullOrWhiteSpace(request.MacAddress))
         {
@@ -46,27 +46,9 @@ public class SaveBiometricDataCommandHandler : IRequestHandler<SaveBiometricData
         // MAC adresine sahip öğrenciyi bul (büyük/küçük harf duyarsız eşleştirme için Normalize edebiliriz)
         var targetMac = request.MacAddress.Trim().Replace("-", ":").ToUpperInvariant();
 
-        try
-        {
-            var allStudents = await _dbContext.Students
-                .Select(s => new { s.Id, s.FirstName, s.LastName, s.SmartBandMacAddress, s.IsDeleted })
-                .ToListAsync(cancellationToken);
-            _logger.LogWarning($"[BIOMETRIC] Total active/inactive students in database: {allStudents.Count}");
-            foreach (var s in allStudents)
-            {
-                _logger.LogWarning($"[BIOMETRIC] DB Student: {s.FirstName} {s.LastName} | ID: {s.Id} | MAC: '{s.SmartBandMacAddress}' | IsDeleted: {s.IsDeleted}");
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning($"[BIOMETRIC] DB Student debug fetch error: {ex.Message}");
-        }
-
         var students = await _dbContext.Students
             .Where(s => s.SmartBandMacAddress != null && !s.IsDeleted)
             .ToListAsync(cancellationToken);
-
-        _logger.LogWarning($"[BIOMETRIC] Found {students.Count} students in DB with non-null SmartBandMacAddress");
 
         var student = students.FirstOrDefault(s => 
             s.SmartBandMacAddress!.Trim().Replace("-", ":").ToUpperInvariant() == targetMac);
