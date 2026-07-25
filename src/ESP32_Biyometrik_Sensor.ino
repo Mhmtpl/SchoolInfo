@@ -261,7 +261,6 @@ void sendBiometricData(String mac, int hr) {
   if (urlStr.startsWith("https")) {
     WiFiClientSecure client;
     client.setInsecure();
-    client.setBufferSizes(1024, 1024); // RX/TX tampon boyutlarını düşürerek 30KB heap tasarrufu sağlar
     http.begin(client, serverUrl);
     
     http.addHeader("Content-Type", "application/json");
