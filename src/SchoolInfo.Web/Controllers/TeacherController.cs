@@ -79,7 +79,7 @@ public class TeacherController : Controller
             ViewBag.DetailedMeals = detailedMeals ?? new List<StudentDetailedMealsResponse>();
             ViewBag.SelectedDate = dateStr;
             ViewBag.AccessToken = User.FindFirst("AccessToken")?.Value;
-            ViewBag.ApiUrl = _apiService.ApiUrl;
+            ViewBag.ApiUrl = _apiService.PublicApiUrl;
 
             return View();
         }

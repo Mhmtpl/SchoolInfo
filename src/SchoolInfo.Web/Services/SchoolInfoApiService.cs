@@ -20,6 +20,7 @@ public class SchoolInfoApiService
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     public string ApiUrl => _httpClient.BaseAddress?.ToString() ?? "";
+    public string PublicApiUrl { get; }
 
     public SchoolInfoApiService(
         HttpClient httpClient, 
@@ -32,6 +33,9 @@ public class SchoolInfoApiService
         // Base URL'i appsettings.json'dan çekiyoruz
         var apiUrl = configuration["SchoolInfoApiUrl"] ?? "http://localhost:53079";
         _httpClient.BaseAddress = new Uri(apiUrl.TrimEnd('/') + "/");
+
+        // Tarayıcının dışarıdan erişebileceği kamuya açık API URL'i
+        PublicApiUrl = configuration["PublicApiUrl"] ?? apiUrl;
     }
 
     private void AttachAuthorizationHeader()

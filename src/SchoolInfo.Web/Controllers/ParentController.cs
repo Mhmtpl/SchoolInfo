@@ -215,7 +215,7 @@ public class ParentController : Controller
             ViewBag.Biometrics = biometrics;
             ViewBag.SelectedDate = dateStr;
             ViewBag.AccessToken = User.FindFirst("AccessToken")?.Value;
-            ViewBag.ApiUrl = _apiService.ApiUrl;
+            ViewBag.ApiUrl = _apiService.PublicApiUrl;
 
             return View();
         }

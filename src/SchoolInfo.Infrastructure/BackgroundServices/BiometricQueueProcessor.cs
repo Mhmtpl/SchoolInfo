@@ -28,6 +28,8 @@ public class BiometricQueueProcessor : BackgroundService
         _logger = logger;
     }
 
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, DateTime> _lastSaveTimes = new();
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Biyometrik veri kuyruk işleyici başlatıldı.");
@@ -45,11 +47,25 @@ public class BiometricQueueProcessor : BackgroundService
                     var dbContext = scope.ServiceProvider.GetRequiredService<IAppDbContext>();
                     var notificationService = scope.ServiceProvider.GetRequiredService<IBiometricNotificationService>();
 
-                    // 1. Veritabanına kaydet
-                    await dbContext.StudentBiometricRecords.AddAsync(record, stoppingToken);
-                    await dbContext.SaveChangesAsync(stoppingToken);
+                    bool shouldSaveToDb = true;
+                    if (_lastSaveTimes.TryGetValue(record.StudentId, out var lastSave))
+                    {
+                        // Son 1 dakika içinde kayıt atıldıysa veritabanına yazma, sadece SignalR ile canlı yayınla
+                        if (DateTime.UtcNow - lastSave < TimeSpan.FromMinutes(1))
+                        {
+                            shouldSaveToDb = false;
+                        }
+                    }
 
-                    // 2. Gerçek zamanlı SignalR yayını yap
+                    if (shouldSaveToDb)
+                    {
+                        // 1. Veritabanına kaydet
+                        await dbContext.StudentBiometricRecords.AddAsync(record, stoppingToken);
+                        await dbContext.SaveChangesAsync(stoppingToken);
+                        _lastSaveTimes[record.StudentId] = DateTime.UtcNow;
+                    }
+
+                    // 2. Her durumda canlı SignalR bildirimini gönder
                     await notificationService.SendBiometricUpdateAsync(
                         record.SchoolId,
                         record.StudentId,

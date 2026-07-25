@@ -49,6 +49,7 @@ services:
       - "5200:5200"
     environment:
       - SchoolInfoApiUrl=http://schoolinfo-api:5100
+      - PublicApiUrl=https://api.veliport.com.tr
     depends_on:
       - schoolinfo-api
     restart: always

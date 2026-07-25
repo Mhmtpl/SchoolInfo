@@ -12,7 +12,10 @@ public class StudentEndpoints : IEndpoint
 {
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/students").WithTags("Students").RequireAuthorization();
+        var group = app.MapGroup("/api/students")
+            .WithTags("Students")
+            .RequireAuthorization()
+            .RequireRateLimiting("api");
 
         group.MapPost("/", async (CreateStudentCommand command, IMediator mediator) =>
         {

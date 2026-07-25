@@ -218,23 +218,40 @@
             <div class="glass-card" style="padding: 2rem; margin-top: 1.5rem; margin-bottom: 1.5rem;">
                 <div class="section-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
                     <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0; display: flex; align-items: center; gap: 0.5rem;">
-                        ❤️ Canlı Biyometrik Sağlık Takibi (Xiaomi IoT)
+                        ❤️ Canlı Biyometrik Sağlık Takibi (HUAWEI Band 10)
                     </h2>
                     <span id="biometrics-connection-status" style="background: #fee2e2; color: #b91c1c; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 0.35rem;">
                         <span style="width: 8px; height: 8px; background: #b91c1c; border-radius: 50%; display: inline-block;" id="biometrics-dot"></span>
                         <span id="biometrics-status-text">Bağlantı Yok</span>
                     </span>
                 </div>
-
-                <!-- Son ölçülen değerler -->
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-                    <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 1rem;">
-                        <span style="font-size: 2rem;">❤️</span>
-                        <div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">Kalp Atış Hızı</div>
-                            <div style="font-size: 1.6rem; font-weight: 800; color: #dc2626;"><span id="live-heartrate">--</span> <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted);">BPM</span></div>
+                    <!-- Kalp Atış Hızı ve Canlı EKG Dalgası -->
+                    <div id="ecg-card" style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 12px; padding: 1rem; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1.5rem; overflow: hidden; position: relative; transition: all 0.3s ease-in-out;">
+                        <!-- Sol: Başlık ve Değer -->
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <span id="ecg-heart-icon" style="font-size: 2.2rem; transition: transform 0.1s ease; display: inline-block;">❤️</span>
+                            <div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">Kalp Atış Hızı</div>
+                                <div style="font-size: 1.6rem; font-weight: 800; color: #dc2626;">
+                                    <span id="live-heartrate">--</span> 
+                                    <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted);">BPM</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Orta: EKG Osiloskop Dalgası (Kırmızı/Göz Alıcı) -->
+                        <div style="position: relative; height: 50px; width: 100%; min-width: 150px; overflow: hidden; background: rgba(239, 68, 68, 0.02); border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.05);">
+                            <canvas id="ecgCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
+                        </div>
+                        
+                        <!-- Sağ: Canlı Durum -->
+                        <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem;">
+                            <span id="ecg-pulse-indicator" style="font-size: 0.65rem; font-weight: 700; color: #991b1b; padding: 0.15rem 0.4rem; border-radius: 4px; background: rgba(239, 68, 68, 0.1);">BAĞLANTI BEKLENİYOR</span>
+                            <span style="font-size: 0.6rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px;">CANLI AKIŞ</span>
                         </div>
                     </div>
+
                     <div style="display: none; background: rgba(14, 165, 233, 0.05); border: 1px solid rgba(14, 165, 233, 0.15); border-radius: 12px; padding: 1rem; align-items: center; gap: 1rem;">
                         <span style="font-size: 2rem;">🫁</span>
                         <div>
@@ -248,6 +265,18 @@
                             <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">Vücut Sıcaklığı</div>
                             <div style="font-size: 1.6rem; font-weight: 800; color: #d97706;"><span id="live-temp">--</span> <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted);">°C</span></div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Grafik Başlığı ve Filtreleri -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.35rem;">
+                        📊 Sağlık Geçmişi Analizi <span id="chart-type-indicator" style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); padding: 0.15rem 0.4rem; border-radius: 4px; background: rgba(0,0,0,0.03);">(Bugün - Canlı Akış)</span>
+                    </div>
+                    <div style="display: flex; background: rgba(0,0,0,0.04); border-radius: 8px; padding: 0.2rem; border: 1px solid var(--border-color);">
+                        <button type="button" onclick="changeChartFilter('today')" id="btn-filter-today" class="biometrics-filter-btn active-filter" style="border: none; background: #ffffff; color: #1e293b; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.2s ease-in-out;">Bugün (Canlı)</button>
+                        <button type="button" onclick="changeChartFilter('7days')" id="btn-filter-7days" class="biometrics-filter-btn" style="border: none; background: transparent; color: var(--text-secondary); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.2s ease-in-out;">Son 7 Gün (Ort.)</button>
+                        <button type="button" onclick="changeChartFilter('30days')" id="btn-filter-30days" class="biometrics-filter-btn" style="border: none; background: transparent; color: var(--text-secondary); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.2s ease-in-out;">Son 30 Gün (Ort.)</button>
                     </div>
                 </div>
 
@@ -995,6 +1024,9 @@
         // --- BİYOMETRİK CANLI VERİ & GRAFİK KURGUSU ---
         (function() {
             const initialBiometrics = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.Biometrics)) || [];
+            const studentId = '@ViewBag.StudentId';
+            let currentFilter = 'today';
+            let lastUpdateTime = Date.now();
             
             const chartLabels = [];
             const heartRateData = [];
@@ -1010,17 +1042,391 @@
                 tempData.push(item.BodyTemperature);
             });
 
-            // Son değerleri ekranda göster
+            // --- Canlı ECG Monitörü Kodları ---
+            const ecgCanvas = document.getElementById('ecgCanvas');
+            const ecgCtx = ecgCanvas.getContext('2d');
+            
+            function resizeEcgCanvas() {
+                if (!ecgCanvas) return;
+                const rect = ecgCanvas.getBoundingClientRect();
+                ecgCanvas.width = rect.width * window.devicePixelRatio;
+                ecgCanvas.height = rect.height * window.devicePixelRatio;
+                ecgCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            }
+            
+            window.addEventListener('resize', resizeEcgCanvas);
+            
+            let currentBpm = 75; 
+            let hasEcgData = false;
+            let ecgColor = '#dc2626'; // Varsayılan kırmızı (bağlantı beklerken)
+            
+            // Çocuk yaş grubuna göre (2-6 yaş) nabız durum renklerini belirler
+            function getEcgStatus(bpm) {
+                if (!bpm) {
+                    return {
+                        color: '#94a3b8', // Gri
+                        bg: 'rgba(148, 163, 184, 0.05)',
+                        border: 'rgba(148, 163, 184, 0.15)',
+                        text: 'BAĞLANTI BEKLENİYOR',
+                        indicatorBg: 'rgba(148, 163, 184, 0.1)'
+                    };
+                }
+                
+                if (bpm < 70) {
+                    // Düşük Nabız (Mavi/Turkuaz)
+                    return {
+                        color: '#0284c7',
+                        bg: 'rgba(14, 165, 233, 0.04)',
+                        border: 'rgba(14, 165, 233, 0.15)',
+                        text: 'DÜŞÜK NABIZ',
+                        indicatorBg: 'rgba(14, 165, 233, 0.15)'
+                    };
+                } else if (bpm <= 125) {
+                    // Normal Çocuk Nabzı (Yeşil)
+                    return {
+                        color: '#16a34a',
+                        bg: 'rgba(22, 163, 74, 0.04)',
+                        border: 'rgba(22, 163, 74, 0.15)',
+                        text: 'SİNYAL AKTİF',
+                        indicatorBg: 'rgba(22, 163, 74, 0.15)'
+                    };
+                } else if (bpm <= 140) {
+                    // Yüksek Nabız (Turuncu/Uyarı)
+                    return {
+                        color: '#ea580c',
+                        bg: 'rgba(234, 88, 12, 0.04)',
+                        border: 'rgba(234, 88, 12, 0.15)',
+                        text: 'YÜKSEK NABIZ',
+                        indicatorBg: 'rgba(234, 88, 12, 0.15)'
+                    };
+                } else {
+                    // Kritik Yüksek Çocuk Nabzı (Kırmızı/Riskli)
+                    return {
+                        color: '#dc2626',
+                        bg: 'rgba(220, 38, 38, 0.04)',
+                        border: 'rgba(220, 38, 38, 0.15)',
+                        text: 'KRİTİK NABIZ',
+                        indicatorBg: 'rgba(220, 38, 38, 0.15)'
+                    };
+                }
+            }
+
+            function updateEcgBpm(bpm) {
+                if (!bpm) return;
+                currentBpm = bpm;
+                hasEcgData = true;
+                
+                const status = getEcgStatus(bpm);
+                ecgColor = status.color;
+                
+                // Kartın arka planını ve kenarlığını durum rengine göre güncelle
+                const ecgCard = document.getElementById('ecg-card');
+                if (ecgCard) {
+                    ecgCard.style.background = status.bg;
+                    ecgCard.style.borderColor = status.border;
+                }
+                
+                // Değerin rengini güncelle
+                const bpmText = document.getElementById('live-heartrate');
+                if (bpmText) {
+                    bpmText.style.color = status.color;
+                }
+                
+                // Canlı akış durum etiketini güncelle
+                const pulseInd = document.getElementById('ecg-pulse-indicator');
+                if (pulseInd) {
+                    pulseInd.innerText = status.text;
+                    pulseInd.style.color = status.color;
+                    pulseInd.style.background = status.indicatorBg;
+                }
+            }
+
+            // Keskin ve Gerçekçi EKG Dalga Formülü (PQRST)
+            function getEcgY(t) {
+                if (!hasEcgData) {
+                    // Veri yoksa düz izoelektrik hat çiz, arada çok küçük parazitler olsun
+                    return 0.02 * Math.sin(t * Math.PI * 10) * Math.sin(t * Math.PI * 2);
+                }
+                
+                if (t < 0.1) {
+                    return 0.12 * Math.sin((t / 0.1) * Math.PI); // P wave
+                } else if (t < 0.14) {
+                    return 0; // PR segment
+                } else if (t < 0.16) {
+                    // Q Spike (Keskin aşağı iniş)
+                    const progress = (t - 0.14) / 0.02;
+                    return -0.2 * progress;
+                } else if (t < 0.19) {
+                    // R Spike (Çok keskin yukarı fırlama)
+                    const progress = (t - 0.16) / 0.03;
+                    return -0.2 + (1.4 * progress); 
+                } else if (t < 0.22) {
+                    // S Spike (Çok keskin aşağı düşüş)
+                    const progress = (t - 0.19) / 0.03;
+                    return 1.2 - (1.65 * progress); 
+                } else if (t < 0.24) {
+                    // Baseline'a dönüş (keskin yukarı çıkış)
+                    const progress = (t - 0.22) / 0.02;
+                    return -0.45 + (0.45 * progress); 
+                } else if (t < 0.35) {
+                    return 0; // ST segment
+                } else if (t < 0.48) {
+                    return 0.22 * Math.sin(((t - 0.35) / 0.13) * Math.PI); // T wave
+                } else {
+                    return 0; // Isoelectric baseline
+                }
+            }
+
+            let scanX = 0;
+            let waveData = []; // Her yatay piksel için tek bir Y değeri tutarak kalınlaşmayı/üst üste binmeyi engeller
+            let lastTime = performance.now();
+            let heartIconPulseActive = false;
+            
+            function animateEcg(time) {
+                if (!ecgCanvas) return;
+                if (!ecgCanvas.width) {
+                    resizeEcgCanvas();
+                }
+                
+                const width = ecgCanvas.width / window.devicePixelRatio;
+                const height = ecgCanvas.height / window.devicePixelRatio;
+                if (width <= 0 || height <= 0) {
+                    requestAnimationFrame(animateEcg);
+                    return;
+                }
+                const centerY = height / 2;
+                
+                // Pencere boyutu değiştiyse waveData dizisini yeniden boyutlandır
+                const targetLength = Math.ceil(width);
+                if (waveData.length !== targetLength) {
+                    waveData = new Array(targetLength).fill(centerY);
+                }
+                
+                const dt = (time - lastTime) / 1000;
+                lastTime = time;
+                
+                const activeBpm = currentBpm > 0 ? currentBpm : 75;
+                const wavelength = (120 * 60) / activeBpm;
+                
+                // Sweep hızı ve bir sonraki konum
+                const speed = 120 * dt; 
+                const nextScanX = (scanX + speed) % width;
+                
+                // startX ve endX arasındaki tüm pikselleri EKG formülüyle doldur
+                let startX = Math.floor(scanX);
+                let endX = Math.floor(nextScanX);
+                
+                if (endX < startX) {
+                    // Wrap-around (ekran sonundan başa geçiş)
+                    for (let x = startX; x < width; x++) {
+                        const phase = (x % wavelength) / wavelength;
+                        waveData[x] = centerY - (getEcgY(phase) * (height * 0.35));
+                    }
+                    for (let x = 0; x <= endX; x++) {
+                        const phase = (x % wavelength) / wavelength;
+                        waveData[x] = centerY - (getEcgY(phase) * (height * 0.35));
+                    }
+                } else {
+                    for (let x = startX; x <= endX; x++) {
+                        if (x < waveData.length) {
+                            const phase = (x % wavelength) / wavelength;
+                            waveData[x] = centerY - (getEcgY(phase) * (height * 0.35));
+                        }
+                    }
+                }
+                
+                scanX = nextScanX;
+                
+                // Tarama ucunun önündeki eski verileri temizle (Eraser Gap - 15px)
+                const gapSize = 15;
+                for (let i = 1; i <= gapSize; i++) {
+                    const clearX = Math.floor((scanX + i) % width);
+                    if (clearX < waveData.length) {
+                        waveData[clearX] = null;
+                    }
+                }
+                
+                // R dalgası (keskin çıkış anı) tetiklendiğinde kalp ikonunu şişirip söndür
+                const currentPhase = (scanX % wavelength) / wavelength;
+                if (hasEcgData && currentPhase >= 0.17 && currentPhase <= 0.23) {
+                    if (!heartIconPulseActive) {
+                        const heartIcon = document.getElementById('ecg-heart-icon');
+                        if (heartIcon) {
+                            heartIcon.style.transform = 'scale(1.3)';
+                        }
+                        heartIconPulseActive = true;
+                    }
+                } else {
+                    if (heartIconPulseActive) {
+                        const heartIcon = document.getElementById('ecg-heart-icon');
+                        if (heartIcon) {
+                            heartIcon.style.transform = 'scale(1.0)';
+                        }
+                        heartIconPulseActive = false;
+                    }
+                }
+                
+                const valY = centerY - (getEcgY(currentPhase) * (height * 0.35));
+                
+                ecgCtx.clearRect(0, 0, width, height);
+                
+                // 1. Durum Rengine Duyarlı Arka Plan Izgarası
+                ecgCtx.strokeStyle = ecgColor + '10'; // %6 şeffaflık
+                ecgCtx.lineWidth = 1;
+                
+                const gridSize = 15;
+                for (let x = 0; x < width; x += gridSize) {
+                    ecgCtx.beginPath();
+                    ecgCtx.moveTo(x, 0);
+                    ecgCtx.lineTo(x, height);
+                    ecgCtx.stroke();
+                }
+                for (let y = 0; y < height; y += gridSize) {
+                    ecgCtx.beginPath();
+                    ecgCtx.moveTo(0, y);
+                    ecgCtx.lineTo(width, y);
+                    ecgCtx.stroke();
+                }
+                
+                // Durum renginde kılavuz çizgi
+                ecgCtx.strokeStyle = ecgColor + '20'; // %12 şeffaflık
+                ecgCtx.beginPath();
+                ecgCtx.moveTo(0, centerY);
+                ecgCtx.lineTo(width, centerY);
+                ecgCtx.stroke();
+                
+                // 2. Dinamik Durum Renkli EKG Çizgisi
+                ecgCtx.strokeStyle = ecgColor;
+                ecgCtx.lineWidth = 2.2;
+                ecgCtx.shadowColor = ecgColor;
+                ecgCtx.shadowBlur = 6;
+                ecgCtx.lineCap = 'round';
+                ecgCtx.lineJoin = 'round';
+                
+                ecgCtx.beginPath();
+                
+                let isDrawing = false;
+                for (let x = 0; x < width; x++) {
+                    const y = waveData[x];
+                    if (y === null) {
+                        if (isDrawing) {
+                            ecgCtx.stroke();
+                            isDrawing = false;
+                        }
+                    } else {
+                        if (!isDrawing) {
+                            ecgCtx.beginPath();
+                            ecgCtx.moveTo(x, y);
+                            isDrawing = true;
+                        } else {
+                            ecgCtx.lineTo(x, y);
+                        }
+                    }
+                }
+                if (isDrawing) {
+                    ecgCtx.stroke();
+                }
+                
+                ecgCtx.shadowBlur = 0;
+                
+                // Tarama ucundaki parlayan nokta (Durum rengi uyumlu)
+                ecgCtx.fillStyle = '#ffffff';
+                ecgCtx.shadowColor = ecgColor;
+                ecgCtx.shadowBlur = 8;
+                ecgCtx.beginPath();
+                ecgCtx.arc(scanX, valY, 3.5, 0, 2 * Math.PI);
+                ecgCtx.fill();
+                ecgCtx.shadowBlur = 0;
+                
+                requestAnimationFrame(animateEcg);
+            }
+            
+            // Cihaz Çevrimdışı (Sensör Yok / Saat Çıkarıldı) Raporlama Döngüsü
+            setInterval(() => {
+                // Son veri alımından bu yana 20 saniyeden fazla geçtiyse çevrimdışı kabul et
+                if (hasEcgData && (Date.now() - lastUpdateTime > 20000)) {
+                    hasEcgData = false; // EKG'yi düz çizgi/parazite döndür
+                    
+                    // Nabız kutusundaki değeri sıfırla
+                    const liveBpmText = document.getElementById('live-heartrate');
+                    if (liveBpmText) liveBpmText.innerText = "--";
+                    
+                    // Kart rengini ve durumunu sıfırla
+                    const status = getEcgStatus(null);
+                    ecgColor = status.color;
+                    
+                    const ecgCard = document.getElementById('ecg-card');
+                    if (ecgCard) {
+                        ecgCard.style.background = status.bg;
+                        ecgCard.style.borderColor = status.border;
+                    }
+                    
+                    const pulseInd = document.getElementById('ecg-pulse-indicator');
+                    if (pulseInd) {
+                        pulseInd.innerText = "CİHAZ DIŞI / SENSÖR YOK";
+                        pulseInd.style.color = status.color;
+                        pulseInd.style.background = status.indicatorBg;
+                    }
+                    
+                    if (liveBpmText) {
+                        liveBpmText.style.color = status.color;
+                    }
+                }
+            }, 3000);
+
+            // Son değerleri ekranda göster ve ECG'yi kur
             if (initialBiometrics.length > 0) {
                 const lastRecord = initialBiometrics[initialBiometrics.length - 1];
-                if (lastRecord.HeartRate) document.getElementById('live-heartrate').innerText = lastRecord.HeartRate;
+                if (lastRecord.HeartRate) {
+                    document.getElementById('live-heartrate').innerText = lastRecord.HeartRate;
+                    
+                    // Son veri 2 dakikadan eskiyse çevrimdışı başlat
+                    const lastRecTime = new Date(lastRecord.RecordedAt).getTime();
+                    const nowTime = new Date().getTime();
+                    if (Math.abs(nowTime - lastRecTime) > 120000) {
+                        lastUpdateTime = 0; // Çevrimdışına düşür
+                        hasEcgData = false;
+                        
+                        // Kartı ilk baştan da griye çekelim
+                        setTimeout(() => {
+                            const liveBpmText = document.getElementById('live-heartrate');
+                            if (liveBpmText) liveBpmText.innerText = "--";
+                            const status = getEcgStatus(null);
+                            ecgColor = status.color;
+                            const ecgCard = document.getElementById('ecg-card');
+                            if (ecgCard) {
+                                ecgCard.style.background = status.bg;
+                                ecgCard.style.borderColor = status.border;
+                            }
+                            const pulseInd = document.getElementById('ecg-pulse-indicator');
+                            if (pulseInd) {
+                                pulseInd.innerText = "CİHAZ DIŞI / SENSÖR YOK";
+                                pulseInd.style.color = status.color;
+                                pulseInd.style.background = status.indicatorBg;
+                            }
+                        }, 50);
+                    } else {
+                        updateEcgBpm(lastRecord.HeartRate);
+                        lastUpdateTime = Date.now();
+                    }
+                }
                 if (lastRecord.SpO2) document.getElementById('live-spo2').innerText = lastRecord.SpO2;
                 if (lastRecord.BodyTemperature) document.getElementById('live-temp').innerText = lastRecord.BodyTemperature.toFixed(1);
                 document.getElementById('live-timestamp').innerText = new Date(lastRecord.RecordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             }
 
+            // Animasyonu başlat
+            resizeEcgCanvas();
+            requestAnimationFrame(animateEcg);
+
             // Chart.js Tanımlaması
             const ctx = document.getElementById('biometricsChart').getContext('2d');
+            
+            // Premium Gradyan Arka Planlar
+            const heartGradient = ctx.createLinearGradient(0, 0, 0, 300);
+            heartGradient.addColorStop(0, 'rgba(99, 102, 241, 0.25)'); // Indigo soft top
+            heartGradient.addColorStop(1, 'rgba(99, 102, 241, 0.00)'); // Transparent bottom
+
             const biometricsChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -1029,19 +1435,28 @@
                         {
                             label: 'Kalp Atışı (BPM)',
                             data: heartRateData,
-                            borderColor: '#ef4444',
-                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderColor: '#6366f1', // Premium Indigo Line
+                            backgroundColor: heartGradient,
                             borderWidth: 2,
-                            tension: 0.3,
+                            tension: 0.4, // Smooth Spline Curve
+                            fill: true,
+                            pointRadius: 0, // Düzgün çizgi için noktaları gizle
+                            pointHoverRadius: 6, // Hover durumunda yuvarlak belirsin
+                            pointBackgroundColor: '#6366f1',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
                             yAxisID: 'y-heart'
                         },
                         {
                             label: 'Oksijen (SpO2 %)',
                             data: spo2Data,
-                            borderColor: '#0284c7',
-                            backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                            borderColor: '#0ea5e9',
+                            backgroundColor: 'rgba(14, 165, 233, 0.05)',
                             borderWidth: 2,
-                            tension: 0.3,
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
                             yAxisID: 'y-spo2',
                             hidden: true
                         },
@@ -1049,9 +1464,12 @@
                             label: 'Ateş (°C)',
                             data: tempData,
                             borderColor: '#f59e0b',
-                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            backgroundColor: 'rgba(245, 158, 11, 0.05)',
                             borderWidth: 2,
-                            tension: 0.3,
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
                             yAxisID: 'y-temp',
                             hidden: true
                         }
@@ -1060,16 +1478,52 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
                     scales: {
                         x: {
-                            grid: { display: false }
+                            grid: { 
+                                display: false // Dikey ızgaraları gizleyerek sadeleştir
+                            },
+                            ticks: {
+                                maxRotation: 0, // Yatay kalıp temiz görünsün
+                                autoSkip: true,
+                                maxTicksLimit: 8, // Maksimum 8 zaman etiketi göster
+                                color: '#64748b',
+                                font: {
+                                    size: 11,
+                                    family: 'Outfit, Inter, system-ui, sans-serif'
+                                }
+                            }
                         },
                         'y-heart': {
                             type: 'linear',
                             position: 'left',
                             min: 50,
                             max: 160,
-                            title: { display: true, text: 'BPM' }
+                            grid: {
+                                color: 'rgba(226, 232, 240, 0.8)' // Çok yumuşak yatay çizgiler
+                            },
+                            ticks: {
+                                stepSize: 20,
+                                color: '#64748b',
+                                font: {
+                                    size: 11,
+                                    family: 'Outfit, Inter, system-ui, sans-serif'
+                                }
+                            },
+                            title: { 
+                                display: true, 
+                                text: 'Nabız (BPM)',
+                                color: '#475569',
+                                font: {
+                                    size: 11,
+                                    weight: '600',
+                                    family: 'Outfit, Inter, system-ui, sans-serif'
+                                }
+                            }
                         },
                         'y-spo2': {
                             display: false,
@@ -1077,8 +1531,7 @@
                             position: 'right',
                             min: 80,
                             max: 100,
-                            grid: { drawOnChartArea: false },
-                            title: { display: true, text: 'SpO2 %' }
+                            grid: { drawOnChartArea: false }
                         },
                         'y-temp': {
                             display: false,
@@ -1086,17 +1539,32 @@
                             position: 'right',
                             min: 35,
                             max: 42,
-                            grid: { drawOnChartArea: false },
-                            title: { display: true, text: 'Ateş °C' }
+                            grid: { drawOnChartArea: false }
                         }
                     },
                     plugins: {
                         legend: {
-                            position: 'top',
-                            labels: { 
-                                boxWidth: 15,
-                                filter: function(item, chart) {
-                                    return item.text.includes('Kalp Atışı');
+                            display: false // Zaten tek veri gösteriyoruz, lejant kirliliğine gerek yok
+                        },
+                        tooltip: {
+                            backgroundColor: '#1e293b', // Modern koyu slate tooltip
+                            titleColor: '#ffffff',
+                            bodyColor: '#e2e8f0',
+                            borderColor: '#334155',
+                            borderWidth: 1,
+                            padding: 10,
+                            cornerRadius: 8,
+                            titleFont: {
+                                family: 'Outfit, Inter, system-ui, sans-serif',
+                                weight: '600'
+                            },
+                            bodyFont: {
+                                family: 'Outfit, Inter, system-ui, sans-serif'
+                            },
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return ` Kalp Atış Hızı: ${context.parsed.y} BPM`;
                                 }
                             }
                         }
@@ -1104,67 +1572,161 @@
                 }
             });
 
+            // Filtre Değiştirme Fonksiyonu (Geçmişe yönelik filtreler)
+            window.changeChartFilter = async function(filterType) {
+                if (filterType === currentFilter) return;
+                currentFilter = filterType;
+                
+                // Buton stillerini ve aktiflik durumunu güncelle
+                document.querySelectorAll('.biometrics-filter-btn').forEach(btn => {
+                    btn.classList.remove('active-filter');
+                    btn.style.background = 'transparent';
+                    btn.style.color = 'var(--text-secondary)';
+                    btn.style.boxShadow = 'none';
+                });
+                
+                const activeBtn = document.getElementById(`btn-filter-${filterType}`);
+                if (activeBtn) {
+                    activeBtn.classList.add('active-filter');
+                    activeBtn.style.background = '#ffffff';
+                    activeBtn.style.color = '#1e293b';
+                    activeBtn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+                }
+                
+                // Başlık altı gösterge metnini güncelle
+                const indicator = document.getElementById('chart-type-indicator');
+                if (indicator) {
+                    if (filterType === 'today') {
+                        indicator.innerText = '(Bugün - Canlı Akış)';
+                    } else if (filterType === '7days') {
+                        indicator.innerText = '(Son 7 Günlük Rapor - Günlük Ortalama)';
+                    } else if (filterType === '30days') {
+                        indicator.innerText = '(Son 30 Günlük Rapor - Günlük Ortalama)';
+                    }
+                }
+                
+                try {
+                    let url = `${apiUrl}/api/students/${studentId}/biometrics`;
+                    if (filterType !== 'today') {
+                        url += `?range=${filterType}`;
+                    } else {
+                        const selectedDate = '@ViewBag.SelectedDate';
+                        if (selectedDate) {
+                            url += `?date=${selectedDate}`;
+                        }
+                    }
+                    
+                    const response = await fetch(url, {
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    });
+                    const data = await response.json();
+                    
+                    // Grafik verilerini temizle
+                    biometricsChart.data.labels = [];
+                    biometricsChart.data.datasets[0].data = [];
+                    biometricsChart.data.datasets[1].data = [];
+                    biometricsChart.data.datasets[2].data = [];
+                    
+                    // Gelen verileri grafiğe doldur
+                    data.forEach(item => {
+                        let label = "";
+                        if (filterType === 'today') {
+                            label = new Date(item.recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        } else {
+                            label = formatDateTurkish(item.recordedAt);
+                        }
+                        
+                        biometricsChart.data.labels.push(label);
+                        biometricsChart.data.datasets[0].data.push(item.heartRate);
+                        biometricsChart.data.datasets[1].data.push(item.spO2);
+                        biometricsChart.data.datasets[2].data.push(item.bodyTemperature);
+                    });
+                    
+                    biometricsChart.update();
+                } catch (err) {
+                    console.error("Grafik verileri filtreleme hatası:", err);
+                }
+            }
+            
+            function formatDateTurkish(dateStr) {
+                const date = new Date(dateStr);
+                const day = date.getDate();
+                const months = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+                return `${day} ${months[date.getMonth()]}`;
+            }
+
             // SignalR Hub Entegrasyonu
             const accessToken = '@ViewBag.AccessToken';
             const apiUrl = '@ViewBag.ApiUrl';
-
+ 
             if (accessToken && apiUrl) {
-                // SignalR hub adresi
                 const hubUrl = apiUrl.replace(/\/$/, '') + '/hubs/biometrics';
-
+ 
                 const connection = new signalR.HubConnectionBuilder()
                     .withUrl(hubUrl, {
                         accessTokenFactory: () => accessToken
                     })
                     .withAutomaticReconnect()
                     .build();
-
+ 
                 // Canlı güncelleme dinleyicisi
                 connection.on("ReceiveBiometricUpdate", function (update) {
                     console.log("Canlı biyometrik güncelleme:", update);
-
+                    lastUpdateTime = Date.now();
+ 
                     const timeStr = new Date(update.recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const fullTimeStr = new Date(update.recordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-                    // Canlı kutuları güncelle
+ 
+                    // Canlı üst durum kutularını her zaman güncelle
                     if (update.heartRate) {
                         document.getElementById('live-heartrate').innerText = update.heartRate;
-                        biometricsChart.data.datasets[0].data.push(update.heartRate);
+                        updateEcgBpm(update.heartRate);
                     }
                     if (update.spO2) {
                         document.getElementById('live-spo2').innerText = update.spO2;
-                        biometricsChart.data.datasets[1].data.push(update.spO2);
                     }
                     if (update.bodyTemperature) {
                         document.getElementById('live-temp').innerText = update.bodyTemperature.toFixed(1);
-                        biometricsChart.data.datasets[2].data.push(update.bodyTemperature);
                     }
                     document.getElementById('live-timestamp').innerText = fullTimeStr;
-
-                    // Zaman etiketini ekle
-                    biometricsChart.data.labels.push(timeStr);
-
-                    // Ekranda çok fazla nokta birikmesini önlemek için ilk elemanı sil
-                    if (biometricsChart.data.labels.length > 25) {
-                        biometricsChart.data.labels.shift();
-                        biometricsChart.data.datasets.forEach(dataset => dataset.data.shift());
+ 
+                    // Sadece 'today' (Bugün) filtresi aktifse grafiğe ekle
+                    if (currentFilter === 'today') {
+                        if (update.heartRate) {
+                            biometricsChart.data.datasets[0].data.push(update.heartRate);
+                        }
+                        if (update.spO2) {
+                            biometricsChart.data.datasets[1].data.push(update.spO2);
+                        }
+                        if (update.bodyTemperature) {
+                            biometricsChart.data.datasets[2].data.push(update.bodyTemperature);
+                        }
+                        
+                        biometricsChart.data.labels.push(timeStr);
+ 
+                        if (biometricsChart.data.labels.length > 25) {
+                            biometricsChart.data.labels.shift();
+                            biometricsChart.data.datasets.forEach(dataset => dataset.data.shift());
+                        }
+ 
+                        biometricsChart.update();
                     }
-
-                    biometricsChart.update();
                 });
-
+ 
                 // Hub bağlantısını başlat
                 connection.start()
                     .then(function () {
                         const statusContainer = document.getElementById('biometrics-connection-status');
                         const statusDot = document.getElementById('biometrics-dot');
                         const statusText = document.getElementById('biometrics-status-text');
-
+ 
                         if (statusContainer) statusContainer.style.background = '#dcfce7';
                         if (statusContainer) statusContainer.style.color = '#15803d';
                         if (statusDot) statusDot.style.background = '#15803d';
                         if (statusText) statusText.innerText = 'Canlı Bağlantı';
-
+ 
                         // Gruba katıl
                         connection.invoke("JoinStudentGroup", '@ViewBag.StudentId')
                             .catch(err => console.error("SignalR Gruba Katılamadı: ", err.toString()));

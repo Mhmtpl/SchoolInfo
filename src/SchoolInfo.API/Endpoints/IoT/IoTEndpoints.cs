@@ -18,14 +18,19 @@ public class IoTEndpoints : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder app)
     {
         // ESP32'nin veri yollayacağı halka açık ama token korumalı IoT grubu
-        var group = app.MapGroup("/api/iot").WithTags("IoT").AllowAnonymous();
+        var group = app.MapGroup("/api/iot")
+            .WithTags("IoT")
+            .AllowAnonymous();
 
         group.MapPost("/biometrics", SaveBiometricDataAsync)
             .WithName("SaveBiometricData")
             .WithSummary("ESP32 cihazından gelen canlı biyometrik verileri kuyruğa ekler.");
 
         // Veli ve öğretmenlerin kullanacağı yetkilendirilmiş API grubu
-        var secureGroup = app.MapGroup("/api/students/{studentId:guid}/biometrics").WithTags("Biometrics").RequireAuthorization();
+        var secureGroup = app.MapGroup("/api/students/{studentId:guid}/biometrics")
+            .WithTags("Biometrics")
+            .RequireAuthorization()
+            .RequireRateLimiting("api");
 
         secureGroup.MapGet("/", GetStudentBiometricsAsync)
             .WithName("GetStudentBiometrics")
@@ -57,8 +62,15 @@ public class IoTEndpoints : IEndpoint
     private static async Task<IResult> GetStudentBiometricsAsync(
         Guid studentId, 
         string? date, 
+        string? range,
         IMediator mediator)
     {
+        if (!string.IsNullOrEmpty(range))
+        {
+            var resultRange = await mediator.Send(new GetStudentBiometricsQuery(studentId, null, range));
+            return Results.Ok(resultRange);
+        }
+
         if (!DateTime.TryParse(date, out var queryDate))
         {
             queryDate = DateTime.UtcNow.AddHours(3).Date; // Default to Turkey Local Time Date

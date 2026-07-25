@@ -4,24 +4,27 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace SchoolInfo.Web.Controllers;
 
-[Authorize]
 public class HomeController : Controller
 {
     public IActionResult Index()
     {
-        if (User.IsInRole("Admin"))
+        if (User.Identity?.IsAuthenticated == true)
         {
-            return RedirectToAction("Index", "Admin");
-        }
-        else if (User.IsInRole("Teacher"))
-        {
-            return RedirectToAction("Index", "Teacher");
-        }
-        else if (User.IsInRole("Parent"))
-        {
-            return RedirectToAction("Index", "Parent");
+            if (User.IsInRole("Admin"))
+            {
+                return RedirectToAction("Index", "Admin");
+            }
+            else if (User.IsInRole("Teacher"))
+            {
+                return RedirectToAction("Index", "Teacher");
+            }
+            else if (User.IsInRole("Parent"))
+            {
+                return RedirectToAction("Index", "Parent");
+            }
         }
 
-        return RedirectToAction("Logout", "Account");
+        // Show the promotional landing page for anonymous users
+        return View();
     }
 }

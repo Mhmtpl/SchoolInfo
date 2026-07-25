@@ -2,7 +2,7 @@
  * SchoolInfo IoT - ESP32 Çoklu Canlı Biyometrik (Nabız) Veri Vericisi
  * 
  * Bu yazılım, tek bir ESP32 (ESP-32S) kartı ile sınıftaki birden fazla
- * Xiaomi Akıllı Saat/Bileklik cihazına sırayla bağlanır (Connection Cycling),
+ * HUAWEI Band 10 Akıllı Saat/Bileklik cihazına sırayla bağlanır (Connection Cycling),
  * nabız verisini okur, API'ye gönderir ve bir sonraki saate geçer.
  * 
  * Sınıfta bulunmayan (saati kapalı veya menzil dışında olan) çocukların
@@ -40,12 +40,12 @@ const int wifiCount = sizeof(wifiNetworks) / sizeof(wifiNetworks[0]);
 const char* serverUrl = "http://85.235.74.24:5100/api/iot/biometrics"; 
 const char* iotDeviceToken = "DefaultSecretIoTToken1234!";
 
-// 3. İzlenecek Saatlerin MAC Adresleri Dizisi
-// Not: MAC adresindeki harfler BÜYÜK olmalıdır. İleride yeni saatler eklendikçe diziye ekleme yapabilirsiniz.
-const String targetMacAddresses[] = {
-    "54:2F:04:55:4F:9D"  // 1. Redmi Watch 4
+// 3. İzlenecek Saatlerin/Bilekliklerin MAC Adresleri veya Benzersiz İsimleri Dizisi
+// Not: Cihazların MAC adreslerini veya telefonda görünen bluetooth isimlerini (örn: HUAWEI Band 10-73D) yazabilirsiniz.
+const String targetDevices[] = {
+    "E4:A5:87:B7:07:3D" // 1. HUAWEI Band 10-73D (Gerçek BLE MAC Adresi)
 };
-const int deviceCount = sizeof(targetMacAddresses) / sizeof(targetMacAddresses[0]);
+const int deviceCount = sizeof(targetDevices) / sizeof(targetDevices[0]);
 
 // 4. Zaman Aşımı Değerleri (Milisaniye)
 const unsigned long scanTimeoutMs = 4000;    // Saati arama süresi (Bulunamazsa sonraki saate geçer)
@@ -58,8 +58,8 @@ const unsigned long delayBetweenDevices = 1000; // İki saat geçişi arasındak
 static BLEUUID serviceUUID("180D");        // Heart Rate Service
 static BLEUUID charUUID("2A37");           // Heart Rate Measurement Characteristic
 
-static boolean doConnect = false;
-static boolean connected = false;
+volatile bool doConnect = false;
+volatile bool connected = false;
 static BLEAdvertisedDevice* myDevice = nullptr;
 static BLEClient* pClient = nullptr;
 
@@ -67,6 +67,7 @@ int currentDeviceIndex = 0;
 volatile int latestHeartRate = 0;
 volatile bool newHeartRateAvailable = false;
 unsigned long connectionStartTime = 0;
+int consecutiveFailures = 0;
 
 // BLE Bağlantı Durumu Takibi
 class MyClientCallback : public BLEClientCallbacks {
@@ -122,6 +123,9 @@ bool connectToDevice() {
         return false;
     }
 
+    // MTU ve bağlantı parametrelerinin güvenli müzakeresi için kısa bir gecikme ekle
+    delay(300);
+
     // Servis Keşfi
     BLERemoteService* pRemoteService = pClient->getService(serviceUUID);
     if (pRemoteService == nullptr) {
@@ -165,15 +169,53 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     String foundAddress = advertisedDevice.getAddress().toString().c_str();
     foundAddress.toUpperCase();
     
-    String targetMac = targetMacAddresses[currentDeviceIndex];
-    targetMac.toUpperCase();
+    String foundName = "";
+    if (advertisedDevice.haveName()) {
+      foundName = advertisedDevice.getName().c_str();
+    }
 
-    if (foundAddress == targetMac) {
+    // [TANI/DIAGNOSTIC] Havada yakalanan Huawei/Band cihazlarını ekrana yazdırır
+    if (foundName.indexOf("Band") != -1 || foundName.indexOf("HR") != -1 || foundAddress.startsWith("24:A4")) {
+      Serial.print("   [Tarama] Cihaz Yakalandi -> MAC: ");
+      Serial.print(foundAddress);
+      Serial.print(" | Isim: ");
+      Serial.println(foundName.length() > 0 ? foundName : "Isimsiz");
+    }
+
+    String target = targetDevices[currentDeviceIndex];
+    String targetUpper = target;
+    targetUpper.toUpperCase();
+
+    // Hem MAC adresi hem de Cihaz İsmi ile eşleşme kontrolü (büyük/küçük harf duyarsız)
+    bool isMatch = (foundAddress == targetUpper);
+    
+    if (!isMatch && foundName.length() > 0) {
+      String foundNameUpper = foundName;
+      foundNameUpper.toUpperCase();
+      
+      if (foundNameUpper == targetUpper) {
+        isMatch = true;
+      } else {
+        // Hedef ismin sonundaki benzersiz kodu (örn: "73D" veya "8C4") alalım ve yayınlanan ismin içinde arayalım
+        int dashIndex = target.lastIndexOf('-');
+        String suffix = (dashIndex != -1) ? target.substring(dashIndex + 1) : target;
+        suffix.toUpperCase();
+        
+        if (suffix.length() > 0 && foundNameUpper.indexOf(suffix) != -1) {
+          isMatch = true;
+        }
+      }
+    }
+
+    if (isMatch) {
       Serial.print("   -> Hedef cihaz bulundu: ");
-      Serial.println(foundAddress);
-      BLEDevice::getScan()->stop();
+      Serial.print(target);
+      Serial.print(" (Yayinlanan isim: ");
+      Serial.print(foundName.length() > 0 ? foundName : "Isimsiz");
+      Serial.println(")");
       myDevice = new BLEAdvertisedDevice(advertisedDevice);
       doConnect = true;
+      BLEDevice::getScan()->stop(); // Wakes up main thread - must be called last!
     }
   }
 };
@@ -251,9 +293,9 @@ void setup() {
 }
 
 void loop() {
-  String activeMac = targetMacAddresses[currentDeviceIndex];
+  String activeDevice = targetDevices[currentDeviceIndex];
   Serial.print("\n[+] Cihaz taranıyor (" + String(currentDeviceIndex + 1) + "/" + String(deviceCount) + "): ");
-  Serial.println(activeMac);
+  Serial.println(activeDevice);
 
   doConnect = false;
   connected = false;
@@ -286,8 +328,9 @@ void loop() {
           Serial.println(" BPM");
 
           // API'ye gönder
-          sendBiometricData(activeMac, hr);
+          sendBiometricData(activeDevice, hr);
           successRead = true;
+          consecutiveFailures = 0; // Başarılı veri alındı, sayacı sıfırla
           break; // Okuma başarılı, döngüden çık
         }
         delay(50);
@@ -295,6 +338,7 @@ void loop() {
 
       if (!successRead) {
         Serial.println("   [!] Zaman aşımı! Cihaz bağlandı ama nabız verisi göndermedi.");
+        consecutiveFailures++;
       }
 
       // Bağlantıyı güvenli bir şekilde kes ve nesneyi temizle
@@ -303,10 +347,21 @@ void loop() {
         delete pClient;
         pClient = nullptr;
       }
+    } else {
+      // Bağlantı kurulamadı veya karakteristik keşfi başarısız oldu
+      consecutiveFailures++;
     }
   }
 
-  // 3. Sonraki cihaza geç
+  // 3. Bluetooth Kilitlenme Koruması (Self-Healing)
+  if (consecutiveFailures >= 10) {
+    Serial.println("\n[!] Arda arda 10 baglantı/veri hatası! BLE Stack kilitlenmiş olabilir.");
+    Serial.println("[+] ESP32 kendi kendini temizlemek için RESTART ediliyor...");
+    delay(1000);
+    ESP.restart();
+  }
+
+  // 4. Sonraki cihaza geç
   currentDeviceIndex = (currentDeviceIndex + 1) % deviceCount;
   
   // Geçişler arasında ESP32'yi dinlendir

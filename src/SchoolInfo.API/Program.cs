@@ -41,6 +41,17 @@ builder.Services.AddEndpoints();
 builder.Services.AddSignalR();
 builder.Services.AddScoped<SchoolInfo.Application.Common.Interfaces.IBiometricNotificationService, SchoolInfo.API.Hubs.BiometricNotificationService>();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("CorsPolicy", policy =>
+    {
+        policy.SetIsOriginAllowed(origin => true)
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+    });
+});
+
 // 5. JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -157,6 +168,8 @@ if (app.Environment.IsDevelopment())
 
 // Rate Limiter middleware
 app.UseRateLimiter();
+
+app.UseCors("CorsPolicy");
 
 // Seed Database
 using (var scope = app.Services.CreateScope())

@@ -1289,8 +1289,8 @@
 
             connection.on("ReceiveBiometricUpdate", function (update) {
                 console.log("Öğretmen paneli canlı güncelleme:", update);
-                if (update.macAddress && update.heartRate) {
-                    const studentId = studentMacMap[update.macAddress.toUpperCase()];
+                if (update.studentId && update.heartRate) {
+                    const studentId = update.studentId;
                     if (studentId) {
                         const rateValEl = document.getElementById(`live-heart-rate-val-${studentId}`);
                         const badgeEl = document.getElementById(`live-heart-badge-${studentId}`);
@@ -2698,9 +2698,9 @@
             const studentId = document.getElementById('macStudentId').value;
             const macAddress = document.getElementById('macAddressInput').value.trim();
 
-            // Opsiyonel MAC format doğrulaması (eğer girilmişse)
-            if (macAddress && !/^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(macAddress)) {
-                alert("Lütfen geçerli bir MAC adresi girin! Örn: AA:BB:CC:DD:EE:FF veya boş bırakın.");
+            // Opsiyonel MAC format veya Cihaz Adı doğrulaması (eğer girilmişse)
+            if (macAddress && !/^[A-Za-z0-9\s:-]{3,50}$/.test(macAddress)) {
+                alert("Lütfen geçerli bir MAC adresi veya Cihaz Adı girin! (Harf, rakam, boşluk veya -/: karakterleri içerebilir)");
                 return;
             }
 

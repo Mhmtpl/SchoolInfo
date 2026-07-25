@@ -10,13 +10,13 @@
 </head>
 <body>
     <div class="app-container">
-        @if (User.Identity?.IsAuthenticated == true)
-        {
-            <nav class="navbar">
-                <a href="/" class="brand">
-                    SchoolInfo<span class="brand-dot"></span>
-                </a>
-                
+        <nav class="navbar">
+            <a href="/" class="brand">
+                Veliport<span class="brand-dot"></span>
+            </a>
+            
+            @if (User.Identity?.IsAuthenticated == true)
+            {
                 <div class="nav-user">
                     @{
                         var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "Parent";
@@ -34,8 +34,14 @@
                     </div>
                     <a asp-controller="Account" asp-action="Logout" class="logout-btn">Çıkış Yap</a>
                 </div>
-            </nav>
-        }
+            }
+            else
+            {
+                <div class="nav-user">
+                    <a asp-controller="Account" asp-action="Login" class="login-nav-btn">Giriş Yap</a>
+                </div>
+            }
+        </nav>
 
         <main class="main-content">
             @RenderBody()

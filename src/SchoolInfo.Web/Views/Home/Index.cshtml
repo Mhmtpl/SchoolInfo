@@ -1,8 +1,158 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@{
+    ViewData["Title"] = "Veliport | Okul Öncesi Bilgi Platformu";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="landing-container">
+    <!-- HERO SECTION -->
+    <header class="landing-hero">
+        <div class="hero-badge-container">
+            <span class="hero-badge">✨ Okul Öncesi Eğitim Platformu</span>
+        </div>
+        <h1 class="hero-title">
+            Çocuğunuzun Okuldaki Her Günü <span class="gradient-text">Gözünüzün Önünde</span>
+        </h1>
+        <p class="hero-subtitle">
+            Öğretmenler ile veliler arasında en akıllı, en şeffaf köprü. Yapay zeka destekli günlük özetler, anlık durum takipleri ve dijital bültenler tek bir platformda.
+        </p>
+        <div class="hero-actions">
+            <a asp-controller="Account" asp-action="Login" class="btn-landing-primary">Sisteme Giriş Yap</a>
+            <a href="#features" class="btn-landing-secondary">Özellikleri Keşfet</a>
+        </div>
+    </header>
+
+    <!-- INTERACTIVE MOCKUP SECTION -->
+    <section class="landing-showcase">
+        <div class="glass-card mockup-card animate-float">
+            <div class="mockup-header">
+                <div class="mockup-student-profile">
+                    <div class="mockup-avatar">👶</div>
+                    <div class="mockup-student-details">
+                        <h3>Alp Demir</h3>
+                        <span class="mockup-badge">Yıldızlar Sınıfı</span>
+                    </div>
+                </div>
+                <div class="mockup-date">24 Temmuz 2026</div>
+            </div>
+
+            <div class="mockup-grid">
+                <!-- Water Tracker Mockup -->
+                <div class="mockup-stat-item">
+                    <span class="mockup-stat-icon">💧</span>
+                    <div class="mockup-stat-info">
+                        <h4>Su Tüketimi</h4>
+                        <div class="mockup-water-bar-bg">
+                            <div class="mockup-water-bar-fill" style="width: 75%;"></div>
+                        </div>
+                        <span class="mockup-stat-meta">750 ml / 1000 ml</span>
+                    </div>
+                </div>
+
+                <!-- Sleep Status Mockup -->
+                <div class="mockup-stat-item">
+                    <span class="mockup-stat-icon">🌙</span>
+                    <div class="mockup-stat-info">
+                        <h4>Uyku Durumu</h4>
+                        <span class="mockup-sleep-badge">13:30 - 15:00 Uyudu</span>
+                    </div>
+                </div>
+
+                <!-- Food Status Mockup -->
+                <div class="mockup-stat-item">
+                    <span class="mockup-stat-icon">🍲</span>
+                    <div class="mockup-stat-info">
+                        <h4>Öğle Yemeği</h4>
+                        <span class="mockup-meal-badge">Tümünü Bitirdi</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Summary Mockup -->
+            <div class="mockup-ai-summary">
+                <div class="mockup-ai-badge">🤖 VELİPORT AI GÜNLÜK ÖZETİ</div>
+                <p class="mockup-ai-text">
+                    "Alp bugün okulda harika bir gün geçirdi! 🌟 Sabah boyama etkinliğinde çok yaratıcıydı ve arkadaşlarıyla boyalarını paylaştı. Öğle yemeğini tamamen bitirdi ve öğleden sonra 1.5 saat dinlendirici bir uyku uyudu. Su tüketim hedefine yaklaştı. Bugünün yıldızıydı!"
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURES SECTION -->
+    <section id="features" class="landing-features">
+        <div class="section-header text-center">
+            <h2 class="section-title">Neden Veliport?</h2>
+            <p class="section-desc">Okul öncesi eğitim süreçlerini kolaylaştırmak ve velilerin içini rahatlatmak için tasarlanan modern özellikler.</p>
+        </div>
+
+        <div class="features-grid">
+            <div class="glass-card feature-card">
+                <div class="feature-icon bg-blue">📊</div>
+                <h3>Anlık Durum Takibi</h3>
+                <p>Çocuğunuzun gün içindeki uyku saatlerini, yemek yeme oranını ve su tüketimini öğretmenlerin sisteme girdiği an eş zamanlı olarak takip edin.</p>
+            </div>
+
+            <div class="glass-card feature-card">
+                <div class="feature-icon bg-purple">🧠</div>
+                <h3>Yapay Zeka Raporları</h3>
+                <p>Karmaşık listeler yerine, yapay zeka teknolojimizin çocuğunuzun gününü tatlı ve okuması kolay bir günlük hikaye haline getirdiği özetleri okuyun.</p>
+            </div>
+
+            <div class="glass-card feature-card">
+                <div class="feature-icon bg-green">📄</div>
+                <h3>Dijital Bülten ve PDF</h3>
+                <p>Aylık yemek listelerine, haftalık eğitim bültenlerine ve okul duyurularına anında erişin, dilediğiniz an PDF olarak cihazınıza indirin.</p>
+            </div>
+
+            <div class="glass-card feature-card">
+                <div class="feature-icon bg-amber">🔒</div>
+                <h3>Rol Tabanlı Güvenli Erişim</h3>
+                <p>Yöneticiler, öğretmenler ve veliler için ayrı ayrı optimize edilmiş panellerle yetkilendirilmiş, güvenli ve sade bir kullanıcı deneyimi.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- TARGET AUDIENCES -->
+    <section class="landing-audiences">
+        <div class="section-header text-center">
+            <h2 class="section-title">Herkes İçin Veliport</h2>
+            <p class="section-desc">Eğitim ekosistemindeki tüm paydaşlar için süreci kolaylaştırıyor, bağları güçlendiriyoruz.</p>
+        </div>
+
+        <div class="audiences-grid">
+            <div class="audience-card">
+                <div class="audience-header">
+                    <span class="audience-emoji">🏡</span>
+                    <h3>Veliler İçin</h3>
+                </div>
+                <p>Çocuğum bugün ne yedi, uyudu mu sorularını geride bırakın. Gün içindeki tüm detaylara işteyken veya evdeyken tek tıkla ulaşarak huzurlu kalın.</p>
+            </div>
+
+            <div class="audience-card">
+                <div class="audience-header">
+                    <span class="audience-emoji">🏫</span>
+                    <h3>Öğretmenler İçin</h3>
+                </div>
+                <p>Kağıt bülten doldurma yükünden kurtulun. Hızlı veri giriş arayüzü sayesinde öğrencilerin durumlarını saniyeler içinde kaydedin, eğitime daha çok zaman ayırın.</p>
+            </div>
+
+            <div class="audience-card">
+                <div class="audience-header">
+                    <span class="audience-emoji">👑</span>
+                    <h3>Yöneticiler İçin</h3>
+                </div>
+                <p>Sınıfları, öğretmen yetkilerini, bültenleri ve veli listelerini tek bir yönetim panelinden kontrol edin. Okulunuzun kurumsallığını ve prestijini artırın.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA BANNER -->
+    <section class="landing-cta">
+        <div class="glass-card cta-card text-center">
+            <h2>Veliport Dünyasına Adım Atın</h2>
+            <p>Veliport Okul Öncesi Bilgi Platformu ile tanışmak ve okulunuzda bu deneyimi sunmak için hemen giriş yapın veya bizimle iletişime geçin.</p>
+            <div class="cta-actions">
+                <a asp-controller="Account" asp-action="Login" class="btn-landing-primary">Sisteme Giriş Yap</a>
+            </div>
+        </div>
+    </section>
 </div>
+
