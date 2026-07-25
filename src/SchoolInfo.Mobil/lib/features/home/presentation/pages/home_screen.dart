@@ -675,6 +675,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final cardWidth = (constraints.maxWidth - 20) / 3;
+        final selectedChild = _selectedChild;
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -687,6 +688,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 bgColor: const Color(0xFFFEF3C7),
                 statusLabel: summary.sleepStatus,
                 detailLabel: sleepLbl,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SleepScreen()),
+                  );
+                },
                 visual: SizedBox(
                   width: 38,
                   height: 38,
@@ -709,6 +716,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 bgColor: const Color(0xFFFFE4E6),
                 statusLabel: summary.mealStatus,
                 detailLabel: mealLbl,
+                onTap: () {
+                  if (selectedChild != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MealScreen(
+                          classroomId: selectedChild.classroomId,
+                          token: widget.token,
+                        ),
+                      ),
+                    );
+                  }
+                },
                 visual: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -749,6 +769,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 bgColor: const Color(0xFFD1FAE5),
                 statusLabel: summary.activityStatus,
                 detailLabel: actLbl,
+                onTap: () {
+                  if (selectedChild != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ActivityScreen(
+                          classroomId: selectedChild.classroomId,
+                          token: widget.token,
+                        ),
+                      ),
+                    );
+                  }
+                },
                 visual: SizedBox(
                   width: 38,
                   height: 38,
@@ -776,8 +809,9 @@ class _HomeScreenState extends State<HomeScreen> {
     required Widget visual,
     required String statusLabel,
     required String detailLabel,
+    VoidCallback? onTap,
   }) {
-    return Container(
+    final cardContent = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -850,6 +884,14 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+
+    if (onTap != null) {
+      return GestureDetector(
+        onTap: onTap,
+        child: cardContent,
+      );
+    }
+    return cardContent;
   }
 
   Widget _buildSectionTitle(String title, String subtitle, {VoidCallback? onViewAll}) {

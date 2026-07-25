@@ -17,15 +17,29 @@
 #include <BLEUtils.h>
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
-#include "secrets.h" // Hassas şifreler ve token bu dosyada saklanır (Git'e eklenmez)
 
 WiFiMulti wifiMulti;
 
 // ==================== YAPILANDIRMA ====================
 
-// 1. SchoolInfo API Sunucu Adresi
+// 1. Wi-Fi Bilgileri (Birden fazla ağ tanımlayabilirsiniz, en güçlü olana otomatik bağlanır)
+struct WiFiNetwork {
+    const char* ssid;
+    const char* password;
+};
+
+const WiFiNetwork wifiNetworks[] = {
+    {"Keenetic-8550", "g2e44GrKbDT5vrSGLCoY++"},
+    {"TurkNet1000Mbps_16EDA", "RbZEUP7s"},
+    {"TURKNET_ADBAB", "SfzufsC3"},
+    {"mPala", "12345678p"} // Mobil Hotspot
+};
+const int wifiCount = sizeof(wifiNetworks) / sizeof(wifiNetworks[0]);
+
+// 2. SchoolInfo API Sunucu Adresi
 // Not: Canlı sunucu adresini veya yerel bilgisayar IP'sini girin
 const char* serverUrl = "http://api.veliport.com.tr/api/iot/biometrics"; 
+const char* iotDeviceToken = "DefaultSecretIoTToken1234!"; 
 
 
 // 3. İzlenecek Saatlerin/Bilekliklerin MAC Adresleri veya Benzersiz İsimleri Dizisi
