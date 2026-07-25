@@ -43,6 +43,11 @@ class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _newsletters = [];
   bool _isClassroomLoading = false;
   bool _isNewslettersLoading = false;
+  int _waterIntake = 0;
+  String _sleepStatusText = 'Belirtilmemiş';
+  String _teacherNote = '';
+  List<dynamic> _meals = [];
+  bool _isLoadingDailyDetails = false;
   late String _currentFirstName;
   late String _currentLastName;
   late String _currentEmail;
@@ -68,11 +73,11 @@ class _HomeScreenState extends State<HomeScreen> {
     _currentClassroom = '';
     _currentPhone = '';
 
-    // İlk seçili çocuğun sınıf ve bülten verilerini çekelim
+    // İlk seçili çocuğun verilerini çekelim
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final initialChild = _selectedChild;
       if (initialChild != null) {
-        _loadDynamicClassroomAndNewsletters(initialChild.classroomId);
+        _loadAllChildData(initialChild.id, initialChild.classroomId);
       }
     });
   }
@@ -85,6 +90,96 @@ class _HomeScreenState extends State<HomeScreen> {
       age--;
     }
     return age;
+  }
+
+  Future<void> _loadAllChildData(String studentId, String classroomId) async {
+    _loadDynamicClassroomAndNewsletters(classroomId);
+    _loadChildDailyDetails(studentId, classroomId);
+  }
+
+  Future<void> _loadChildDailyDetails(String studentId, String classroomId) async {
+    if (studentId.isEmpty) return;
+    
+    setState(() {
+      _waterIntake = 0;
+      _sleepStatusText = 'Belirtilmemiş';
+      _teacherNote = '';
+      _meals = [];
+      _isLoadingDailyDetails = true;
+    });
+
+    final String baseUrl = 'https://api.veliport.com.tr';
+    final dateStr = DateTime.now().toIso8601String().split('T').first;
+
+    // 1. Günlük Özbakım Kaydını (Su, Uyku, Not) Çek
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/daily-records/student/$studentId/today?date=$dateStr'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+      );
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body) as Map<String, dynamic>;
+        
+        final water = (data['waterIntake'] ?? data['WaterIntake']) as num?;
+        final sleep = (data['sleepStatus'] ?? data['SleepStatus'])?.toString() ?? '';
+        final note = (data['teacherNote'] ?? data['TeacherNote']) as String?;
+
+        String sleepText = 'Belirtilmemiş';
+        if (sleep.toLowerCase().contains('well') || sleep == '2') {
+          sleepText = 'Düzenli Uyudu';
+        } else if (sleep.toLowerCase().contains('little') || sleep == '1') {
+          sleepText = 'Az Uyudu';
+        } else if (sleep.toLowerCase().contains('not') || sleep == '0') {
+          sleepText = 'Uymadı';
+        }
+
+        if (mounted) {
+          setState(() {
+            _waterIntake = water?.toInt() ?? 0;
+            _sleepStatusText = sleepText;
+            _teacherNote = note ?? '';
+          });
+        }
+      }
+    } catch (_) {}
+
+    // 2. Yemek Kayıtlarını Çek
+    if (classroomId.isNotEmpty) {
+      try {
+        final response = await http.get(
+          Uri.parse('$baseUrl/api/classrooms/$classroomId/meal-records/detailed?date=$dateStr'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ${widget.token}',
+          },
+        );
+        if (response.statusCode == 200) {
+          final List<dynamic> allClassroomMeals = jsonDecode(response.body) as List<dynamic>;
+          // Selected student meals bul
+          final studentMealObj = allClassroomMeals.firstWhere(
+            (m) => (m['studentId'] ?? m['StudentId'])?.toString() == studentId,
+            orElse: () => null,
+          );
+
+          if (studentMealObj != null && studentMealObj['meals'] != null) {
+            if (mounted) {
+              setState(() {
+                _meals = studentMealObj['meals'] as List<dynamic>;
+              });
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (mounted) {
+      setState(() {
+        _isLoadingDailyDetails = false;
+      });
+    }
   }
 
   Future<void> _loadDynamicClassroomAndNewsletters(String classroomId) async {
@@ -229,7 +324,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 setState(() {});
                 final child = _selectedChild;
                 if (child != null) {
-                  await _loadDynamicClassroomAndNewsletters(child.classroomId);
+                  await _loadAllChildData(child.id, child.classroomId);
                 }
               },
               child: SingleChildScrollView(
@@ -260,6 +355,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             const SizedBox(height: 20),
 
                             _buildSelectedChildSummary(selectedChild, _classroomName),
+                            const SizedBox(height: 20),
+
+                            _buildDailyDevelopmentSection(),
                             const SizedBox(height: 24),
                           ],
 
@@ -438,7 +536,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   setState(() {
                     _selectedChildIndex = index;
                   });
-                  _loadDynamicClassroomAndNewsletters(s.classroomId);
+                  _loadAllChildData(s.id, s.classroomId);
                 },
                 child: Column(
                   children: [
@@ -1211,6 +1309,271 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildDailyDevelopmentSection() {
+    final theme = Theme.of(context);
+
+    if (_isLoadingDailyDetails) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 20.0),
+          child: CircularProgressIndicator(color: Color(0xFF6366F1)),
+        ),
+      );
+    }
+
+    final waterPercent = (_waterIntake / 2000.0).clamp(0.0, 1.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(
+          'Günlük Özbakım ve Beslenme Raporu',
+          'Öğün ve hidrasyon durumunu canlı takip edin',
+        ),
+        const SizedBox(height: 12),
+
+        // 1. Su ve Uyku Kartları
+        Row(
+          children: [
+            // Su Tüketimi
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFE0F2FE),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.water_drop, color: Color(0xFF0284C7), size: 16),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Su Tüketimi',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '$_waterIntake ml / 2000 ml',
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF0284C7)),
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: waterPercent,
+                        minHeight: 6,
+                        color: const Color(0xFF0284C7),
+                        backgroundColor: const Color(0xFFE0F2FE),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            
+            // Uyku Durumu
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFEF3C7),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.bedtime_rounded, color: Color(0xFFD97706), size: 16),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Öğle Uykusu',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _sleepStatusText,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFFD97706)),
+                    ),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'Dinlenme Karnesi',
+                      style: TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // 2. Yemek Öğünleri Kartı
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.restaurant_rounded, color: theme.colorScheme.primary, size: 18),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Beslenme Karnesi',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              _meals.isEmpty
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8.0),
+                        child: Text(
+                          'Öğün bilgisi henüz girilmedi.',
+                          style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _meals.length,
+                      separatorBuilder: (_, __) => const Divider(color: Color(0xFFF1F5F9), height: 16),
+                      itemBuilder: (context, idx) {
+                        final m = _meals[idx] as Map<String, dynamic>;
+                        final name = m['mealName'] as String? ?? m['MealName'] as String? ?? 'Öğün';
+                        final details = m['foodContent'] as String? ?? m['FoodContent'] as String? ?? 'Menü bilgisi yok';
+                        final int status = (m['statusType'] ?? m['StatusType'] ?? 0) as int;
+                        
+                        String statusText = 'Girilmedi';
+                        IconData statusIcon = Icons.help_outline;
+                        Color statusColor = const Color(0xFF64748B);
+                        if (status == 3) {
+                          statusText = 'Hepsini Yedi';
+                          statusIcon = Icons.check_circle_rounded;
+                          statusColor = const Color(0xFF16A34A);
+                        } else if (status == 2) {
+                          statusText = 'Yarısını Yedi';
+                          statusIcon = Icons.pause_circle_filled_rounded;
+                          statusColor = const Color(0xFFD97706);
+                        } else if (status == 1) {
+                          statusText = 'Yemedi';
+                          statusIcon = Icons.cancel_rounded;
+                          statusColor = const Color(0xFFDC2626);
+                        }
+
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    name,
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF1E293B)),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    details,
+                                    style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(statusIcon, color: statusColor, size: 12),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    statusText,
+                                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: statusColor),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+            ],
+          ),
+        ),
+        
+        // 3. Öğretmen Notu (Varsa)
+        if (_teacherNote.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF3C7).withOpacity(0.4),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFFDE68A)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.edit_note_rounded, color: Color(0xFFB45309), size: 18),
+                    SizedBox(width: 6),
+                    Text(
+                      'Öğretmen Notu',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF92400E)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _teacherNote,
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF92400E), height: 1.5, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
