@@ -248,6 +248,10 @@ void sendBiometricData(String mac, int hr) {
     if (WiFi.status() != WL_CONNECTED) return;
   }
 
+  Serial.print("   [Heap] Free: ");
+  Serial.print(ESP.getFreeHeap());
+  Serial.println(" bytes");
+
   HTTPClient http;
   String urlStr = String(serverUrl);
   String jsonPayload = "{\"macAddress\":\"" + mac + 
@@ -257,6 +261,7 @@ void sendBiometricData(String mac, int hr) {
   if (urlStr.startsWith("https")) {
     WiFiClientSecure client;
     client.setInsecure();
+    client.setBufferSizes(1024, 1024); // RX/TX tampon boyutlarını düşürerek 30KB heap tasarrufu sağlar
     http.begin(client, serverUrl);
     
     http.addHeader("Content-Type", "application/json");
