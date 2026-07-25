@@ -1059,8 +1059,22 @@
             let currentBpm = 75; 
             let hasEcgData = false;
             let ecgColor = '#dc2626'; // Varsayılan kırmızı (bağlantı beklerken)
+            const studentAge = @(ViewBag.StudentAge ?? 4);
+
+            // Yaşa göre dinamik tıbbi nabız eşik değerlerini belirler
+            function getHeartRateThresholds(age) {
+                if (age <= 2) {
+                    return { low: 80, normalMax: 130, warningMax: 145 };
+                } else if (age <= 5) {
+                    return { low: 80, normalMax: 120, warningMax: 135 };
+                } else if (age <= 10) {
+                    return { low: 70, normalMax: 110, warningMax: 125 };
+                } else {
+                    return { low: 60, normalMax: 100, warningMax: 115 };
+                }
+            }
             
-            // Çocuk yaş grubuna göre (2-6 yaş) nabız durum renklerini belirler
+            // Çocuk yaş grubuna göre nabız durum renklerini belirler
             function getEcgStatus(bpm) {
                 if (!bpm) {
                     return {
@@ -1072,7 +1086,9 @@
                     };
                 }
                 
-                if (bpm < 70) {
+                const thresholds = getHeartRateThresholds(studentAge);
+                
+                if (bpm < thresholds.low) {
                     // Düşük Nabız (Mavi/Turkuaz)
                     return {
                         color: '#0284c7',
@@ -1081,7 +1097,7 @@
                         text: 'DÜŞÜK NABIZ',
                         indicatorBg: 'rgba(14, 165, 233, 0.15)'
                     };
-                } else if (bpm <= 125) {
+                } else if (bpm <= thresholds.normalMax) {
                     // Normal Çocuk Nabzı (Yeşil)
                     return {
                         color: '#16a34a',
@@ -1090,7 +1106,7 @@
                         text: 'SİNYAL AKTİF',
                         indicatorBg: 'rgba(22, 163, 74, 0.15)'
                     };
-                } else if (bpm <= 140) {
+                } else if (bpm <= thresholds.warningMax) {
                     // Yüksek Nabız (Turuncu/Uyarı)
                     return {
                         color: '#ea580c',

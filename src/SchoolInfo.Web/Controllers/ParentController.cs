@@ -82,6 +82,21 @@ public class ParentController : Controller
                 return NotFound("Öğrenci bulunamadı.");
             }
 
+            // Yaş hesaplama
+            if (studentInfo.TryGetValue("dateOfBirth", out var dobVal) || studentInfo.TryGetValue("DateOfBirth", out dobVal))
+            {
+                if (DateTime.TryParse(dobVal.ToString(), out var dob))
+                {
+                    var age = today.Year - dob.Year;
+                    if (dob.Date > today.AddYears(-age)) age--;
+                    ViewBag.StudentAge = age;
+                }
+            }
+            if (ViewBag.StudentAge == null)
+            {
+                ViewBag.StudentAge = 4; // Varsayılan 4 yaş
+            }
+
             var classroomId = Guid.Parse(studentInfo["classroomId"].ToString()!);
             
             // Sınıf adını GetClassroom endpoint'inden dinamik çekerek sözlük hatasını gideriyoruz

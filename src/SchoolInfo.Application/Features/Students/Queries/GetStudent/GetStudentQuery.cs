@@ -10,7 +10,7 @@ namespace SchoolInfo.Application.Features.Students.Queries.GetStudent;
 
 public record GetStudentQuery(Guid Id) : IRequest<StudentDto>;
 
-public record StudentDto(Guid Id, string FirstName, string LastName, Guid ClassroomId);
+public record StudentDto(Guid Id, string FirstName, string LastName, Guid ClassroomId, DateTime DateOfBirth);
 
 public class GetStudentHandler : IRequestHandler<GetStudentQuery, StudentDto>
 {
@@ -44,6 +44,6 @@ public class GetStudentHandler : IRequestHandler<GetStudentQuery, StudentDto>
                 throw new UnauthorizedAccessException("Bu öğrencinin bilgilerine erişim yetkiniz bulunmamaktadır.");
         }
 
-        return new StudentDto(student.Id, student.FirstName, student.LastName, student.ClassroomId);
+        return new StudentDto(student.Id, student.FirstName, student.LastName, student.ClassroomId, student.DateOfBirth);
     }
 }
