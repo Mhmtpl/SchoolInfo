@@ -345,19 +345,20 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                           
                           if (selectedChild != null) ...[
-                            // Canlı Biyometrik Takip Modülü (EKG) - UX gereği en üstte konumlandırıldı
+                            _buildChildHeader(selectedChild, _classroomName),
+                            const SizedBox(height: 16),
+
+                            // Canlı Biyometrik Takip Modülü (EKG)
                             BiometricDashboardCard(
                               studentId: selectedChild.id,
                               studentName: '${selectedChild.firstName} ${selectedChild.lastName}',
                               studentAge: _calculateAge(selectedChild.dateOfBirth),
                               token: widget.token,
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 22),
 
-                            _buildSelectedChildSummary(selectedChild, _classroomName),
-                            const SizedBox(height: 20),
-
-                            _buildDailyDevelopmentSection(),
+                            // Günlük Özbakım, Beslenme ve AI Özet Raporu
+                            _buildDailyDevelopmentSection(selectedChild),
                             const SizedBox(height: 24),
                           ],
 
@@ -952,166 +953,88 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSelectedChildSummary(Student child, String className) {
+  Widget _buildChildHeader(Student child, String className) {
     final theme = Theme.of(context);
     final dob = child.dateOfBirth == DateTime.fromMillisecondsSinceEpoch(0)
         ? '—'
-        : '${child.dateOfBirth.day}/${child.dateOfBirth.month}/${child.dateOfBirth.year}';
-    
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: const Color(0xFFE2E8F0),
-          width: 1,
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(15, 23, 42, 0.02),
-            blurRadius: 24,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        : '${child.dateOfBirth.day}.${child.dateOfBirth.month}.${child.dateOfBirth.year}';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          '${child.firstName} ${child.lastName}',
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF0F172A),
-                            letterSpacing: -0.4,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFD1FAE5),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Badge(
-                                backgroundColor: Color(0xFF10B981),
-                                smallSize: 6,
-                              ),
-                              SizedBox(width: 5),
-                              Text(
-                                'Okulda',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF065F46),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
                     Text(
-                      'Sınıf: ${className.isNotEmpty ? className : 'Bilinmiyor'} • Doğum: $dob',
+                      '${child.firstName} ${child.lastName}',
                       style: const TextStyle(
-                        color: Color(0xFF64748B), 
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF0F172A),
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFD1FAE5),
+                        borderRadius: BorderRadius.all(Radius.circular(6)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Badge(
+                            backgroundColor: Color(0xFF10B981),
+                            smallSize: 6,
+                          ),
+                          SizedBox(width: 5),
+                          Text(
+                            'Okulda',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF065F46),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.child_care_rounded,
-                  color: theme.colorScheme.primary,
-                  size: 22,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          const Divider(color: Color(0xFFF1F5F9), height: 1),
-          const SizedBox(height: 16),
-          
-          const Text(
-            'Bugünkü Rapor',
-            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF0F172A)),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            child.dailyRecordSummary ?? 'Öğretmenden günlük veri bekleniyor. Bu alanda uyku, su tüketimi ve önemli notlar gösterilecektir.',
-            style: const TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.5, fontWeight: FontWeight.w500),
-          ),
-          
-          if (child.aiSummary != null && child.aiSummary!.isNotEmpty) ...[
-            const SizedBox(height: 18),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFFF1F2), Color(0xFFFDF4FF)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: const Color(0xFFFFE4E6),
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.auto_awesome_rounded, color: theme.colorScheme.secondary, size: 16),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Yapay Zeka Önerisi',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
-                          color: theme.colorScheme.secondary,
-                        ),
-                      ),
-                    ],
+                const SizedBox(height: 4),
+                Text(
+                  'Sınıf: ${className.isNotEmpty ? className : 'Yükleniyor...'}  •  Doğum Tarihi: $dob',
+                  style: const TextStyle(
+                    color: Color(0xFF64748B),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11.5,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    child.aiSummary!,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF4F46E5),
-                      height: 1.5,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [theme.colorScheme.primary, theme.colorScheme.primary.withOpacity(0.7)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
             ),
-          ],
+            child: Center(
+              child: Text(
+                child.firstName.isNotEmpty ? child.firstName[0] : '',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1312,7 +1235,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildDailyDevelopmentSection() {
+  Widget _buildDailyDevelopmentSection(Student child) {
     final theme = Theme.of(context);
 
     if (_isLoadingDailyDetails) {
@@ -1330,18 +1253,18 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionTitle(
-          'Günlük Özbakım ve Beslenme Raporu',
-          'Öğün ve hidrasyon durumunu canlı takip edin',
+          'Günlük Gelişim Raporu',
+          'Çocuğunuzun okul içi durumunu takip edin',
         ),
         const SizedBox(height: 12),
 
-        // 1. Su ve Uyku Kartları
+        // 1. Su ve Uyku Kartları (Row)
         Row(
           children: [
             // Su Tüketimi
             Expanded(
               child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
@@ -1353,23 +1276,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(6),
+                          padding: const EdgeInsets.all(5),
                           decoration: const BoxDecoration(
                             color: Color(0xFFE0F2FE),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.water_drop, color: Color(0xFF0284C7), size: 16),
+                          child: const Icon(Icons.water_drop, color: Color(0xFF0284C7), size: 14),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         const Text(
                           'Su Tüketimi',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     Text(
-                      '$_waterIntake ml / 2000 ml',
+                      '$_waterIntake ml',
                       style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF0284C7)),
                     ),
                     const SizedBox(height: 8),
@@ -1377,7 +1300,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
                         value: waterPercent,
-                        minHeight: 6,
+                        minHeight: 5,
                         color: const Color(0xFF0284C7),
                         backgroundColor: const Color(0xFFE0F2FE),
                       ),
@@ -1386,12 +1309,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             
             // Uyku Durumu
             Expanded(
               child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
@@ -1403,29 +1326,29 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(6),
+                          padding: const EdgeInsets.all(5),
                           decoration: const BoxDecoration(
                             color: Color(0xFFFEF3C7),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.bedtime_rounded, color: Color(0xFFD97706), size: 16),
+                          child: const Icon(Icons.bedtime_rounded, color: Color(0xFFD97706), size: 14),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         const Text(
                           'Öğle Uykusu',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     Text(
                       _sleepStatusText,
                       style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFFD97706)),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 13),
                     const Text(
                       'Dinlenme Karnesi',
-                      style: TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -1433,7 +1356,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
 
         // 2. Yemek Öğünleri Kartı
         Container(
@@ -1449,22 +1372,22 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Row(
                 children: [
-                  Icon(Icons.restaurant_rounded, color: theme.colorScheme.primary, size: 18),
-                  const SizedBox(width: 8),
+                  Icon(Icons.restaurant_rounded, color: theme.colorScheme.primary, size: 16),
+                  const SizedBox(width: 6),
                   const Text(
                     'Beslenme Karnesi',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               _meals.isEmpty
                   ? const Center(
                       child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8.0),
+                        padding: EdgeInsets.symmetric(vertical: 6.0),
                         child: Text(
                           'Öğün bilgisi henüz girilmedi.',
-                          style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                          style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8), fontWeight: FontWeight.w500),
                         ),
                       ),
                     )
@@ -1472,7 +1395,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: _meals.length,
-                      separatorBuilder: (_, __) => const Divider(color: Color(0xFFF1F5F9), height: 16),
+                      separatorBuilder: (_, __) => const Divider(color: Color(0xFFF1F5F9), height: 12),
                       itemBuilder: (context, idx) {
                         final m = _meals[idx] as Map<String, dynamic>;
                         final name = m['mealName'] as String? ?? m['MealName'] as String? ?? 'Öğün';
@@ -1506,10 +1429,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                     name,
                                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF1E293B)),
                                   ),
-                                  const SizedBox(height: 3),
+                                  const SizedBox(height: 2),
                                   Text(
                                     details,
-                                    style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                                    style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
                                   ),
                                 ],
                               ),
@@ -1519,11 +1442,11 @@ class _HomeScreenState extends State<HomeScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: statusColor.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(6),
                               ),
                               child: Row(
                                 children: [
-                                  Icon(statusIcon, color: statusColor, size: 12),
+                                  Icon(statusIcon, color: statusColor, size: 11),
                                   const SizedBox(width: 4),
                                   Text(
                                     statusText,
@@ -1539,36 +1462,100 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-        
-        // 3. Öğretmen Notu (Varsa)
-        if (_teacherNote.isNotEmpty) ...[
-          const SizedBox(height: 12),
+
+        // 3. Mesajlar & Yapay Zeka Analizi
+        if (_teacherNote.isNotEmpty || (child.aiSummary != null && child.aiSummary!.isNotEmpty)) ...[
+          const SizedBox(height: 10),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFFFEF3C7).withOpacity(0.4),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFFDE68A)),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.edit_note_rounded, color: Color(0xFFB45309), size: 18),
-                    SizedBox(width: 6),
-                    Text(
-                      'Öğretmen Notu',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF92400E)),
+                    Icon(Icons.chat_bubble_outline_rounded, color: theme.colorScheme.primary, size: 16),
+                    const SizedBox(width: 6),
+                    const Text(
+                      'Geri Bildirim & Analiz',
+                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  _teacherNote,
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF92400E), height: 1.5, fontWeight: FontWeight.w600),
-                ),
+                if (_teacherNote.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7).withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFFDE68A)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.edit_note_rounded, color: Color(0xFFB45309), size: 14),
+                            SizedBox(width: 5),
+                            Text(
+                              'Öğretmen Notu',
+                              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF92400E)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          _teacherNote,
+                          style: const TextStyle(fontSize: 11.5, color: Color(0xFF92400E), height: 1.4, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                if (child.aiSummary != null && child.aiSummary!.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEEF2FF),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE0E7FF)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.auto_awesome_rounded, color: theme.colorScheme.secondary, size: 12),
+                            const SizedBox(width: 5),
+                            Text(
+                              'Yapay Zeka Analizi',
+                              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: theme.colorScheme.secondary),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          child.aiSummary!,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: theme.colorScheme.secondary,
+                            height: 1.4,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
