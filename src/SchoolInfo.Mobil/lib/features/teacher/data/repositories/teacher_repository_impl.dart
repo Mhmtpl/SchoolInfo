@@ -91,7 +91,7 @@ class TeacherRepositoryImpl implements TeacherRepository {
     String classroomId,
   ) async {
     final uri = Uri.parse(
-      '$_baseUrl/api/classrooms/$classroomId/meal-records/today',
+      '$_baseUrl/api/classrooms/$classroomId/meal-records/detailed',
     );
     final response = await http.get(uri, headers: _headers);
     if (response.statusCode != 200) {
@@ -205,12 +205,15 @@ class TeacherRepositoryImpl implements TeacherRepository {
   Future<void> updateMealRecord({
     required String studentId,
     required String mealRecordId,
+    required String mealName,
     required int status,
     String? notes,
   }) async {
     final uri = Uri.parse('$_baseUrl/api/meal-records/$studentId');
     final body = jsonEncode({
       'mealRecordId': mealRecordId,
+      'studentId': studentId,
+      'mealName': mealName,
       'statusType': status,
       'description': notes,
     });

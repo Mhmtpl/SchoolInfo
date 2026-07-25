@@ -558,7 +558,7 @@ class _TeacherClassroomDetailScreenState
       bottomNavigationBar: _buildBottomNavigationBar(context),
       floatingActionButton: _tabController.index == 3
           ? FloatingActionButton.extended(
-              onPressed: _showCreateActivityDialog,
+              onPressed: () => _showCreateActivityDialog(),
               icon: const Icon(Icons.add),
               label: const Text('Yeni Aktivite'),
             )
@@ -1216,25 +1216,41 @@ class _TeacherClassroomDetailScreenState
                   _mealEntriesInitialized = true;
                   _mealEntries.clear();
                   for (final student in students) {
-                    final meal = records.firstWhere(
+                    final mealRecord = records.firstWhere(
                       (record) => record.studentId == student.id,
                       orElse: () => StudentMealRecord(
                         studentId: student.id,
                         firstName: student.firstName,
                         lastName: student.lastName,
-                        mealRecordId: null,
-                        status: 0,
-                        notes: null,
+                        meals: const [],
                       ),
                     );
+
+                    final mealNames = ['Kahvaltı', 'Öğle Yemeği', 'İkindi Kahvaltısı'];
+                    final subEntries = mealNames.map((mealName) {
+                      final existing = mealRecord.meals.firstWhere(
+                        (m) => m.mealName.toLowerCase().contains(mealName.split(' ')[0].toLowerCase()),
+                        orElse: () => MealDetail(
+                          mealRecordId: '',
+                          mealName: mealName,
+                          statusType: 0,
+                          statusDescription: '',
+                        ),
+                      );
+                      return _TeacherMealSubEntry(
+                        mealName: existing.mealName.isNotEmpty ? existing.mealName : mealName,
+                        mealRecordId: existing.mealRecordId,
+                        status: existing.statusType,
+                        notes: existing.statusDescription,
+                      );
+                    }).toList();
+
                     _mealEntries.add(
                       _TeacherMealEntry(
                         studentId: student.id,
                         firstName: student.firstName,
                         lastName: student.lastName,
-                        mealRecordId: meal.mealRecordId,
-                        status: meal.status ?? 0,
-                        notes: meal.notes ?? '',
+                        meals: subEntries,
                       ),
                     );
                   }
@@ -1245,6 +1261,8 @@ class _TeacherClassroomDetailScreenState
             if (students.isEmpty) {
               return const Center(child: Text('Sınıfta öğrenci bulunamadı.'));
             }
+
+            final theme = Theme.of(context);
 
             return RefreshIndicator(
               onRefresh: () async {
@@ -1308,10 +1326,10 @@ class _TeacherClassroomDetailScreenState
                   const SizedBox(height: 16),
                   ..._mealEntries.map((entry) {
                     return Card(
-                            key: ValueKey(entry.studentId),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
+                      key: ValueKey(entry.studentId),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       child: ExpansionTile(
                         title: Row(
                           children: [
@@ -1323,60 +1341,119 @@ class _TeacherClassroomDetailScreenState
                                 ),
                               ),
                             ),
-                            Chip(
-                              label: Text(_mealStatusLabel(entry.status)),
-                              backgroundColor: _mealStatusColor(entry.status).withOpacity(0.16),
-                              labelStyle: TextStyle(
-                                color: _mealStatusColor(entry.status),
-                                fontWeight: FontWeight.w600,
-                              ),
+                            Builder(
+                              builder: (context) {
+                                final enteredCount = entry.meals.where((m) => m.mealRecordId.isNotEmpty && m.mealRecordId != '00000000-0000-0000-0000-000000000000').length;
+                                return Chip(
+                                  label: Text(
+                                    enteredCount == 0 ? 'Girilmedi' : 'Giriş ($enteredCount/3)',
+                                  ),
+                                  backgroundColor: enteredCount == 3
+                                      ? Colors.green.shade50
+                                      : (enteredCount > 0 ? Colors.blue.shade50 : Colors.grey.shade100),
+                                  labelStyle: TextStyle(
+                                    color: enteredCount == 3
+                                        ? Colors.green.shade700
+                                        : (enteredCount > 0 ? Colors.blue.shade700 : Colors.grey.shade700),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),
                         childrenPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         children: [
-                          DropdownButtonFormField<int>(
-                            value: entry.status,
-                            decoration: const InputDecoration(
-                              labelText: 'Yemek Durumu',
-                            ),
-                            items: const [
-                              DropdownMenuItem(value: 0, child: Text('Durum yok')),
-                              DropdownMenuItem(value: 1, child: Text('Az yedi')),
-                              DropdownMenuItem(value: 2, child: Text('Yarı yedi')),
-                              DropdownMenuItem(value: 3, child: Text('Tamamını yedi')),
-                            ],
-                            onChanged: (value) {
-                              if (value == null) return;
-                              setState(() {
-                                entry.status = value;
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            key: ValueKey('meal-note-${entry.studentId}'),
-                            initialValue: entry.notes,
-                            decoration: const InputDecoration(
-                              labelText: 'Yemek Notu',
-                            ),
-                            maxLines: 2,
-                            onChanged: (value) {
-                              entry.notes = value;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          if (entry.mealRecordId == null)
-                            Container(
+                          ...entry.meals.map((meal) {
+                            Color containerBg;
+                            Color borderCol;
+                            Color headerColor;
+                            
+                            if (meal.mealName.toLowerCase().contains('kahvaltı') && !meal.mealName.toLowerCase().contains('ikindi')) {
+                              containerBg = theme.brightness == Brightness.dark ? const Color(0xFF2D2510) : const Color(0xFFFEF3C7).withOpacity(0.45);
+                              borderCol = const Color(0xFFFBBF24).withOpacity(0.2);
+                              headerColor = const Color(0xFFD97706);
+                            } else if (meal.mealName.toLowerCase().contains('öğle')) {
+                              containerBg = theme.brightness == Brightness.dark ? const Color(0xFF1E283C) : const Color(0xFFDBEAFE).withOpacity(0.45);
+                              borderCol = const Color(0xFF3B82F6).withOpacity(0.2);
+                              headerColor = const Color(0xFF2563EB);
+                            } else {
+                              containerBg = theme.brightness == Brightness.dark ? const Color(0xFF142D23) : const Color(0xFFD1FAE5).withOpacity(0.45);
+                              borderCol = const Color(0xFF10B981).withOpacity(0.2);
+                              headerColor = const Color(0xFF059669);
+                            }
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.orange.shade50,
+                                color: containerBg,
                                 borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: borderCol, width: 1),
                               ),
-                              child: const Text(
-                                'Bu öğrenci için yemek kaydı bulunamadı. Önce günlük kaydın oluşturulması gerekebilir.',
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        meal.mealName,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 13,
+                                          color: headerColor,
+                                        ),
+                                      ),
+                                      if (meal.mealRecordId.isNotEmpty && meal.mealRecordId != '00000000-0000-0000-0000-000000000000')
+                                        const Text(
+                                          'Kayıt Var',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: Colors.green,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  DropdownButtonFormField<int>(
+                                    value: meal.status,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Yemek Durumu',
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(value: 0, child: Text('Durum yok')),
+                                      DropdownMenuItem(value: 1, child: Text('Az yedi')),
+                                      DropdownMenuItem(value: 2, child: Text('Yarı yedi')),
+                                      DropdownMenuItem(value: 3, child: Text('Tamamını yedi')),
+                                    ],
+                                    onChanged: (value) {
+                                      if (value == null) return;
+                                      setState(() {
+                                        meal.status = value;
+                                      });
+                                    },
+                                  ),
+                                  const SizedBox(height: 10),
+                                  TextFormField(
+                                    key: ValueKey('meal-note-${entry.studentId}-${meal.mealName}'),
+                                    initialValue: meal.notes,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Yemek Notu / Açıklama',
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    ),
+                                    maxLines: 1,
+                                    onChanged: (value) {
+                                      meal.notes = value;
+                                    },
+                                  ),
+                                ],
                               ),
-                            ),
+                            );
+                          }).toList(),
                         ],
                       ),
                     );
@@ -1734,43 +1811,298 @@ class _TeacherClassroomDetailScreenState
   ) {
     return activitiesAsync.when(
       data: (activities) {
-        if (activities.isEmpty) {
-          return const Center(child: Text('Sınıf için aktivite bulunamadı.'));
-        }
+        final theme = Theme.of(context);
+        final today = DateTime.now();
+        final currentDayOfWeek = today.weekday;
+        final monday = today.subtract(Duration(days: currentDayOfWeek - 1));
+
+        final weekDays = List.generate(5, (index) {
+          final date = monday.add(Duration(days: index));
+          return {
+            'name': ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma'][index],
+            'date': date,
+          };
+        });
+
         return RefreshIndicator(
           onRefresh: () async {
             ref.refresh(classroomActivitiesProvider(widget.classroom.id));
           },
-          child: ListView.separated(
+          child: ListView(
             padding: const EdgeInsets.all(16),
-            itemCount: activities.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              final activity = activities[index];
-              return Card(
-                child: ListTile(
-                  title: Text(activity.title),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(activity.description),
-                      const SizedBox(height: 6),
-                      Text(
-                        '${activity.activityDate.toLocal().toIso8601String().split('T').first} • ${activity.formattedTime}',
+                      const Text(
+                        'Haftalık Ders Akışı',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(activity.completed ? 'Tamamlandı' : 'Tamamlanmadı'),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Pazartesi - Cuma arası haftalık ders ve etkinlik planını buradan görebilir, tamamlayabilir veya yeni ekleme yapabilirsiniz.',
+                      ),
                     ],
                   ),
-                  trailing: activity.completed
-                      ? const Icon(Icons.check_circle, color: Colors.green)
-                      : TextButton(
-                          onPressed: () => _completeActivity(activity.id),
-                          child: const Text('Tamamla'),
-                        ),
                 ),
-              );
-            },
+              ),
+              const SizedBox(height: 16),
+              ...weekDays.map((day) {
+                final date = day['date'] as DateTime;
+                final dayName = day['name'] as String;
+
+                final dayActs = activities.where((act) {
+                  return act.activityDate.year == date.year &&
+                      act.activityDate.month == date.month &&
+                      act.activityDate.day == date.day;
+                }).toList()..sort((a, b) {
+                  final aMinutes = a.startTime.hour * 60 + a.startTime.minute;
+                  final bMinutes = b.startTime.hour * 60 + b.startTime.minute;
+                  return aMinutes.compareTo(bMinutes);
+                });
+
+                return Card(
+                  key: ValueKey('day-${date.day}'),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    side: BorderSide(
+                      color: date.day == today.day && date.month == today.month
+                          ? theme.colorScheme.primary.withOpacity(0.3)
+                          : Colors.transparent,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  dayName,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: date.day == today.day && date.month == today.month
+                                        ? theme.colorScheme.primary
+                                        : theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${date.day} ${_getTurkishMonthName(date.month)}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: theme.colorScheme.onSurface.withOpacity(0.5),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            IconButton.filledTonal(
+                              onPressed: () => _showCreateActivityDialog(targetDate: date),
+                              icon: const Icon(Icons.add_rounded, size: 20),
+                              tooltip: 'Yeni Ekle',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        if (dayActs.isNotEmpty) ...[
+                          ...dayActs.map((act) {
+                            String icon = "⭐";
+                            Color bgColor;
+                            Color borderCol;
+                            Color textColor;
+
+                            switch (act.type) {
+                              case 0:
+                                icon = "📚";
+                                bgColor = theme.brightness == Brightness.dark ? const Color(0xFF1E283C) : const Color(0xFFDBEAFE).withOpacity(0.45);
+                                borderCol = const Color(0xFF3B82F6).withOpacity(0.2);
+                                textColor = theme.brightness == Brightness.dark ? const Color(0xFF93C5FD) : const Color(0xFF1E3A8A);
+                                break;
+                              case 1:
+                                icon = "🎨";
+                                bgColor = theme.brightness == Brightness.dark ? const Color(0xFF2D2510) : const Color(0xFFFEF3C7).withOpacity(0.45);
+                                borderCol = const Color(0xFFFBBF24).withOpacity(0.2);
+                                textColor = theme.brightness == Brightness.dark ? const Color(0xFFFDE047) : const Color(0xFF78350F);
+                                break;
+                              case 2:
+                                icon = "🍲";
+                                bgColor = theme.brightness == Brightness.dark ? const Color(0xFF142D23) : const Color(0xFFD1FAE5).withOpacity(0.45);
+                                borderCol = const Color(0xFF10B981).withOpacity(0.2);
+                                textColor = theme.brightness == Brightness.dark ? const Color(0xFF6EE7B7) : const Color(0xFF065F46);
+                                break;
+                              case 3:
+                                icon = "😴";
+                                bgColor = theme.brightness == Brightness.dark ? const Color(0xFF281E3C) : const Color(0xFFF3E8FF).withOpacity(0.45);
+                                borderCol = const Color(0xFFA855F7).withOpacity(0.2);
+                                textColor = theme.brightness == Brightness.dark ? const Color(0xFFD8B4FE) : const Color(0xFF581C87);
+                                break;
+                              case 4:
+                              default:
+                                icon = "🖌️";
+                                bgColor = theme.brightness == Brightness.dark ? const Color(0xFF2D1424) : const Color(0xFFFCE7F3).withOpacity(0.45);
+                                borderCol = const Color(0xFFEC4899).withOpacity(0.2);
+                                textColor = theme.brightness == Brightness.dark ? const Color(0xFFF9A8D4) : const Color(0xFF831843);
+                                break;
+                            }
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: bgColor,
+                                border: Border.all(color: borderCol, width: 1),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    icon,
+                                    style: const TextStyle(fontSize: 20),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          act.title,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13.5,
+                                            color: textColor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '🕒 ${act.formattedTime}',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: textColor.withOpacity(0.8),
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        if (act.description.isNotEmpty) ...[
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            act.description,
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  act.completed
+                                      ? Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green.withOpacity(0.12),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: const Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.check, color: Colors.green, size: 14),
+                                              SizedBox(width: 4),
+                                              Text(
+                                                'Bitti',
+                                                style: TextStyle(
+                                                  color: Colors.green,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 10,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      : TextButton(
+                                          onPressed: () => _completeActivity(act.id),
+                                          style: TextButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                            minimumSize: Size.zero,
+                                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                          ),
+                                          child: const Text(
+                                            'Tamamla',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ] else ...[
+                          GestureDetector(
+                            onTap: () => _showCreateActivityDialog(targetDate: date),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: theme.colorScheme.onSurface.withOpacity(0.1),
+                                  style: BorderStyle.solid,
+                                  width: 1,
+                                ),
+                                borderRadius: BorderRadius.circular(14),
+                                color: theme.colorScheme.onSurface.withOpacity(0.02),
+                              ),
+                              child: Center(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.add_circle_outline_rounded,
+                                      size: 16,
+                                      color: theme.colorScheme.onSurface.withOpacity(0.4),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Aktivite planlanmadı. Ekle +',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: theme.colorScheme.onSurface.withOpacity(0.4),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+              const SizedBox(height: 60),
+            ],
           ),
         );
       },
@@ -1797,7 +2129,9 @@ class _TeacherClassroomDetailScreenState
   void _setAllMealStatus(int status) {
     setState(() {
       for (final entry in _mealEntries) {
-        entry.status = status;
+        for (final meal in entry.meals) {
+          meal.status = status;
+        }
       }
     });
   }
@@ -1828,11 +2162,11 @@ class _TeacherClassroomDetailScreenState
     }
   }
 
-  Future<void> _showCreateActivityDialog() async {
+  Future<void> _showCreateActivityDialog({DateTime? targetDate}) async {
     _errorMessage = null;
     _titleController.clear();
     _descriptionController.clear();
-    _selectedDate = DateTime.now();
+    _selectedDate = targetDate ?? DateTime.now();
     _selectedStartTime = const TimeOfDay(hour: 9, minute: 0);
     _selectedEndTime = const TimeOfDay(hour: 10, minute: 0);
     _selectedType = 0;
@@ -2076,16 +2410,19 @@ class _TeacherClassroomDetailScreenState
     try {
       final repository = ref.read(teacherRepositoryProvider);
       for (final entry in _mealEntries) {
-        if (entry.mealRecordId == null) {
-          continue;
-        }
+        for (final meal in entry.meals) {
+          final recordId = meal.mealRecordId.isEmpty
+              ? '00000000-0000-0000-0000-000000000000'
+              : meal.mealRecordId;
 
-        await repository.updateMealRecord(
-          studentId: entry.studentId,
-          mealRecordId: entry.mealRecordId!,
-          status: entry.status,
-          notes: entry.notes.trim().isEmpty ? null : entry.notes.trim(),
-        );
+          await repository.updateMealRecord(
+            studentId: entry.studentId,
+            mealRecordId: recordId,
+            mealName: meal.mealName,
+            status: meal.status,
+            notes: meal.notes.trim().isEmpty ? null : meal.notes.trim(),
+          );
+        }
       }
 
       ref.refresh(classroomMealRecordsProvider(widget.classroom.id));
@@ -2461,21 +2798,31 @@ class _TeacherDailyEntry {
   int get waterAmount => int.tryParse(waterInput) ?? 0;
 }
 
+class _TeacherMealSubEntry {
+  final String mealName;
+  String mealRecordId;
+  int status;
+  String notes;
+
+  _TeacherMealSubEntry({
+    required this.mealName,
+    this.mealRecordId = '',
+    this.status = 0,
+    this.notes = '',
+  });
+}
+
 class _TeacherMealEntry {
   final String studentId;
   final String firstName;
   final String lastName;
-  final String? mealRecordId;
-  int status;
-  String notes;
+  final List<_TeacherMealSubEntry> meals;
 
   _TeacherMealEntry({
     required this.studentId,
     required this.firstName,
     required this.lastName,
-    this.mealRecordId,
-    this.status = 0,
-    this.notes = '',
+    required this.meals,
   });
 }
 

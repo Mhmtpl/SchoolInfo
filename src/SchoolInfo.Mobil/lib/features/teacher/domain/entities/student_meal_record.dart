@@ -1,36 +1,30 @@
 import 'package:flutter/foundation.dart';
 
 @immutable
-class StudentMealRecord {
-  final String studentId;
-  final String firstName;
-  final String lastName;
-  final String? mealRecordId;
-  final int? status;
-  final String? notes;
+class MealDetail {
+  final String mealRecordId;
+  final String mealName;
+  final int statusType;
+  final String statusDescription;
 
-  const StudentMealRecord({
-    required this.studentId,
-    required this.firstName,
-    required this.lastName,
-    this.mealRecordId,
-    this.status,
-    this.notes,
+  const MealDetail({
+    required this.mealRecordId,
+    required this.mealName,
+    required this.statusType,
+    required this.statusDescription,
   });
 
-  factory StudentMealRecord.fromJson(Map<String, dynamic> json) {
-    return StudentMealRecord(
-      studentId: json['studentId']?.toString() ?? json['StudentId']?.toString() ?? '',
-      firstName: json['firstName'] as String? ?? json['FirstName'] as String? ?? '',
-      lastName: json['lastName'] as String? ?? json['LastName'] as String? ?? '',
-      mealRecordId: json['mealRecordId']?.toString() ?? json['MealRecordId']?.toString(),
-      status: json['status'] as int? ?? json['Status'] as int?,
-      notes: json['notes'] as String? ?? json['Notes'] as String?,
+  factory MealDetail.fromJson(Map<String, dynamic> json) {
+    return MealDetail(
+      mealRecordId: json['mealRecordId']?.toString() ?? json['MealRecordId']?.toString() ?? '',
+      mealName: json['mealName']?.toString() ?? json['MealName']?.toString() ?? '',
+      statusType: json['statusType'] as int? ?? json['StatusType'] as int? ?? 0,
+      statusDescription: json['statusDescription']?.toString() ?? json['StatusDescription']?.toString() ?? '',
     );
   }
 
   String get statusLabel {
-    switch (status) {
+    switch (statusType) {
       case 1:
         return 'Az yedi';
       case 2:
@@ -38,7 +32,32 @@ class StudentMealRecord {
       case 3:
         return 'Tamamını yedi';
       default:
-        return 'Durum yok';
+        return 'Hiç yemedi';
     }
+  }
+}
+
+@immutable
+class StudentMealRecord {
+  final String studentId;
+  final String firstName;
+  final String lastName;
+  final List<MealDetail> meals;
+
+  const StudentMealRecord({
+    required this.studentId,
+    required this.firstName,
+    required this.lastName,
+    required this.meals,
+  });
+
+  factory StudentMealRecord.fromJson(Map<String, dynamic> json) {
+    final list = json['meals'] as List<dynamic>? ?? json['Meals'] as List<dynamic>? ?? [];
+    return StudentMealRecord(
+      studentId: json['studentId']?.toString() ?? json['StudentId']?.toString() ?? '',
+      firstName: json['firstName'] as String? ?? json['FirstName'] as String? ?? '',
+      lastName: json['lastName'] as String? ?? json['LastName'] as String? ?? '',
+      meals: list.map((item) => MealDetail.fromJson(item as Map<String, dynamic>)).toList(),
+    );
   }
 }

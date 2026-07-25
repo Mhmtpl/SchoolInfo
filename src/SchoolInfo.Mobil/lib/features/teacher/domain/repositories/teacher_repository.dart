@@ -42,6 +42,7 @@ abstract class TeacherRepository {
   Future<void> updateMealRecord({
     required String studentId,
     required String mealRecordId,
+    required String mealName,
     required int status,
     String? notes,
   });
