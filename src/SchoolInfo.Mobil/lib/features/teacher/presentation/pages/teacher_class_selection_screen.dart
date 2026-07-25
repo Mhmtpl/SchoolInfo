@@ -105,37 +105,48 @@ class TeacherClassSelectionScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 56,
-                height: 6,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withOpacity(0.08),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.school_rounded,
+                      color: theme.colorScheme.primary,
+                      size: 28,
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Container(
-                width: 64,
-                height: 6,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Hoş geldiniz, Öğretmenim! 👋',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: theme.colorScheme.onSurface,
+                            letterSpacing: -0.4,
+                          ),
+                        ),
+                        Text(
+                          'Günlük Sınıf Yönetim Paneli',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: theme.colorScheme.onSurface.withOpacity(0.55),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                ],
               ),
-              const SizedBox(height: 18),
-              Text(
-                'Hoş geldiniz, Öğretmenim! 👋',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: theme.colorScheme.onSurface,
-                  letterSpacing: -0.5,
-                ),
-              ),
+              const SizedBox(height: 16),
               const SizedBox(height: 8),
               Text(
                 'Bugün sınıflarınızı hızlıca yönetebilir, uyku ve haftalık yemek programlarını düzenleyebilirsiniz.',
@@ -322,10 +333,11 @@ class _TeacherClassroomDetailScreenState
   final List<_TeacherMedicationEntry> _medicationEntries = [];
   bool _dailyEntriesInitialized = false;
   final List<_TeacherDailyEntry> _dailyEntries = [];
-  bool _showDailySaveButton = false;
+  bool _showDailySaveButton = true;
   late final ScrollController _dailyScrollController;
   bool _weeklyPlanEditMode = false;
   List<WeeklyMealPlan> _weeklyPlanEdits = [];
+  int _mealTabSubIndex = 0;
 
   // Yapay Zeka Güncelleme Değişkenleri
   late final stt.SpeechToText _speech;
@@ -341,18 +353,9 @@ class _TeacherClassroomDetailScreenState
   @override
   void initState() {
     super.initState();
-    // Removed the 'Sınıf' tab; total tabs now 6
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _tabController.addListener(() => setState(() {}));
     _dailyScrollController = ScrollController();
-    _dailyScrollController.addListener(() {
-      final shouldShow = _dailyScrollController.offset > 24;
-      if (shouldShow != _showDailySaveButton) {
-        setState(() {
-          _showDailySaveButton = shouldShow;
-        });
-      }
-    });
 
     _speech = stt.SpeechToText();
     _initSpeech();
@@ -543,9 +546,8 @@ class _TeacherClassroomDetailScreenState
               controller: _tabController,
               children: [
                 _buildDailyTab(dailyAsync),
-                _buildMealTab(studentsAsync, mealsAsync),
+                _buildMealTabCombined(studentsAsync, mealsAsync, weeklyPlansAsync),
                 _buildMedicationTab(studentsAsync),
-                _buildWeeklyMealPlanTab(weeklyPlansAsync),
                 _buildActivitiesTab(activitiesAsync),
                 _buildAIUpdateTab(),
               ],
@@ -554,7 +556,7 @@ class _TeacherClassroomDetailScreenState
         ],
       ),
       bottomNavigationBar: _buildBottomNavigationBar(context),
-      floatingActionButton: _tabController.index == 4
+      floatingActionButton: _tabController.index == 3
           ? FloatingActionButton.extended(
               onPressed: _showCreateActivityDialog,
               icon: const Icon(Icons.add),
@@ -591,6 +593,7 @@ class _TeacherClassroomDetailScreenState
             ],
           ),
           child: Stack(
+            clipBehavior: Clip.none,
             alignment: Alignment.center,
             children: [
               Positioned.fill(
@@ -600,19 +603,18 @@ class _TeacherClassroomDetailScreenState
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          _buildNavItem(context, icon: Icons.schedule, index: 0, label: 'Günlük', activeColor: activeColor, inactiveColor: inactiveColor),
-                          _buildNavItem(context, icon: Icons.restaurant, index: 1, label: 'Yemek', activeColor: activeColor, inactiveColor: inactiveColor),
+                          _buildNavItem(context, icon: Icons.schedule_rounded, index: 0, label: 'Günlük', activeColor: activeColor, inactiveColor: inactiveColor),
+                          _buildNavItem(context, icon: Icons.restaurant_rounded, index: 1, label: 'Yemek', activeColor: activeColor, inactiveColor: inactiveColor),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 90),
+                    const SizedBox(width: 80),
                     Expanded(
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          _buildNavItem(context, icon: Icons.medication, index: 2, label: 'İlaç', activeColor: activeColor, inactiveColor: inactiveColor),
-                          _buildNavItem(context, icon: Icons.calendar_today, index: 3, label: 'Hafta', activeColor: activeColor, inactiveColor: inactiveColor),
-                          _buildNavItem(context, icon: Icons.sports_handball, index: 4, label: 'Aktivite', activeColor: activeColor, inactiveColor: inactiveColor),
+                          _buildNavItem(context, icon: Icons.medication_rounded, index: 2, label: 'İlaç', activeColor: activeColor, inactiveColor: inactiveColor),
+                          _buildNavItem(context, icon: Icons.sports_handball_rounded, index: 3, label: 'Aktivite', activeColor: activeColor, inactiveColor: inactiveColor),
                         ],
                       ),
                     ),
@@ -647,10 +649,10 @@ class _TeacherClassroomDetailScreenState
     return GestureDetector(
       onTap: () => _tabController.animateTo(index),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? activeColor.withOpacity(0.14) : Colors.transparent,
-          borderRadius: BorderRadius.circular(18),
+          color: isSelected ? activeColor.withOpacity(0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -661,7 +663,7 @@ class _TeacherClassroomDetailScreenState
               label,
               style: theme.textTheme.labelSmall?.copyWith(
                 color: isSelected ? activeColor : inactiveColor,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
@@ -673,7 +675,7 @@ class _TeacherClassroomDetailScreenState
   Widget _buildCenterAiButton(BuildContext context) {
     final theme = Theme.of(context);
     return GestureDetector(
-      onTap: () => _tabController.animateTo(5),
+      onTap: () => _tabController.animateTo(4),
       child: Container(
         width: 72,
         height: 72,
@@ -919,7 +921,7 @@ class _TeacherClassroomDetailScreenState
               },
               child: ListView(
                 controller: _dailyScrollController,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 92),
                 children: [
               Card(
                   shape: RoundedRectangleBorder(
@@ -1080,20 +1082,13 @@ class _TeacherClassroomDetailScreenState
               left: 16,
               right: 16,
               bottom: 16,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 200),
-                opacity: _showDailySaveButton ? 1 : 0,
-                child: IgnorePointer(
-                  ignoring: !_showDailySaveButton,
-                  child: FilledButton(
-                    onPressed: _isDailySaving ? null : _saveDailyEntries,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: AppColors.primary,
-                    ),
-                    child: Text(_isDailySaving ? 'Kaydediliyor...' : 'Günlük Kaydet'),
-                  ),
+              child: FilledButton(
+                onPressed: _isDailySaving ? null : _saveDailyEntries,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: AppColors.primary,
                 ),
+                child: Text(_isDailySaving ? 'Kaydediliyor...' : 'Günlük Kaydet'),
               ),
             ),
           ],
@@ -1101,6 +1096,108 @@ class _TeacherClassroomDetailScreenState
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => Center(child: Text('Hata: $error')),
+    );
+  }
+
+  Widget _buildMealTabCombined(
+    AsyncValue<List<Student>> studentsAsync,
+    AsyncValue<List<StudentMealRecord>> mealAsync,
+    AsyncValue<List<WeeklyMealPlan>> weeklyPlansAsync,
+  ) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: Container(
+            height: 46,
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: theme.brightness == Brightness.dark
+                  ? const Color(0xFF1E293B)
+                  : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _mealTabSubIndex = 0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: _mealTabSubIndex == 0
+                            ? theme.colorScheme.surface
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: _mealTabSubIndex == 0
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                )
+                              ]
+                            : null,
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Günlük Tüketim',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: _mealTabSubIndex == 0
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _mealTabSubIndex = 1),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: _mealTabSubIndex == 1
+                            ? theme.colorScheme.surface
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: _mealTabSubIndex == 1
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                )
+                              ]
+                            : null,
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Haftalık Menü',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: _mealTabSubIndex == 1
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Expanded(
+          child: _mealTabSubIndex == 0
+              ? _buildMealTab(studentsAsync, mealAsync)
+              : _buildWeeklyMealPlanTab(weeklyPlansAsync),
+        ),
+      ],
     );
   }
 
