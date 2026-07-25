@@ -38,7 +38,7 @@ const int wifiCount = sizeof(wifiNetworks) / sizeof(wifiNetworks[0]);
 
 // 2. SchoolInfo API Sunucu Adresi
 // Not: Canlı sunucu adresini veya yerel bilgisayar IP'sini girin
-const char* serverUrl = "https://api.veliport.com.tr/api/iot/biometrics"; 
+const char* serverUrl = "http://api.veliport.com.tr/api/iot/biometrics"; 
 const char* iotDeviceToken = "DefaultSecretIoTToken1234!";
 
 // 3. İzlenecek Saatlerin/Bilekliklerin MAC Adresleri veya Benzersiz İsimleri Dizisi

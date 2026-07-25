@@ -1,0 +1,28 @@
+# veliport.com.tr (SchoolInfo Web)
+veliport.com.tr, www.veliport.com.tr {
+    reverse_proxy schoolinfo-web:5200
+}
+
+# SchoolInfo API
+http://api.veliport.com.tr, https://api.veliport.com.tr {
+    reverse_proxy schoolinfo-api:5100
+}
+
+# emsal.ebaro.com.tr (EmsalApp Web)
+emsal.ebaro.com.tr {
+    # sitemap.xml icin dogru Content-Type garantisi
+    @sitemap path /sitemap.xml
+    header @sitemap Content-Type application/xml; charset=utf-8
+
+    reverse_proxy emsalapp-web:3000
+}
+
+# EmsalApp API
+api.ebaro.com.tr {
+    reverse_proxy emsalapp-api:5286
+}
+
+# ParkIST
+parkist.ebaro.com.tr {
+    reverse_proxy parkist-web:80
+}
