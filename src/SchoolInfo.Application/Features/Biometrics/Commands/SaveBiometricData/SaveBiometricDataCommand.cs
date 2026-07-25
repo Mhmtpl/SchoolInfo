@@ -36,6 +36,21 @@ public class SaveBiometricDataCommandHandler : IRequestHandler<SaveBiometricData
         // MAC adresine sahip öğrenciyi bul (büyük/küçük harf duyarsız eşleştirme için Normalize edebiliriz)
         var targetMac = request.MacAddress.Trim().Replace("-", ":").ToUpperInvariant();
 
+        try
+        {
+            var allStudents = await _dbContext.Students
+                .Select(s => new { s.Id, s.FirstName, s.LastName, s.SmartBandMacAddress, s.IsDeleted })
+                .ToListAsync(cancellationToken);
+            foreach (var s in allStudents)
+            {
+                Console.WriteLine($"DEBUG STUDENT: {s.FirstName} {s.LastName} | ID: {s.Id} | MAC: '{s.SmartBandMacAddress}' | IsDeleted: {s.IsDeleted}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"DEBUG STUDENT ERROR: {ex.Message}");
+        }
+
         var student = await _dbContext.Students
             .FirstOrDefaultAsync(s => s.SmartBandMacAddress != null && 
                                       s.SmartBandMacAddress.Replace("-", ":").ToUpper() == targetMac && 
@@ -43,6 +58,7 @@ public class SaveBiometricDataCommandHandler : IRequestHandler<SaveBiometricData
 
         if (student == null)
         {
+            Console.WriteLine($"DEBUG STUDENT NOT FOUND FOR MAC: '{targetMac}'");
             return false;
         }
 

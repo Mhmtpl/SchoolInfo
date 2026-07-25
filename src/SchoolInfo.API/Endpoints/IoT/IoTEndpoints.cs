@@ -26,6 +26,15 @@ public class IoTEndpoints : IEndpoint
             .WithName("SaveBiometricData")
             .WithSummary("ESP32 cihazından gelen canlı biyometrik verileri kuyruğa ekler.");
 
+        group.MapGet("/students-debug", async (SchoolInfo.Application.Common.Interfaces.IAppDbContext dbContext) =>
+        {
+            var students = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
+                dbContext.Students.Select(s => new { s.Id, s.FirstName, s.LastName, s.SmartBandMacAddress, s.IsDeleted })
+            );
+            return Results.Ok(students);
+        })
+        .WithName("GetStudentsDebug");
+
         // Veli ve öğretmenlerin kullanacağı yetkilendirilmiş API grubu
         var secureGroup = app.MapGroup("/api/students/{studentId:guid}/biometrics")
             .WithTags("Biometrics")
