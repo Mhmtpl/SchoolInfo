@@ -20,6 +20,7 @@ class HomeScreen extends StatefulWidget {
   final SchoolId schoolId;
   final String? userFirstName;
   final String? userLastName;
+  final String? userEmail;
   final List<Student>? students;
   final String token;
 
@@ -29,6 +30,7 @@ class HomeScreen extends StatefulWidget {
     required this.token,
     this.userFirstName,
     this.userLastName,
+    this.userEmail,
     this.students,
   });
 
@@ -69,7 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _getHomeSummary = GetHomeSummary(HomeRepositoryImpl());
     _currentFirstName = widget.userFirstName ?? '';
     _currentLastName = widget.userLastName ?? '';
-    _currentEmail = '';
+    _currentEmail = widget.userEmail ?? '';
     _currentClassroom = '';
     _currentPhone = '';
 
@@ -95,6 +97,32 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadAllChildData(String studentId, String classroomId) async {
     _loadDynamicClassroomAndNewsletters(classroomId);
     _loadChildDailyDetails(studentId, classroomId);
+    _loadParentProfile();
+  }
+
+  Future<void> _loadParentProfile() async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://api.veliport.com.tr/api/users/me'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+      );
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body) as Map<String, dynamic>;
+        final email = (data['email'] ?? data['Email']) as String? ?? '';
+        final phone = (data['phoneNumber'] ?? data['PhoneNumber'] ?? data['phone'] ?? data['Phone']) as String? ?? '';
+        final classroom = (data['classroom'] ?? data['Classroom']) as String? ?? '';
+        if (mounted) {
+          setState(() {
+            _currentEmail = email.isNotEmpty ? email : _currentEmail;
+            _currentPhone = phone;
+            _currentClassroom = classroom;
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadChildDailyDetails(String studentId, String classroomId) async {
