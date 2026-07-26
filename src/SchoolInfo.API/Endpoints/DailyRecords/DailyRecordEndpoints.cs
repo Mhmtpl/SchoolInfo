@@ -53,6 +53,8 @@ public class DailyRecordEndpoints : IEndpoint
         var query = new GetStudentDailyRecordQuery(studentId, targetDate);
         var result = await mediator.Send(query);
 
-        return result is not null ? Results.Ok(result) : Results.NotFound();
+        return result is not null 
+            ? Results.Ok(result) 
+            : Results.Ok(new DailyRecordDto(Guid.Empty, studentId, targetDate, "0", 0, ""));
     }
 }

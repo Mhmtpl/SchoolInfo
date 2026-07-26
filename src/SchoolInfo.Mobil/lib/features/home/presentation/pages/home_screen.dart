@@ -15,6 +15,9 @@ import 'profile_screen.dart';
 import 'sleep_screen.dart';
 import '../widgets/biometric_dashboard_card.dart';
 import 'biometrics_history_screen.dart';
+import 'dart:async';
+import '../../../../core/services/biometric_signalr_service.dart';
+
 
 // Ana sayfa ekranı. Login sonrası gösterilir ve okul kimliğine göre özet verilerini yükler.
 class HomeScreen extends StatefulWidget {
@@ -59,6 +62,15 @@ class _HomeScreenState extends State<HomeScreen> {
   late String _currentClassroom;
   late String _currentPhone;
 
+  // Canlı Biyometrik Veriler (SignalR & Bildirimler için global seviyede)
+  BiometricSignalRService? _globalSignalRService;
+  double _liveHeartRate = 0;
+  String _liveHubStatus = "Bağlanıyor...";
+  bool _liveHasSignal = false;
+  DateTime? _liveLastUpdateTime;
+  Timer? _globalOfflineTimer;
+  bool _isBannerShowing = false;
+
   Student? get _selectedChild {
     if (widget.students == null || widget.students!.isEmpty) return null;
     if (_selectedChildIndex < 0 || _selectedChildIndex >= widget.students!.length) {
@@ -87,6 +99,13 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    _globalSignalRService?.disconnect();
+    _globalOfflineTimer?.cancel();
+    super.dispose();
+  }
+
   int _calculateAge(DateTime? dob) {
     if (dob == null) return 4;
     final today = DateTime.now();
@@ -97,10 +116,107 @@ class _HomeScreenState extends State<HomeScreen> {
     return age;
   }
 
+  void _initGlobalSignalR(String studentId) {
+    _globalSignalRService?.disconnect();
+    _globalOfflineTimer?.cancel();
+    
+    setState(() {
+      _liveHeartRate = 0;
+      _liveHasSignal = false;
+      _liveHubStatus = "Bağlanıyor...";
+    });
+
+    _globalSignalRService = BiometricSignalRService(
+      hubUrl: 'https://api.veliport.com.tr/hubs/biometrics',
+      token: _token,
+      studentId: studentId,
+      onStatusChanged: (status) {
+        if (mounted) {
+          setState(() {
+            _liveHubStatus = status;
+          });
+        }
+      },
+      onUpdateReceived: (update) {
+        if (mounted) {
+          setState(() {
+            final hr = update['heartRate'] as num?;
+            if (hr != null && hr > 0) {
+              _liveHeartRate = hr.toDouble();
+              _liveHasSignal = true;
+              _liveLastUpdateTime = DateTime.now();
+              _checkCriticalHeartRate(hr.toInt());
+            }
+          });
+        }
+      },
+    );
+    _globalSignalRService!.connect();
+    _startGlobalOfflineTimer();
+  }
+
+  void _startGlobalOfflineTimer() {
+    _globalOfflineTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (_liveHasSignal && _liveLastUpdateTime != null) {
+        final diff = DateTime.now().difference(_liveLastUpdateTime!).inSeconds;
+        if (diff > 20) {
+          if (mounted) {
+            setState(() {
+              _liveHasSignal = false;
+              _liveHeartRate = 0;
+            });
+          }
+        }
+      }
+    });
+  }
+
+  void _checkCriticalHeartRate(int bpm) {
+    final child = _selectedChild;
+    if (child == null) return;
+    final age = _calculateAge(child.dateOfBirth);
+    
+    int low = 60;
+    int warningMax = 115;
+    if (age <= 2) {
+      low = 80; warningMax = 145;
+    } else if (age <= 5) {
+      low = 80; warningMax = 135;
+    } else if (age <= 10) {
+      low = 70; warningMax = 125;
+    }
+    
+    bool isCritical = bpm < low || bpm > warningMax;
+    if (isCritical && !_isBannerShowing) {
+      _isBannerShowing = true;
+      ScaffoldMessenger.of(context).clearMaterialBanners();
+      ScaffoldMessenger.of(context).showMaterialBanner(
+        MaterialBanner(
+          backgroundColor: const Color(0xFFEF4444),
+          leading: const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 28),
+          content: Text(
+            'KRİTİK NABIZ UYARISI: ${child.firstName} ${child.lastName} adlı öğrencimizin nabız değeri $bpm BPM olarak ölçülmüştür!',
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                ScaffoldMessenger.of(context).clearMaterialBanners();
+                _isBannerShowing = false;
+              },
+              child: const Text('KAPAT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
   Future<void> _loadAllChildData(String studentId, String classroomId) async {
     _loadDynamicClassroomAndNewsletters(classroomId);
     _loadChildDailyDetails(studentId, classroomId);
     _loadParentProfile();
+    _initGlobalSignalR(studentId);
   }
 
   Future<void> _loadParentProfile() async {
@@ -390,6 +506,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         studentName: '${selectedChild.firstName} ${selectedChild.lastName}',
                         studentAge: _calculateAge(selectedChild.dateOfBirth),
                         token: _token,
+                        liveHeartRate: _liveHeartRate,
+                        liveHasSignal: _liveHasSignal,
+                        liveHubStatus: _liveHubStatus,
                       ),
                       const SizedBox(height: 22),
 
@@ -651,7 +770,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildNavItem(context, icon: Icons.home_rounded, index: 0, label: 'Ana Sayfa', activeColor: activeColor, inactiveColor: inactiveColor),
               _buildNavItem(context, icon: Icons.restaurant_rounded, index: 1, label: 'Yemek', activeColor: activeColor, inactiveColor: inactiveColor),
               _buildNavItem(context, icon: Icons.sports_basketball_rounded, index: 2, label: 'Aktivite', activeColor: activeColor, inactiveColor: inactiveColor),
-              _buildNavItem(context, icon: Icons.medication_rounded, index: 3, label: 'İlaç Defteri', activeColor: activeColor, inactiveColor: inactiveColor),
+              _buildNavItem(context, icon: Icons.medication_rounded, index: 3, label: 'İlaç', activeColor: activeColor, inactiveColor: inactiveColor),
               _buildNavItem(context, icon: Icons.notifications_rounded, index: 4, label: 'Duyurular', activeColor: activeColor, inactiveColor: inactiveColor),
             ],
           ),

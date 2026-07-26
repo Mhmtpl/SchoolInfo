@@ -9,6 +9,9 @@ class BiometricDashboardCard extends StatefulWidget {
   final String studentName;
   final int studentAge;
   final String token;
+  final double liveHeartRate;
+  final bool liveHasSignal;
+  final String liveHubStatus;
 
   const BiometricDashboardCard({
     super.key,
@@ -16,6 +19,9 @@ class BiometricDashboardCard extends StatefulWidget {
     required this.studentName,
     required this.studentAge,
     required this.token,
+    required this.liveHeartRate,
+    required this.liveHasSignal,
+    required this.liveHubStatus,
   });
 
   @override
@@ -23,17 +29,6 @@ class BiometricDashboardCard extends StatefulWidget {
 }
 
 class _BiometricDashboardCardState extends State<BiometricDashboardCard> with SingleTickerProviderStateMixin {
-  BiometricSignalRService? _signalRService;
-  
-  double _heartRate = 0;
-  double? _spO2;
-  double? _bodyTemp;
-  
-  String _hubStatus = "Bağlanıyor...";
-  bool _hasLiveSignal = false;
-  DateTime? _lastUpdateTime;
-  Timer? _offlineCheckTimer;
-
   // Kalp ikonu nabız animasyonu için
   late AnimationController _heartAnimController;
   late Animation<double> _heartScaleAnim;
@@ -49,88 +44,20 @@ class _BiometricDashboardCardState extends State<BiometricDashboardCard> with Si
     _heartScaleAnim = Tween<double>(begin: 1.0, end: 1.25).animate(
       CurvedAnimation(parent: _heartAnimController, curve: Curves.bounceOut),
     );
-
-    _initSignalR();
-    _startOfflineTimer();
   }
 
   @override
   void didUpdateWidget(covariant BiometricDashboardCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.studentId != widget.studentId) {
-      // Seçili öğrenci değiştiğinde SignalR bağlantısını yenile
-      _signalRService?.disconnect();
-      setState(() {
-        _heartRate = 0;
-        _spO2 = null;
-        _bodyTemp = null;
-        _hasLiveSignal = false;
-        _lastUpdateTime = null;
-      });
-      _initSignalR();
+    if (widget.liveHeartRate != oldWidget.liveHeartRate && widget.liveHeartRate > 0) {
+      _heartAnimController.forward().then((_) => _heartAnimController.reverse());
     }
   }
 
   @override
   void dispose() {
-    _signalRService?.disconnect();
-    _offlineCheckTimer?.cancel();
     _heartAnimController.dispose();
     super.dispose();
-  }
-
-  void _initSignalR() {
-    _signalRService = BiometricSignalRService(
-      hubUrl: 'https://api.veliport.com.tr/hubs/biometrics',
-      token: widget.token,
-      studentId: widget.studentId,
-      onStatusChanged: (status) {
-        if (mounted) {
-          setState(() {
-            _hubStatus = status;
-          });
-        }
-      },
-      onUpdateReceived: (update) {
-        if (mounted) {
-          setState(() {
-            final hr = update['heartRate'] as num?;
-            final ox = update['spO2'] as num?;
-            final temp = update['bodyTemperature'] as num?;
-
-            if (hr != null && hr > 0) {
-              _heartRate = hr.toDouble();
-              _hasLiveSignal = true;
-              _lastUpdateTime = DateTime.now();
-              // Kalbi pırpır ettir
-              _heartAnimController.forward().then((_) => _heartAnimController.reverse());
-            }
-
-            _spO2 = ox?.toDouble();
-            _bodyTemp = temp?.toDouble();
-          });
-        }
-      },
-    );
-
-    _signalRService!.connect();
-  }
-
-  void _startOfflineTimer() {
-    _offlineCheckTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      if (_hasLiveSignal && _lastUpdateTime != null) {
-        final diff = DateTime.now().difference(_lastUpdateTime!).inSeconds;
-        // Son 20 saniyede veri gelmediyse cihaz dışı yap
-        if (diff > 20) {
-          if (mounted) {
-            setState(() {
-              _hasLiveSignal = false;
-              _heartRate = 0;
-            });
-          }
-        }
-      }
-    });
   }
 
   Map<String, dynamic> _getHeartRateThresholds(int age) {
@@ -146,7 +73,7 @@ class _BiometricDashboardCardState extends State<BiometricDashboardCard> with Si
   }
 
   Map<String, dynamic> _getStatusStyle(double bpm) {
-    if (!_hasLiveSignal || bpm <= 0) {
+    if (!widget.liveHasSignal || bpm <= 0) {
       return {
         'color': const Color(0xFF94A3B8), // Gri
         'bg': const Color(0xFFF1F5F9),
@@ -190,7 +117,7 @@ class _BiometricDashboardCardState extends State<BiometricDashboardCard> with Si
 
   @override
   Widget build(BuildContext context) {
-    final style = _getStatusStyle(_heartRate);
+    final style = _getStatusStyle(widget.liveHeartRate);
     final Color statusColor = style['color'] as Color;
     final Color bgColor = style['bg'] as Color;
     final Color borderColor = style['border'] as Color;
@@ -250,17 +177,17 @@ class _BiometricDashboardCardState extends State<BiometricDashboardCard> with Si
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _hubStatus == "Bağlandı"
+                    color: widget.liveHubStatus == "Bağlandı"
                         ? const Color(0xFFDCFCE7)
                         : const Color(0xFFFEE2E2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    _hubStatus == "Bağlandı" ? 'Canlı' : 'Bağlanıyor...',
+                    widget.liveHubStatus == "Bağlandı" ? 'Canlı' : 'Bağlanıyor...',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: _hubStatus == "Bağlandı"
+                      color: widget.liveHubStatus == "Bağlandı"
                           ? const Color(0xFF15803D)
                           : const Color(0xFFB91C1C),
                     ),
@@ -293,7 +220,7 @@ class _BiometricDashboardCardState extends State<BiometricDashboardCard> with Si
                       children: [
                         Icon(
                           Icons.favorite,
-                          color: _hasLiveSignal ? const Color(0xFFEF4444) : Colors.grey,
+                          color: widget.liveHasSignal ? const Color(0xFFEF4444) : Colors.grey,
                           size: 26,
                         ),
                         const SizedBox(width: 10),
@@ -301,7 +228,7 @@ class _BiometricDashboardCardState extends State<BiometricDashboardCard> with Si
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _heartRate > 0 ? '${_heartRate.round()}' : '--',
+                              widget.liveHeartRate > 0 ? '${widget.liveHeartRate.round()}' : '--',
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -327,8 +254,8 @@ class _BiometricDashboardCardState extends State<BiometricDashboardCard> with Si
                 // Canlı EKG Dalgası Canvası
                 Expanded(
                   child: EcgLiveWave(
-                    bpm: _heartRate,
-                    hasEcgData: _hasLiveSignal,
+                    bpm: widget.liveHeartRate,
+                    hasEcgData: widget.liveHasSignal,
                     color: statusColor,
                   ),
                 ),
