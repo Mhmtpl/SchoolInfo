@@ -6,11 +6,13 @@ import '../../../../features/teacher/domain/entities/weekly_meal_plan.dart';
 class MealScreen extends StatefulWidget {
   final String classroomId;
   final String token;
+  final bool isEmbedded;
 
   const MealScreen({
     super.key,
     required this.classroomId,
     required this.token,
+    this.isEmbedded = false,
   });
 
   @override
@@ -42,6 +44,15 @@ class _MealScreenState extends State<MealScreen> {
       _selectedDay = 1; // Default to Monday if weekend
     }
     _fetchWeeklyMealPlans();
+  }
+
+  @override
+  void didUpdateWidget(covariant MealScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.classroomId != widget.classroomId || oldWidget.token != widget.token) {
+      _isLoading = true;
+      _fetchWeeklyMealPlans();
+    }
   }
 
   Future<void> _fetchWeeklyMealPlans() async {
@@ -94,6 +105,7 @@ class _MealScreenState extends State<MealScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
+        automaticallyImplyLeading: !widget.isEmbedded,
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF1E293B),
         elevation: 0,

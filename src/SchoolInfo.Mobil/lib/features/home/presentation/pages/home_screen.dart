@@ -43,6 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String get _token => AuthStorageService.currentToken ?? widget.token;
   late final GetHomeSummary _getHomeSummary;
   int _selectedChildIndex = 0;
+  int _currentTabIndex = 0;
   String _classroomName = 'Yükleniyor...';
   List<dynamic> _newsletters = [];
   bool _isClassroomLoading = false;
@@ -322,19 +323,406 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Widget _buildBodyForTab(HomeSummary summary, Student? selectedChild) {
+    switch (_currentTabIndex) {
+      case 0:
+        return _buildHomeTabContent(summary, selectedChild);
+      case 1:
+        if (selectedChild == null) return const Center(child: Text('Çocuk seçilmedi'));
+        return MealScreen(
+          classroomId: selectedChild.classroomId,
+          token: _token,
+          isEmbedded: true,
+        );
+      case 2:
+        if (selectedChild == null) return const Center(child: Text('Çocuk seçilmedi'));
+        return ActivityScreen(
+          classroomId: selectedChild.classroomId,
+          token: _token,
+          isEmbedded: true,
+        );
+      case 3:
+        return const MedicationScreen(
+          isEmbedded: true,
+        );
+      case 4:
+        return _buildAnnouncementsTabContent();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildHomeTabContent(HomeSummary summary, Student? selectedChild) {
+    return SafeArea(
+      bottom: false,
+      child: RefreshIndicator(
+        onRefresh: () async {
+          setState(() {});
+          final child = _selectedChild;
+          if (child != null) {
+            await _loadAllChildData(child.id, child.classroomId);
+          }
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 100),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(summary, selectedChild),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (widget.students != null && widget.students!.isNotEmpty) ...[
+                      _buildChildrenSection(widget.students!, _classroomName),
+                      const SizedBox(height: 20),
+                    ],
+                    
+                    if (selectedChild != null) ...[
+                      _buildChildHeader(selectedChild, _classroomName),
+                      const SizedBox(height: 16),
+
+                      // Canlı Biyometrik Takip Modülü (EKG)
+                      BiometricDashboardCard(
+                        studentId: selectedChild.id,
+                        studentName: '${selectedChild.firstName} ${selectedChild.lastName}',
+                        studentAge: _calculateAge(selectedChild.dateOfBirth),
+                        token: _token,
+                      ),
+                      const SizedBox(height: 22),
+
+                      // Günlük Özbakım, Beslenme ve AI Özet Raporu
+                      _buildDailyDevelopmentSection(selectedChild),
+                      const SizedBox(height: 24),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnnouncementsTabContent() {
+    final theme = Theme.of(context);
+    
+    String formatNewsletterDate(String? dateStr) {
+      if (dateStr == null) return '';
+      try {
+        final dt = DateTime.parse(dateStr).toLocal();
+        final today = DateTime.now();
+        if (dt.year == today.year && dt.month == today.month && dt.day == today.day) {
+          return 'Bugün, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+        }
+        final diff = today.difference(dt).inDays;
+        if (diff == 1) {
+          return 'Dün, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+        }
+        return '${dt.day}/${dt.month}/${dt.year}';
+      } catch (_) {
+        return '';
+      }
+    }
+
+    bool isNewsletterNew(String? dateStr) {
+      if (dateStr == null) return false;
+      try {
+        final dt = DateTime.parse(dateStr).toLocal();
+        return DateTime.now().difference(dt).inHours < 24;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1E293B),
+        elevation: 0,
+        title: const Text(
+          'Duyurular & Haberler',
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+        ),
+      ),
+      body: _isNewslettersLoading
+          ? const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20.0),
+                child: CircularProgressIndicator(color: Color(0xFF6366F1)),
+              ),
+            )
+          : _newsletters.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.notifications_none_rounded, size: 48, color: Colors.grey[400]),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Sınıfa ait güncel bülten veya duyuru bulunmamaktadır.',
+                          style: TextStyle(fontSize: 14, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: () async {
+                    final child = _selectedChild;
+                    if (child != null) {
+                      await _loadDynamicClassroomAndNewsletters(child.classroomId);
+                    }
+                  },
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+                    itemCount: _newsletters.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final item = _newsletters[index] as Map<String, dynamic>;
+                      
+                      final String title = item['title'] as String? ?? item['Title'] as String? ?? 'Duyuru';
+                      final String body = item['content'] as String? ?? item['Content'] as String? ?? '';
+                      final String publishedAtStr = item['publishedAt'] as String? ?? item['PublishedAt'] as String? ?? item['createdAt'] as String? ?? item['CreatedAt'] as String? ?? '';
+                      final String category = item['weekName'] as String? ?? item['WeekName'] as String? ?? 'Duyuru';
+                      
+                      final bool isNew = isNewsletterNew(publishedAtStr);
+                      final String formattedDate = formatNewsletterDate(publishedAtStr);
+                      
+                      final IconData icon = Icons.newspaper_rounded;
+                      final Color iconColor = theme.colorScheme.primary;
+
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isNew ? theme.colorScheme.secondary.withOpacity(0.2) : const Color(0xFFE2E8F0),
+                            width: isNew ? 1.2 : 1,
+                          ),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color.fromRGBO(15, 23, 42, 0.02),
+                              blurRadius: 16,
+                              offset: Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: iconColor.withOpacity(0.06),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(icon, color: iconColor, size: 18),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: isNew 
+                                                  ? theme.colorScheme.secondary.withOpacity(0.1)
+                                                  : const Color(0xFFF1F5F9),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              category,
+                                              style: TextStyle(
+                                                color: isNew ? theme.colorScheme.secondary : const Color(0xFF64748B),
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                          if (isNew) ...[
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFEF4444),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: const Text(
+                                                'YENİ',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 8,
+                                                  fontWeight: FontWeight.w800,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        formattedDate,
+                                        style: const TextStyle(
+                                          color: Color(0xFF94A3B8),
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF0F172A),
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              body,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF475569),
+                                height: 1.5,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+    );
+  }
+
+  Widget _buildBottomNavigationBar(BuildContext context) {
+    final theme = Theme.of(context);
+    final activeColor = theme.colorScheme.primary;
+    final inactiveColor = theme.brightness == Brightness.dark
+        ? Colors.white70
+        : theme.colorScheme.onSurface.withOpacity(0.65);
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+        child: Container(
+          height: 68,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: theme.brightness == Brightness.dark
+                    ? Colors.black.withOpacity(0.35)
+                    : Colors.black.withOpacity(0.10),
+                blurRadius: 22,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildNavItem(context, icon: Icons.home_rounded, index: 0, label: 'Ana Sayfa', activeColor: activeColor, inactiveColor: inactiveColor),
+              _buildNavItem(context, icon: Icons.restaurant_rounded, index: 1, label: 'Yemek', activeColor: activeColor, inactiveColor: inactiveColor),
+              _buildNavItem(context, icon: Icons.sports_basketball_rounded, index: 2, label: 'Aktivite', activeColor: activeColor, inactiveColor: inactiveColor),
+              _buildNavItem(context, icon: Icons.medication_rounded, index: 3, label: 'İlaç Defteri', activeColor: activeColor, inactiveColor: inactiveColor),
+              _buildNavItem(context, icon: Icons.notifications_rounded, index: 4, label: 'Duyurular', activeColor: activeColor, inactiveColor: inactiveColor),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(
+    BuildContext context, {
+    required IconData icon,
+    required int index,
+    required String label,
+    required Color activeColor,
+    required Color inactiveColor,
+  }) {
+    final isSelected = _currentTabIndex == index;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _currentTabIndex = index;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor.withOpacity(0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? activeColor : inactiveColor,
+              size: 22,
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: activeColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC), // Ultra-clean background
-      body: FutureBuilder<HomeSummary>(
-        future: _getHomeSummary(widget.schoolId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return FutureBuilder<HomeSummary>(
+      future: _getHomeSummary(widget.schoolId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: Color(0xFFF8FAFC),
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
 
-          if (snapshot.hasError) {
-            return Center(
+        if (snapshot.hasError) {
+          return Scaffold(
+            backgroundColor: const Color(0xFFF8FAFC),
+            body: Center(
               child: Padding(
                 padding: const EdgeInsets.all(24.0),
                 child: Text(
@@ -342,81 +730,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: const TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold),
                 ),
               ),
-            );
-          }
-
-          final summary = snapshot.data!;
-          final selectedChild = _selectedChild;
-          return SafeArea(
-            bottom: true,
-            child: RefreshIndicator(
-              onRefresh: () async {
-                setState(() {});
-                final child = _selectedChild;
-                if (child != null) {
-                  await _loadAllChildData(child.id, child.classroomId);
-                }
-              },
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.only(bottom: 40),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(summary, selectedChild),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (widget.students != null && widget.students!.isNotEmpty) ...[
-                            _buildChildrenSection(widget.students!, _classroomName),
-                            const SizedBox(height: 20),
-                          ],
-                          
-                          if (selectedChild != null) ...[
-                            _buildChildHeader(selectedChild, _classroomName),
-                            const SizedBox(height: 16),
-
-                            // Canlı Biyometrik Takip Modülü (EKG)
-                            BiometricDashboardCard(
-                              studentId: selectedChild.id,
-                              studentName: '${selectedChild.firstName} ${selectedChild.lastName}',
-                              studentAge: _calculateAge(selectedChild.dateOfBirth),
-                              token: _token,
-                            ),
-                            const SizedBox(height: 22),
-
-                            // Günlük Özbakım, Beslenme ve AI Özet Raporu
-                            _buildDailyDevelopmentSection(selectedChild),
-                            const SizedBox(height: 24),
-                          ],
-
-                          _buildSectionTitle(
-                            'Hızlı Erişim',
-                            'En sık ziyaret edilen alanlara hızlıca ulaşın',
-                          ),
-                          const SizedBox(height: 12),
-                          _buildQuickActionsRow(context, selectedChild),
-                          const SizedBox(height: 28),
-                          
-                          _buildSectionTitle(
-                            'Duyurular & Haberler',
-                            'Okuldan gelen en son duyuruları takip edin',
-                          ),
-                          const SizedBox(height: 14),
-                          _buildAnnouncementsSection(),
-                          const SizedBox(height: 20),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ),
           );
-        },
-      ),
+        }
+
+        final summary = snapshot.data!;
+        final selectedChild = _selectedChild;
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFF8FAFC),
+          body: _buildBodyForTab(summary, selectedChild),
+          bottomNavigationBar: _buildBottomNavigationBar(context),
+        );
+      },
     );
   }
 
@@ -1091,223 +1417,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [theme.colorScheme.primary, theme.colorScheme.primary.withOpacity(0.7)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Center(
-              child: Text(
-                child.firstName.isNotEmpty ? child.firstName[0] : '',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildAnnouncementsSection() {
-    final theme = Theme.of(context);
-    
-    if (_isNewslettersLoading) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(20.0),
-          child: CircularProgressIndicator(color: Color(0xFF6366F1)),
-        ),
-      );
-    }
-
-    if (_newsletters.isEmpty) {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-        ),
-        child: const Center(
-          child: Text(
-            'Sınıfa ait güncel bülten veya duyuru bulunmamaktadır.',
-            style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
-    }
-
-    String formatNewsletterDate(String? dateStr) {
-      if (dateStr == null) return '';
-      try {
-        final dt = DateTime.parse(dateStr).toLocal();
-        final today = DateTime.now();
-        if (dt.year == today.year && dt.month == today.month && dt.day == today.day) {
-          return 'Bugün, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-        }
-        final diff = today.difference(dt).inDays;
-        if (diff == 1) {
-          return 'Dün, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-        }
-        return '${dt.day}/${dt.month}/${dt.year}';
-      } catch (_) {
-        return '';
-      }
-    }
-
-    bool isNewsletterNew(String? dateStr) {
-      if (dateStr == null) return false;
-      try {
-        final dt = DateTime.parse(dateStr).toLocal();
-        return DateTime.now().difference(dt).inHours < 24;
-      } catch (_) {
-        return false;
-      }
-    }
-
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _newsletters.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final item = _newsletters[index] as Map<String, dynamic>;
-        
-        final String title = item['title'] as String? ?? item['Title'] as String? ?? 'Duyuru';
-        final String body = item['content'] as String? ?? item['Content'] as String? ?? '';
-        final String publishedAtStr = item['publishedAt'] as String? ?? item['PublishedAt'] as String? ?? item['createdAt'] as String? ?? item['CreatedAt'] as String? ?? '';
-        final String category = item['weekName'] as String? ?? item['WeekName'] as String? ?? 'Duyuru';
-        
-        final bool isNew = isNewsletterNew(publishedAtStr);
-        final String formattedDate = formatNewsletterDate(publishedAtStr);
-        
-        final IconData icon = Icons.newspaper_rounded;
-        final Color iconColor = theme.colorScheme.primary;
-
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isNew ? theme.colorScheme.secondary.withOpacity(0.2) : const Color(0xFFE2E8F0),
-              width: isNew ? 1.2 : 1,
-            ),
-            boxShadow: const [
-              BoxShadow(
-                color: Color.fromRGBO(15, 23, 42, 0.02),
-                blurRadius: 16,
-                offset: Offset(0, 6),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: iconColor.withOpacity(0.06),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(icon, color: iconColor, size: 18),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: isNew 
-                                    ? theme.colorScheme.secondary.withOpacity(0.1)
-                                    : const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                category,
-                                style: TextStyle(
-                                  color: isNew ? theme.colorScheme.secondary : const Color(0xFF64748B),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            if (isNew) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFEF4444),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Text(
-                                  'YENİ',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          formattedDate,
-                          style: const TextStyle(
-                            color: Color(0xFF94A3B8),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
-                  letterSpacing: -0.3,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                body,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF475569),
-                  height: 1.5,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   Widget _buildDailyDevelopmentSection(Student child) {
     final theme = Theme.of(context);

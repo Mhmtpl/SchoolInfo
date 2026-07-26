@@ -15,18 +15,15 @@ class MedicationRecord {
 }
 
 class MedicationScreen extends StatefulWidget {
-  const MedicationScreen({super.key});
+  final bool isEmbedded;
+  const MedicationScreen({super.key, this.isEmbedded = false});
 
   @override
   State<MedicationScreen> createState() => _MedicationScreenState();
 }
 
 class _MedicationScreenState extends State<MedicationScreen> {
-  final List<MedicationRecord> _records = [
-    MedicationRecord(name: 'Parol Forte', dosage: '1 tablet', time: '08:00'),
-    MedicationRecord(name: 'Vitamin D', dosage: '1 kapsül', time: '12:30'),
-    MedicationRecord(name: 'Soğuk Algınlığı Şurubu', dosage: '5 ml', time: '18:00'),
-  ];
+  final List<MedicationRecord> _records = [];
 
   final _nameController = TextEditingController();
   final _dosageController = TextEditingController();
@@ -106,14 +103,19 @@ class _MedicationScreenState extends State<MedicationScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FB),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF6C5CE7),
-        title: const Text('İlaç Takibi'),
+        automaticallyImplyLeading: !widget.isEmbedded,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF1E293B),
         elevation: 0,
+        title: const Text(
+          'İlaç Defteri',
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addMedication,
-        backgroundColor: const Color(0xFF6C5CE7),
-        child: const Icon(Icons.add),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        child: const Icon(Icons.add, color: Colors.white),
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -121,12 +123,12 @@ class _MedicationScreenState extends State<MedicationScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Bugünkü ilaç takibi',
+              'Bugün Verilecek İlaçlar',
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             const Text(
-              'İlaçları işaretleyerek kaçar adet alındığını takip edin.',
+              'Okulda verilmesi gereken ilaçlar için öğretmenlere talimat bırakın.',
               style: TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 20),
@@ -134,7 +136,7 @@ class _MedicationScreenState extends State<MedicationScreen> {
               child: _records.isEmpty
                   ? const Center(
                       child: Text(
-                        'Henüz ilaç eklenmedi. Sağ alt butondan ekleyebilirsiniz.',
+                        'Henüz bir ilaç talimatı bırakmadınız. Yeni talimat eklemek için + butonuna basabilirsiniz.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.black54),
                       ),
@@ -144,6 +146,7 @@ class _MedicationScreenState extends State<MedicationScreen> {
                       separatorBuilder: (_, __) => const SizedBox(height: 14),
                       itemBuilder: (context, index) {
                         final record = _records[index];
+                        final theme = Theme.of(context);
                         return Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
@@ -163,11 +166,15 @@ class _MedicationScreenState extends State<MedicationScreen> {
                               height: 48,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: record.taken ? const Color(0xFF2ECC71) : const Color(0xFF6C5CE7),
+                                color: record.taken 
+                                    ? const Color(0xFFDCFCE7) 
+                                    : theme.colorScheme.primary.withOpacity(0.1),
                               ),
                               child: Icon(
                                 record.taken ? Icons.check : Icons.medication,
-                                color: Colors.white,
+                                color: record.taken 
+                                    ? const Color(0xFF15803D) 
+                                    : theme.colorScheme.primary,
                               ),
                             ),
                             title: Text(
@@ -177,8 +184,7 @@ class _MedicationScreenState extends State<MedicationScreen> {
                             subtitle: Text('${record.dosage} • ${record.time}'),
                             trailing: Switch(
                               value: record.taken,
-                              activeThumbColor: const Color(0xFF6C5CE7),
-                              activeTrackColor: const Color(0xFFD6C7FF),
+                              activeColor: theme.colorScheme.primary,
                               onChanged: (_) => _toggleTaken(index),
                             ),
                             onTap: () => _toggleTaken(index),

@@ -128,7 +128,7 @@ class _BiometricsHistoryScreenState extends State<BiometricsHistoryScreen> {
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Text(
-          '${widget.studentName} - Sağlık Geçmişi',
+          '${widget.studentName} - Ölçüm Geçmişi',
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
         ),
         backgroundColor: Colors.white,

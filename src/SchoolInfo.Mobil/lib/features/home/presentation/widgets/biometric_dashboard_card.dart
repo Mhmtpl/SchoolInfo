@@ -234,10 +234,10 @@ class _BiometricDashboardCardState extends State<BiometricDashboardCard> with Si
               children: [
                 Row(
                   children: [
-                    Icon(Icons.favorite, color: statusColor, size: 20),
+                    Icon(Icons.sensors_rounded, color: statusColor, size: 20),
                     const SizedBox(width: 8),
                     const Text(
-                      'Canlı Biyometrik Sağlık Takibi',
+                      'Canlı Ölçüm Takibi',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -338,7 +338,7 @@ class _BiometricDashboardCardState extends State<BiometricDashboardCard> with Si
 
             // Durum etiketi ve diğer veriler (SpO2 & Ateş) satırı
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 // Durum Rozeti
                 Container(
@@ -356,24 +356,40 @@ class _BiometricDashboardCardState extends State<BiometricDashboardCard> with Si
                     ),
                   ),
                 ),
-                
-                // Oksijen ve Ateş Göstergeleri
-                Row(
-                  children: [
-                    _buildSubMetric(
-                      Icons.opacity,
-                      _spO2 != null ? '%${_spO2!.round()}' : '--',
-                      const Color(0xFF0284C7),
-                    ),
-                    const SizedBox(width: 12),
-                    _buildSubMetric(
-                      Icons.thermostat,
-                      _bodyTemp != null ? '${_bodyTemp!.toStringAsFixed(1)}°C' : '--',
-                      const Color(0xFFF59E0B),
-                    ),
-                  ],
-                ),
               ],
+            ),
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: Color(0xFFE2E8F0)),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => BiometricsHistoryScreen(
+                      studentId: widget.studentId,
+                      studentName: widget.studentName,
+                      token: widget.token,
+                      studentAge: widget.studentAge,
+                    ),
+                  ),
+                );
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.history_rounded, size: 14, color: Color(0xFF6366F1)),
+                  SizedBox(width: 6),
+                  Text(
+                    'Ölçüm Geçmişini İncele',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF6366F1),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

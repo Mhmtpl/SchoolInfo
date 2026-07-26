@@ -45,11 +45,13 @@ class WeeklySchedule {
 class ActivityScreen extends StatefulWidget {
   final String classroomId;
   final String token;
+  final bool isEmbedded;
 
   const ActivityScreen({
     super.key,
     required this.classroomId,
     required this.token,
+    this.isEmbedded = false,
   });
 
   @override
@@ -80,6 +82,15 @@ class _ActivityScreenState extends State<ActivityScreen> {
       _selectedDay = 1;
     }
     _fetchWeeklySchedule();
+  }
+
+  @override
+  void didUpdateWidget(covariant ActivityScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.classroomId != widget.classroomId || oldWidget.token != widget.token) {
+      _isLoading = true;
+      _fetchWeeklySchedule();
+    }
   }
 
   Future<void> _fetchWeeklySchedule() async {
@@ -189,6 +200,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
+        automaticallyImplyLeading: !widget.isEmbedded,
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF1E293B),
         elevation: 0,
