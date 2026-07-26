@@ -40,14 +40,16 @@ public class AccountController : Controller
 
         try
         {
-            // API üzerinden giriş yapıp JWT Token alıyoruz
-            var jwtToken = await _apiService.LoginAsync(model.Email, model.Password);
+            // API üzerinden giriş yapıp JWT Token ve Refresh Token alıyoruz
+            var loginResult = await _apiService.LoginAsync(model.Email, model.Password);
 
-            if (string.IsNullOrEmpty(jwtToken))
+            if (loginResult == null || string.IsNullOrEmpty(loginResult.Token))
             {
                 ModelState.AddModelError(string.Empty, "Kimlik doğrulama başarısız.");
                 return View(model);
             }
+
+            var jwtToken = loginResult.Token;
 
             // JWT Token'ı parse edip içindeki claim'leri okuyoruz
             var handler = new JwtSecurityTokenHandler();
@@ -84,6 +86,7 @@ public class AccountController : Controller
             }
 
             claims.Add(new Claim("AccessToken", jwtToken));
+            claims.Add(new Claim("RefreshToken", loginResult.RefreshToken));
 
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var principal = new ClaimsPrincipal(identity);
@@ -91,7 +94,7 @@ public class AccountController : Controller
             var authProperties = new AuthenticationProperties
             {
                 IsPersistent = true,
-                ExpiresUtc = DateTimeOffset.UtcNow.AddHours(2)
+                ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30)
             };
 
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, authProperties);

@@ -11,11 +11,19 @@ import '../../data/repositories/teacher_repository_impl.dart';
 import '../../../auth/domain/entities/login_result.dart';
 import '../../../auth/domain/entities/student.dart';
 
-final currentTeacherProvider = StateProvider<LoginResult?>((ref) => null);
+import '../../../../core/services/auth_storage_service.dart';
+
+final currentTeacherProvider = StateProvider<LoginResult?>((ref) {
+  final stored = AuthStorageService.currentLoginResult;
+  if (stored != null && stored.role.toLowerCase() == 'teacher') {
+    return stored;
+  }
+  return null;
+});
 
 final teacherRepositoryProvider = Provider<TeacherRepository>((ref) {
   final loginResult = ref.watch(currentTeacherProvider);
-  final token = loginResult?.token ?? '';
+  final token = loginResult?.token ?? AuthStorageService.currentToken ?? '';
   return TeacherRepositoryImpl(token);
 });
 

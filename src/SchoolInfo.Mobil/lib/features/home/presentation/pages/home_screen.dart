@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/tenant/school_id.dart';
 import '../../../auth/domain/entities/student.dart';
+import '../../../../core/services/auth_storage_service.dart';
 import '../../../auth/presentation/pages/login_screen.dart';
 import '../../data/repositories/home_repository_impl.dart';
 import '../../domain/usecases/get_home_summary.dart';
@@ -39,6 +40,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  String get _token => AuthStorageService.currentToken ?? widget.token;
   late final GetHomeSummary _getHomeSummary;
   int _selectedChildIndex = 0;
   String _classroomName = 'Yükleniyor...';
@@ -106,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Uri.parse('https://api.veliport.com.tr/api/users/me'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${widget.token}',
+          'Authorization': 'Bearer $_token',
         },
       );
       if (response.statusCode == 200) {
@@ -145,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Uri.parse('$baseUrl/api/daily-records/student/$studentId/today?date=$dateStr'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${widget.token}',
+          'Authorization': 'Bearer $_token',
         },
       );
       if (response.statusCode == 200) {
@@ -181,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Uri.parse('$baseUrl/api/classrooms/$classroomId/meal-records/detailed?date=$dateStr'),
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer ${widget.token}',
+            'Authorization': 'Bearer $_token',
           },
         );
         if (response.statusCode == 200) {
@@ -228,7 +230,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Uri.parse('$baseUrl/api/classrooms/$classroomId'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${widget.token}',
+          'Authorization': 'Bearer $_token',
         },
       );
       if (response.statusCode == 200) {
@@ -263,7 +265,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Uri.parse('$baseUrl/api/newsletters/classroom/$classroomId'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${widget.token}',
+          'Authorization': 'Bearer $_token',
         },
       );
       if (response.statusCode == 200) {
@@ -381,7 +383,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               studentId: selectedChild.id,
                               studentName: '${selectedChild.firstName} ${selectedChild.lastName}',
                               studentAge: _calculateAge(selectedChild.dateOfBirth),
-                              token: widget.token,
+                              token: _token,
                             ),
                             const SizedBox(height: 22),
 
@@ -418,7 +420,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _logout() {
+  void _logout() async {
+    await AuthStorageService.clear();
+    if (!mounted) return;
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -457,7 +461,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'MİNİ ADIMLAR ANAOKULU',
+                      selectedChild != null ? selectedChild.schoolName.toUpperCase() : 'VELİPORTAL',
                       style: TextStyle(
                         color: theme.colorScheme.primary,
                         fontSize: 10,
@@ -723,7 +727,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       MaterialPageRoute(
                         builder: (_) => MealScreen(
                           classroomId: selectedChild.classroomId,
-                          token: widget.token,
+                          token: _token,
                         ),
                       ),
                     );
@@ -776,7 +780,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       MaterialPageRoute(
                         builder: (_) => ActivityScreen(
                           classroomId: selectedChild.classroomId,
-                          token: widget.token,
+                          token: _token,
                         ),
                       ),
                     );
@@ -956,7 +960,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     builder: (_) => BiometricsHistoryScreen(
                       studentId: selectedChild.id,
                       studentName: '${selectedChild.firstName} ${selectedChild.lastName}',
-                      token: widget.token,
+                      token: _token,
                       studentAge: _calculateAge(selectedChild.dateOfBirth),
                     ),
                   ),
@@ -1077,7 +1081,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Sınıf: ${className.isNotEmpty ? className : 'Yükleniyor...'}  •  Doğum Tarihi: $dob',
+                  'Sınıf: ${child.classroomName}  •  Doğum Tarihi: $dob',
                   style: const TextStyle(
                     color: Color(0xFF64748B),
                     fontWeight: FontWeight.w600,

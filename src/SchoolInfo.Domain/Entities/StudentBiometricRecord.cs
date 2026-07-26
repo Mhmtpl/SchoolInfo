@@ -4,31 +4,38 @@ using SchoolInfo.Domain.Common;
 namespace SchoolInfo.Domain.Entities;
 
 /// <summary>
-/// Öğrencinin biyometrik sağlık verileri (Nabız, SpO2, Ateş).
+/// Öğrencinin günlük biyometrik sağlık verisi özeti ve detaylı veri noktaları (JSON formatında).
 /// </summary>
 public class StudentBiometricRecord : BaseEntity
 {
     public Guid StudentId { get; private set; }
-    public int? HeartRate { get; private set; }
-    public double? SpO2 { get; private set; }
-    public double? BodyTemperature { get; private set; }
-    public DateTime RecordedAt { get; private set; }
+    public DateTime Date { get; private set; } // Türkiye yerel tarihi (örn: 2026-07-26 00:00:00)
+    public string DataJson { get; private set; } = "[]"; // Detaylı ölçüm noktalarını tutan JSON listesi
+    public int? AverageHeartRate { get; private set; }
+    public double? AverageSpO2 { get; private set; }
+    public double? AverageBodyTemperature { get; private set; }
+    public DateTime RecordedAt { get; private set; } // Son güncelleme UTC zamanı
 
     protected StudentBiometricRecord() { }
 
     public StudentBiometricRecord(
         Guid studentId, 
-        int? heartRate, 
-        double? spO2, 
-        double? bodyTemperature, 
-        DateTime recordedAt,
+        DateTime date,
         Guid schoolId)
     {
         StudentId = studentId;
-        HeartRate = heartRate;
-        SpO2 = spO2;
-        BodyTemperature = bodyTemperature;
-        RecordedAt = DateTime.SpecifyKind(recordedAt, DateTimeKind.Utc);
+        Date = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
         SchoolId = schoolId;
+        DataJson = "[]";
+        RecordedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateData(string dataJson, int? avgHeartRate, double? avgSpO2, double? avgBodyTemp)
+    {
+        DataJson = dataJson;
+        AverageHeartRate = avgHeartRate;
+        AverageSpO2 = avgSpO2;
+        AverageBodyTemperature = avgBodyTemp;
+        RecordedAt = DateTime.UtcNow;
     }
 }

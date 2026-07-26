@@ -1,16 +1,37 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SchoolInfo.Application.Common.Interfaces;
+using SchoolInfo.Domain.Entities;
 
 namespace SchoolInfo.Infrastructure.BackgroundServices;
 
+public class BiometricDataPoint
+{
+    [JsonPropertyName("t")]
+    public string Time { get; set; } = string.Empty; // HH:mm:ss
+
+    [JsonPropertyName("hr")]
+    public int? HeartRate { get; set; }
+
+    [JsonPropertyName("sp")]
+    public double? SpO2 { get; set; }
+
+    [JsonPropertyName("temp")]
+    public double? BodyTemperature { get; set; }
+}
+
 /// <summary>
-/// Biyometrik veri kuyruğunu arka planda asenkron olarak tüketip veritabanına kaydeden
-/// ve SignalR üzerinden anlık yayınlayan arka plan servisi.
+/// Biyometrik veri kuyruğunu arka planda asenkron olarak tüketip günlük JSONB formatında veritabanına kaydeden
+/// ve SignalR üzerinden anlık gecikmesiz yayınlayan arka plan servisi.
 /// </summary>
 public class BiometricQueueProcessor : BackgroundService
 {
@@ -28,44 +49,91 @@ public class BiometricQueueProcessor : BackgroundService
         _logger = logger;
     }
 
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, DateTime> _lastSaveTimes = new();
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Biyometrik veri kuyruk işleyici başlatıldı.");
+        _logger.LogInformation("Biyometrik veri kuyruk işleyici başlatıldı (Günlük JSONB optimize).");
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                // Kuyruktan veri oku (yeni veri gelene kadar asenkron bekler)
+                // Kuyruktan veri oku
                 var record = await _queue.DequeueBiometricRecordAsync(stoppingToken);
 
-                // Scoped servisleri çözmek için yeni bir scope oluşturuyoruz
                 using (var scope = _serviceProvider.CreateScope())
                 {
                     var dbContext = scope.ServiceProvider.GetRequiredService<IAppDbContext>();
                     var notificationService = scope.ServiceProvider.GetRequiredService<IBiometricNotificationService>();
 
-                    bool shouldSaveToDb = true;
-                    if (_lastSaveTimes.TryGetValue(record.StudentId, out var lastSave))
+                    var localNow = DateTime.UtcNow.AddHours(3);
+                    var todayDate = localNow.Date;
+
+                    // 1. Öğrencinin bugünkü günlük biyometrik kaydını ara
+                    var dailyRecord = await dbContext.StudentBiometricRecords
+                        .FirstOrDefaultAsync(r => r.StudentId == record.StudentId && 
+                                                 r.Date == todayDate && 
+                                                 !r.IsDeleted, 
+                                             stoppingToken);
+
+                    if (dailyRecord == null)
                     {
-                        // Son 10 saniye içinde kayıt atıldıysa veritabanına yazma, sadece SignalR ile canlı yayınla
-                        if (DateTime.UtcNow - lastSave < TimeSpan.FromSeconds(10))
+                        // İlk kayıt: Günlük satırı oluştur
+                        dailyRecord = new StudentBiometricRecord(record.StudentId, todayDate, record.SchoolId);
+
+                        var points = new List<BiometricDataPoint>
                         {
-                            shouldSaveToDb = false;
+                            new()
+                            {
+                                Time = localNow.ToString("HH:mm:ss"),
+                                HeartRate = record.HeartRate,
+                                SpO2 = record.SpO2,
+                                BodyTemperature = record.BodyTemperature
+                            }
+                        };
+
+                        var json = JsonSerializer.Serialize(points);
+                        dailyRecord.UpdateData(json, record.HeartRate, record.SpO2, record.BodyTemperature);
+
+                        await dbContext.StudentBiometricRecords.AddAsync(dailyRecord, stoppingToken);
+                        await dbContext.SaveChangesAsync(stoppingToken);
+                    }
+                    else
+                    {
+                        // Veritabanına yazma sıklığını kontrol et: Son DB yazmasından bu yana en az 1 dakika geçmiş mi?
+                        if (DateTime.UtcNow - dailyRecord.RecordedAt >= TimeSpan.FromMinutes(1))
+                        {
+                            var points = JsonSerializer.Deserialize<List<BiometricDataPoint>>(dailyRecord.DataJson) 
+                                         ?? new List<BiometricDataPoint>();
+
+                            points.Add(new BiometricDataPoint
+                            {
+                                Time = localNow.ToString("HH:mm:ss"),
+                                HeartRate = record.HeartRate,
+                                SpO2 = record.SpO2,
+                                BodyTemperature = record.BodyTemperature
+                            });
+
+                            // Günlük ortalamaları yeniden hesapla
+                            int? avgHeartRate = points.Any(p => p.HeartRate.HasValue) 
+                                ? (int)Math.Round(points.Where(p => p.HeartRate.HasValue).Average(p => p.HeartRate!.Value)) 
+                                : (int?)null;
+
+                            double? avgSpO2 = points.Any(p => p.SpO2.HasValue) 
+                                ? Math.Round(points.Where(p => p.SpO2.HasValue).Average(p => p.SpO2!.Value), 1) 
+                                : (double?)null;
+
+                            double? avgTemp = points.Any(p => p.BodyTemperature.HasValue) 
+                                ? Math.Round(points.Where(p => p.BodyTemperature.HasValue).Average(p => p.BodyTemperature!.Value), 1) 
+                                : (double?)null;
+
+                            var json = JsonSerializer.Serialize(points);
+                            dailyRecord.UpdateData(json, avgHeartRate, avgSpO2, avgTemp);
+
+                            await dbContext.SaveChangesAsync(stoppingToken);
                         }
                     }
 
-                    if (shouldSaveToDb)
-                    {
-                        // 1. Veritabanına kaydet
-                        await dbContext.StudentBiometricRecords.AddAsync(record, stoppingToken);
-                        await dbContext.SaveChangesAsync(stoppingToken);
-                        _lastSaveTimes[record.StudentId] = DateTime.UtcNow;
-                    }
-
-                    // 2. Her durumda canlı SignalR bildirimini gönder
+                    // 2. Her durumda canlı SignalR bildirimini anlık ve gecikmesiz olarak gönder
                     await notificationService.SendBiometricUpdateAsync(
                         record.SchoolId,
                         record.StudentId,
@@ -78,12 +146,11 @@ public class BiometricQueueProcessor : BackgroundService
             }
             catch (OperationCanceledException)
             {
-                // Uygulama kapatılıyor
+                // Kapatılıyor
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Biyometrik veri işlenirken hata oluştu.");
-                // Hata durumunda CPU'yu tüketmemek için kısa bir süre bekliyoruz
                 await Task.Delay(2000, stoppingToken);
             }
         }

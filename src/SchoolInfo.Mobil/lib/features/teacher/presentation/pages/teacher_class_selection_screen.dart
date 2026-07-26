@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../auth/domain/entities/student.dart';
+import '../../../../core/services/auth_storage_service.dart';
 import '../../../auth/presentation/pages/login_screen.dart';
 import '../providers/teacher_providers.dart';
 import '../../domain/entities/classroom_activity.dart';
@@ -58,7 +59,8 @@ class TeacherClassSelectionScreen extends ConsumerWidget {
     );
   }
 
-  void _logout(BuildContext context) {
+  void _logout(BuildContext context) async {
+    await AuthStorageService.clear();
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
@@ -699,7 +701,9 @@ class _TeacherClassroomDetailScreenState
     );
   }
 
-  void _logout() {
+  void _logout() async {
+    await AuthStorageService.clear();
+    if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,

@@ -9,6 +9,8 @@ class Student {
   final String classroomId;
   final String? dailyRecordSummary;
   final String? aiSummary;
+  final String classroomName;
+  final String schoolName;
 
   const Student({
     required this.id,
@@ -18,6 +20,8 @@ class Student {
     required this.classroomId,
     this.dailyRecordSummary,
     this.aiSummary,
+    this.classroomName = 'Bilinmeyen Sınıf',
+    this.schoolName = 'Veliport Portal',
   });
 
   factory Student.fromJson(Map<String, dynamic> json) => Student(
@@ -30,6 +34,8 @@ class Student {
     classroomId: json['classroomId']?.toString() ?? '',
     dailyRecordSummary: json['dailyRecordSummary'] as String?,
     aiSummary: json['aiSummary'] as String?,
+    classroomName: json['classroomName'] as String? ?? 'Bilinmeyen Sınıf',
+    schoolName: json['schoolName'] as String? ?? 'Veliport Portal',
   );
 
   Student copyWith({
@@ -40,6 +46,8 @@ class Student {
     String? classroomId,
     String? dailyRecordSummary,
     String? aiSummary,
+    String? classroomName,
+    String? schoolName,
   }) {
     return Student(
       id: id ?? this.id,
@@ -49,6 +57,20 @@ class Student {
       classroomId: classroomId ?? this.classroomId,
       dailyRecordSummary: dailyRecordSummary ?? this.dailyRecordSummary,
       aiSummary: aiSummary ?? this.aiSummary,
+      classroomName: classroomName ?? this.classroomName,
+      schoolName: schoolName ?? this.schoolName,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'firstName': firstName,
+    'lastName': lastName,
+    'dateOfBirth': dateOfBirth.toIso8601String(),
+    'classroomId': classroomId,
+    'dailyRecordSummary': dailyRecordSummary,
+    'aiSummary': aiSummary,
+    'classroomName': classroomName,
+    'schoolName': schoolName,
+  };
 }

@@ -38,6 +38,7 @@ class AuthRepositoryImpl implements AuthRepository {
         jsonDecode(response.body) as Map<String, dynamic>;
     // Backend dönen JSON'da 'token' veya 'Token' olabilir.
     final token = (body['token'] ?? body['Token']) as String?;
+    final refreshToken = (body['refreshToken'] ?? body['RefreshToken']) as String?;
     if (token == null || token.isEmpty) {
       throw Exception('Sunucudan geçerli bir token alınamadı.');
     }
@@ -77,6 +78,7 @@ class AuthRepositoryImpl implements AuthRepository {
         lastName: '',
         role: '',
         token: token,
+        refreshToken: refreshToken,
       );
     }
 
@@ -194,6 +196,7 @@ class AuthRepositoryImpl implements AuthRepository {
       lastName: lastName,
       role: role,
       token: token,
+      refreshToken: refreshToken,
       students: students,
     );
   }

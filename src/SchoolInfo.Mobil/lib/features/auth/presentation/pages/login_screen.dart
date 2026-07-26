@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/auth_storage_service.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../domain/entities/login_credentials.dart';
 import '../../domain/usecases/login_usecase.dart';
@@ -49,6 +50,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           password: _passwordController.text.trim(),
         ),
       );
+
+      await AuthStorageService.saveLoginResult(result);
 
       if (!mounted) return;
       if (result.role.toLowerCase() == 'teacher') {
@@ -146,7 +149,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    'Mini Adımlar',
+                    'Veliportal',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 28,
@@ -156,7 +159,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Okul Yönetim Portalı',
+                    'Veli Bilgilendirme Portalı',
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.6),
                       fontSize: 15,

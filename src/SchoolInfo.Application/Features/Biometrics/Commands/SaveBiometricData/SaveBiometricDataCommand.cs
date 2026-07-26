@@ -59,18 +59,18 @@ public class SaveBiometricDataCommandHandler : IRequestHandler<SaveBiometricData
             return false;
         }
 
-        // Biyometrik kaydı oluştur
-        var biometricRecord = new StudentBiometricRecord(
+        // Biyometrik kuyruk öğesini oluştur
+        var queueItem = new BiometricQueueItem(
             student.Id,
+            student.SchoolId,
             request.HeartRate,
             request.SpO2,
             request.BodyTemperature,
-            DateTime.UtcNow,
-            student.SchoolId
+            DateTime.UtcNow
         );
 
         // Kuyruğa ekle
-        await _backgroundQueue.QueueBiometricRecordAsync(biometricRecord);
+        await _backgroundQueue.QueueBiometricRecordAsync(queueItem);
         return true;
     }
 }

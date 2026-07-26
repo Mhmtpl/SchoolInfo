@@ -1,10 +1,13 @@
 using System;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using SchoolInfo.Web.Models;
@@ -38,18 +41,27 @@ public class SchoolInfoApiService
         PublicApiUrl = configuration["PublicApiUrl"] ?? apiUrl;
     }
 
-    private void AttachAuthorizationHeader()
+    private async Task AttachAuthorizationHeaderAsync()
     {
-        var user = _httpContextAccessor.HttpContext?.User;
+        var httpContext = _httpContextAccessor.HttpContext;
+        var user = httpContext?.User;
         var tokenClaim = user?.FindFirst("AccessToken")?.Value;
 
-        System.Console.WriteLine($"[DIAGNOSTIC] tokenClaim degeri: '{tokenClaim}'");
-        if (user?.Identity?.IsAuthenticated == true)
+        if (user?.Identity?.IsAuthenticated == true && !string.IsNullOrEmpty(tokenClaim))
         {
-            System.Console.WriteLine("[DIAGNOSTIC] Mevcut Claims:");
-            foreach (var c in user.Claims)
+            var jwtHandler = new JwtSecurityTokenHandler();
+            if (jwtHandler.CanReadToken(tokenClaim))
             {
-                System.Console.WriteLine($"  Type: '{c.Type}', Value: '{c.Value}'");
+                var jwtToken = jwtHandler.ReadJwtToken(tokenClaim);
+                // Eğer access token süresi dolmuşsa veya 5 dakikadan az kalmışsa yenile
+                if (jwtToken.ValidTo < DateTime.UtcNow.AddMinutes(5))
+                {
+                    var refreshed = await RefreshTokensAsync();
+                    if (refreshed && httpContext != null)
+                    {
+                        tokenClaim = httpContext.User.FindFirst("AccessToken")?.Value;
+                    }
+                }
             }
         }
 
@@ -63,11 +75,63 @@ public class SchoolInfoApiService
         }
     }
 
+    private async Task<bool> RefreshTokensAsync()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+        if (httpContext == null) return false;
+
+        var user = httpContext.User;
+        var refreshToken = user.FindFirst("RefreshToken")?.Value;
+        if (string.IsNullOrEmpty(refreshToken)) return false;
+
+        try
+        {
+            // API'ye refresh isteği atıyoruz. Authorization header eklememek için doğrudan PostAsJsonAsync çağrısı yapıyoruz.
+            var response = await _httpClient.PostAsJsonAsync("api/auth/refresh", new { RefreshToken = refreshToken });
+            if (!response.IsSuccessStatusCode)
+            {
+                // Refresh token geçersiz ise kullanıcının oturumunu kapat
+                await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                return false;
+            }
+
+            var refreshResult = await response.Content.ReadFromJsonAsync<LoginResponse>();
+            if (refreshResult == null || string.IsNullOrEmpty(refreshResult.Token)) return false;
+
+            var identity = user.Identity as ClaimsIdentity;
+            if (identity != null)
+            {
+                var oldAccessToken = identity.FindFirst("AccessToken");
+                if (oldAccessToken != null) identity.RemoveClaim(oldAccessToken);
+
+                var oldRefreshToken = identity.FindFirst("RefreshToken");
+                if (oldRefreshToken != null) identity.RemoveClaim(oldRefreshToken);
+
+                identity.AddClaim(new Claim("AccessToken", refreshResult.Token));
+                identity.AddClaim(new Claim("RefreshToken", refreshResult.RefreshToken));
+
+                var authProperties = new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30)
+                };
+
+                await httpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity), authProperties);
+                return true;
+            }
+        }
+        catch
+        {
+            // ignore
+        }
+        return false;
+    }
+
     // --- GENEL HTTP METOTLARI ---
 
     public async Task<T?> GetAsync<T>(string relativeUri)
     {
-        AttachAuthorizationHeader();
+        await AttachAuthorizationHeaderAsync();
         var response = await _httpClient.GetAsync(relativeUri);
 
         if (response.StatusCode == HttpStatusCode.NotFound)
@@ -82,7 +146,7 @@ public class SchoolInfoApiService
 
     public async Task<byte[]> GetByteArrayAsync(string relativeUri)
     {
-        AttachAuthorizationHeader();
+        await AttachAuthorizationHeaderAsync();
         var response = await _httpClient.GetAsync(relativeUri);
 
         if (response.StatusCode == HttpStatusCode.Forbidden || response.StatusCode == HttpStatusCode.Unauthorized)
@@ -93,9 +157,8 @@ public class SchoolInfoApiService
     }
 
     public async Task<TResponse?> PostAsync<TRequest, TResponse>(string relativeUri, TRequest payload)
-
     {
-        AttachAuthorizationHeader();
+        await AttachAuthorizationHeaderAsync();
         var response = await _httpClient.PostAsJsonAsync(relativeUri, payload);
 
         if (response.StatusCode == HttpStatusCode.Forbidden || response.StatusCode == HttpStatusCode.Unauthorized)
@@ -107,7 +170,7 @@ public class SchoolInfoApiService
 
     public async Task PostAsync<TRequest>(string relativeUri, TRequest payload)
     {
-        AttachAuthorizationHeader();
+        await AttachAuthorizationHeaderAsync();
         var response = await _httpClient.PostAsJsonAsync(relativeUri, payload);
 
         if (response.StatusCode == HttpStatusCode.Forbidden || response.StatusCode == HttpStatusCode.Unauthorized)
@@ -118,7 +181,7 @@ public class SchoolInfoApiService
 
     public async Task PutAsync<TRequest>(string relativeUri, TRequest payload)
     {
-        AttachAuthorizationHeader();
+        await AttachAuthorizationHeaderAsync();
         var response = await _httpClient.PutAsJsonAsync(relativeUri, payload);
 
         if (response.StatusCode == HttpStatusCode.Forbidden || response.StatusCode == HttpStatusCode.Unauthorized)
@@ -129,7 +192,7 @@ public class SchoolInfoApiService
 
     public async Task DeleteAsync(string relativeUri)
     {
-        AttachAuthorizationHeader();
+        await AttachAuthorizationHeaderAsync();
         var response = await _httpClient.DeleteAsync(relativeUri);
 
         if (response.StatusCode == HttpStatusCode.Forbidden || response.StatusCode == HttpStatusCode.Unauthorized)
@@ -140,14 +203,13 @@ public class SchoolInfoApiService
 
     // --- AUTHENTICATION SPECIFIC ---
 
-    public async Task<string> LoginAsync(string email, string password)
+    public async Task<LoginResponse?> LoginAsync(string email, string password)
     {
         var response = await _httpClient.PostAsJsonAsync("api/auth/login", new LoginModel { Email = email, Password = password });
         
         if (!response.IsSuccessStatusCode)
             throw new InvalidOperationException("E-posta veya şifre hatalı.");
 
-        var loginResult = await response.Content.ReadFromJsonAsync<LoginResponse>();
-        return loginResult?.Token ?? string.Empty;
+        return await response.Content.ReadFromJsonAsync<LoginResponse>();
     }
 }

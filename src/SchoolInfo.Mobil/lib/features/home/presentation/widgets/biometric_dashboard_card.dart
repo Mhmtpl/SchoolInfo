@@ -256,7 +256,7 @@ class _BiometricDashboardCardState extends State<BiometricDashboardCard> with Si
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    _hubStatus == "Bağlandı" ? 'Bulut Canlı' : 'Bağlanıyor...',
+                    _hubStatus == "Bağlandı" ? 'Canlı' : 'Bağlanıyor...',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,

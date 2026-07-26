@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -12,6 +14,21 @@ namespace SchoolInfo.Application.Features.Biometrics.Queries.GetStudentBiometric
 public record GetStudentBiometricsQuery(Guid StudentId, DateTime? Date, string? Range = null) : IRequest<List<StudentBiometricDto>>;
 
 public record StudentBiometricDto(Guid Id, int? HeartRate, double? SpO2, double? BodyTemperature, DateTime RecordedAt);
+
+public class QueryBiometricDataPoint
+{
+    [JsonPropertyName("t")]
+    public string Time { get; set; } = string.Empty;
+
+    [JsonPropertyName("hr")]
+    public int? HeartRate { get; set; }
+
+    [JsonPropertyName("sp")]
+    public double? SpO2 { get; set; }
+
+    [JsonPropertyName("temp")]
+    public double? BodyTemperature { get; set; }
+}
 
 public class GetStudentBiometricsQueryHandler : IRequestHandler<GetStudentBiometricsQuery, List<StudentBiometricDto>>
 {
@@ -67,55 +84,72 @@ public class GetStudentBiometricsQueryHandler : IRequestHandler<GetStudentBiomet
             int days = request.Range == "30days" ? 30 : 7;
             var startLocal = DateTime.UtcNow.AddHours(3).Date.AddDays(-days);
             var endLocal = DateTime.UtcNow.AddHours(3).Date.AddDays(1); // Yarına kadar
-            
-            var start = DateTime.SpecifyKind(startLocal.AddHours(-3), DateTimeKind.Utc);
-            var end = DateTime.SpecifyKind(endLocal.AddHours(-3), DateTimeKind.Utc);
+            var startUtc = DateTime.SpecifyKind(startLocal, DateTimeKind.Utc);
+            var endUtc = DateTime.SpecifyKind(endLocal, DateTimeKind.Utc);
 
+            // Günlük kayıtları doğrudan pre-calculated alanlardan listele (Milyonlarca veri taramadan ultra hızlı)
             var raw = await _dbContext.StudentBiometricRecords
                 .Where(r => r.StudentId == request.StudentId && 
                             r.SchoolId == _currentUserService.SchoolId &&
-                            r.RecordedAt >= start && 
-                            r.RecordedAt < end && 
+                            r.Date >= startUtc && 
+                            r.Date < endUtc && 
                             !r.IsDeleted)
+                .OrderBy(r => r.Date)
                 .ToListAsync(cancellationToken);
 
-            var grouped = raw
-                .GroupBy(r => r.RecordedAt.AddHours(3).Date)
-                .OrderBy(g => g.Key)
-                .Select(g => new StudentBiometricDto(
-                    Guid.Empty,
-                    g.Any(x => x.HeartRate.HasValue) ? (int)Math.Round(g.Where(x => x.HeartRate.HasValue).Average(x => x.HeartRate.Value)) : (int?)null,
-                    g.Any(x => x.SpO2.HasValue) ? Math.Round(g.Where(x => x.SpO2.HasValue).Average(x => x.SpO2.Value), 1) : (double?)null,
-                    g.Any(x => x.BodyTemperature.HasValue) ? Math.Round(g.Where(x => x.BodyTemperature.HasValue).Average(x => x.BodyTemperature.Value), 1) : (double?)null,
-                    g.Key
+            var list = raw
+                .Select(r => new StudentBiometricDto(
+                    r.Id,
+                    r.AverageHeartRate,
+                    r.AverageSpO2,
+                    r.AverageBodyTemperature,
+                    DateTime.SpecifyKind(r.Date, DateTimeKind.Utc)
                 ))
                 .ToList();
 
-            return grouped;
+            return list;
         }
 
         // 4. Tek bir tarihteki biyometrik kayıtları getir (Canlı akış grafiği için)
-        var targetDate = request.Date ?? DateTime.UtcNow.AddHours(3).Date;
-        // Turkey timezone (UTC+3) offset correction
-        var startDate = DateTime.SpecifyKind(targetDate.Date.AddHours(-3), DateTimeKind.Utc);
-        var endDate = startDate.AddDays(1);
+        var targetDate = (request.Date ?? DateTime.UtcNow.AddHours(3).Date).Date;
+        var targetDateUtc = DateTime.SpecifyKind(targetDate, DateTimeKind.Utc);
 
-        var records = await _dbContext.StudentBiometricRecords
-            .Where(r => r.StudentId == request.StudentId && 
-                        r.SchoolId == _currentUserService.SchoolId &&
-                        r.RecordedAt >= startDate && 
-                        r.RecordedAt < endDate && 
-                        !r.IsDeleted)
-            .OrderBy(r => r.RecordedAt)
-            .Select(r => new StudentBiometricDto(
-                r.Id,
-                r.HeartRate,
-                r.SpO2,
-                r.BodyTemperature,
-                r.RecordedAt
-            ))
-            .ToListAsync(cancellationToken);
+        var dailyRecord = await _dbContext.StudentBiometricRecords
+            .FirstOrDefaultAsync(r => r.StudentId == request.StudentId && 
+                                     r.SchoolId == _currentUserService.SchoolId &&
+                                     r.Date == targetDateUtc && 
+                                     !r.IsDeleted, 
+                                 cancellationToken);
 
-        return records;
+        if (dailyRecord == null || string.IsNullOrEmpty(dailyRecord.DataJson))
+        {
+            return new List<StudentBiometricDto>();
+        }
+
+        // JSON dizisini çöz ve DTO listesine dönüştür
+        var points = JsonSerializer.Deserialize<List<QueryBiometricDataPoint>>(dailyRecord.DataJson) 
+                     ?? new List<QueryBiometricDataPoint>();
+
+        var records = new List<StudentBiometricDto>();
+        foreach (var point in points)
+        {
+            if (TimeSpan.TryParse(point.Time, out var timeOffset))
+            {
+                // Türkiye yerel tarihi ve saatini birleştir
+                var localTime = targetDate.Add(timeOffset);
+                // UTC zaman damgasına çevir (Örn: +3 saat çıkararak)
+                var recordedAtUtc = DateTime.SpecifyKind(localTime.AddHours(-3), DateTimeKind.Utc);
+
+                records.Add(new StudentBiometricDto(
+                    dailyRecord.Id,
+                    point.HeartRate,
+                    point.SpO2,
+                    point.BodyTemperature,
+                    recordedAtUtc
+                ));
+            }
+        }
+
+        return records.OrderBy(r => r.RecordedAt).ToList();
     }
 }

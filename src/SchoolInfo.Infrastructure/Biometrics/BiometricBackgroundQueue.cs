@@ -2,7 +2,6 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using SchoolInfo.Application.Common.Interfaces;
-using SchoolInfo.Domain.Entities;
 
 namespace SchoolInfo.Infrastructure.Biometrics;
 
@@ -11,27 +10,26 @@ namespace SchoolInfo.Infrastructure.Biometrics;
 /// </summary>
 public class BiometricBackgroundQueue : IBiometricBackgroundQueue
 {
-    private readonly Channel<StudentBiometricRecord> _queue;
+    private readonly Channel<BiometricQueueItem> _queue;
 
     public BiometricBackgroundQueue()
     {
         // En fazla 5000 kaydı bellekte tutacak şekilde sınırlandırıyoruz (OOM önleme).
-        // Kuyruk dolarsa yeni gelen veri yazılırken bekler veya drop edilir.
         var options = new BoundedChannelOptions(5000)
         {
-            FullMode = BoundedChannelFullMode.DropOldest, // Kuyruk dolarsa en eski okunmamış veriyi düşür
+            FullMode = BoundedChannelFullMode.DropOldest,
             SingleWriter = false,
             SingleReader = true
         };
-        _queue = Channel.CreateBounded<StudentBiometricRecord>(options);
+        _queue = Channel.CreateBounded<BiometricQueueItem>(options);
     }
 
-    public async ValueTask QueueBiometricRecordAsync(StudentBiometricRecord record)
+    public async ValueTask QueueBiometricRecordAsync(BiometricQueueItem record)
     {
         await _queue.Writer.WriteAsync(record);
     }
 
-    public async ValueTask<StudentBiometricRecord> DequeueBiometricRecordAsync(CancellationToken cancellationToken)
+    public async ValueTask<BiometricQueueItem> DequeueBiometricRecordAsync(CancellationToken cancellationToken)
     {
         return await _queue.Reader.ReadAsync(cancellationToken);
     }

@@ -1033,13 +1033,20 @@
             const spo2Data = [];
             const tempData = [];
 
-            // Başlangıç verilerini doldur
+            // Başlangıç verilerini doldur (camelCase ve PascalCase uyumlu)
             initialBiometrics.forEach(item => {
-                const timeStr = new Date(item.RecordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                chartLabels.push(timeStr);
-                heartRateData.push(item.HeartRate);
-                spo2Data.push(item.SpO2);
-                tempData.push(item.BodyTemperature);
+                const rawDate = item.RecordedAt || item.recordedAt;
+                const heartRate = item.HeartRate !== undefined ? item.HeartRate : item.heartRate;
+                const spo2 = item.SpO2 !== undefined ? item.SpO2 : item.spO2;
+                const temp = item.BodyTemperature !== undefined ? item.BodyTemperature : item.bodyTemperature;
+
+                if (rawDate) {
+                    const timeStr = new Date(rawDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    chartLabels.push(timeStr);
+                    heartRateData.push(heartRate);
+                    spo2Data.push(spo2);
+                    tempData.push(temp);
+                }
             });
 
             // --- Canlı ECG Monitörü Kodları ---
@@ -1390,14 +1397,19 @@
                 }
             }, 3000);
 
-            // Son değerleri ekranda göster ve ECG'yi kur
+            // Son değerleri ekranda göster ve ECG'yi kur (camelCase ve PascalCase uyumlu)
             if (initialBiometrics.length > 0) {
                 const lastRecord = initialBiometrics[initialBiometrics.length - 1];
-                if (lastRecord.HeartRate) {
-                    document.getElementById('live-heartrate').innerText = lastRecord.HeartRate;
+                const lastHeartRate = lastRecord.HeartRate !== undefined ? lastRecord.HeartRate : lastRecord.heartRate;
+                const lastSpO2 = lastRecord.SpO2 !== undefined ? lastRecord.SpO2 : lastRecord.spO2;
+                const lastTemp = lastRecord.BodyTemperature !== undefined ? lastRecord.BodyTemperature : lastRecord.bodyTemperature;
+                const lastRecordedAt = lastRecord.RecordedAt || lastRecord.recordedAt;
+
+                if (lastHeartRate) {
+                    document.getElementById('live-heartrate').innerText = lastHeartRate;
                     
                     // Son veri 2 dakikadan eskiyse çevrimdışı başlat
-                    const lastRecTime = new Date(lastRecord.RecordedAt).getTime();
+                    const lastRecTime = new Date(lastRecordedAt).getTime();
                     const nowTime = new Date().getTime();
                     if (Math.abs(nowTime - lastRecTime) > 120000) {
                         lastUpdateTime = 0; // Çevrimdışına düşür
@@ -1422,13 +1434,15 @@
                             }
                         }, 50);
                     } else {
-                        updateEcgBpm(lastRecord.HeartRate);
+                        updateEcgBpm(lastHeartRate);
                         lastUpdateTime = Date.now();
                     }
                 }
-                if (lastRecord.SpO2) document.getElementById('live-spo2').innerText = lastRecord.SpO2;
-                if (lastRecord.BodyTemperature) document.getElementById('live-temp').innerText = lastRecord.BodyTemperature.toFixed(1);
-                document.getElementById('live-timestamp').innerText = new Date(lastRecord.RecordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                if (lastSpO2) document.getElementById('live-spo2').innerText = lastSpO2;
+                if (lastTemp) document.getElementById('live-temp').innerText = lastTemp.toFixed(1);
+                if (lastRecordedAt) {
+                    document.getElementById('live-timestamp').innerText = new Date(lastRecordedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                }
             }
 
             // Animasyonu başlat
