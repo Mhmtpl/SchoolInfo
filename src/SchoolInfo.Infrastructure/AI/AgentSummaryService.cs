@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -45,6 +45,6 @@ public class AgentSummaryService : IAISummaryService
 
     private string GetFallbackMessage(string studentName)
     {
-        return $"{studentName} bugÃ¼n okulda gÃ¼zel vakit geÃ§irdi. Detaylar iÃ§in Ã¶ÄŸretmeniyle iletiÅŸime geÃ§ebilirsiniz.";
+        return $"{studentName} bugün okulda güzel vakit geçirdi. Detaylar için öğretmeniyle iletişime geçebilirsiniz.";
     }
 }
