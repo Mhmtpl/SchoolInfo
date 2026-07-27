@@ -33,9 +33,11 @@ class AuthRepositoryImpl implements AuthRepository {
         throw Exception('E-posta veya şifre hatalı.');
       } else if (response.statusCode == 429) {
         throw Exception('Çok fazla giriş denemesi yaptınız. Lütfen daha sonra tekrar deneyin.');
+      } else if (response.statusCode >= 500) {
+        throw Exception('Sunucuya ulaşılamıyor veya sunucuda geçici bir sorun var (Hata Kodu: ${response.statusCode}). Lütfen daha sonra tekrar deneyin.');
       } else {
         throw Exception(
-          'Giriş başarısız. Sunucu durumu: ${response.statusCode}.',
+          'Giriş başarısız. Lütfen bilgilerinizi kontrol edip tekrar deneyin.',
         );
       }
     }
