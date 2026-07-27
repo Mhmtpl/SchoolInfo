@@ -61,6 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late String _currentEmail;
   late String _currentClassroom;
   late String _currentPhone;
+  late Future<HomeSummary> _homeSummaryFuture;
 
   Student? get _selectedChild {
     if (widget.students == null || widget.students!.isEmpty) return null;
@@ -75,6 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     // Home ekranı açıldığında veri almak için use case oluşturulur.
     _getHomeSummary = GetHomeSummary(HomeRepositoryImpl());
+    _homeSummaryFuture = _getHomeSummary(widget.schoolId);
     _currentFirstName = widget.userFirstName ?? '';
     _currentLastName = widget.userLastName ?? '';
     _currentEmail = widget.userEmail ?? '';
@@ -728,7 +730,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<HomeSummary>(
-      future: _getHomeSummary(widget.schoolId),
+      future: _homeSummaryFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
