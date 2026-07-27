@@ -30,7 +30,7 @@ services:
       - Jwt__Audience=SchoolInfoUsers
       - Jwt__Key=${JWT_KEY}
       - AgentFramework__ApiKey=${GEMINI_API_KEY}
-      - AgentFramework__Model=gemini-3.1-flash-lite
+      - AgentFramework__Model=gemini-1.5-flash
       - AgentFramework__ProjectName=SchoolInfoAI
     depends_on:
       - schoolinfo-db

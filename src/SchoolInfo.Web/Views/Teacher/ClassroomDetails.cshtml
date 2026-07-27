@@ -224,7 +224,7 @@
 
         @{
             var todayActivities = activities.Where(a => a.ActivityDate.Date == DateTime.UtcNow.AddHours(3).Date).ToList();
-            var currentTime = DateTime.UtcNow.ToLocalTime().TimeOfDay;
+            var currentTime = DateTime.UtcNow.AddHours(3).TimeOfDay;
         }
 
         @if (todayActivities.Count == 0)
@@ -2647,6 +2647,7 @@
         // --- YAPAY ZEKA TOPLU VERİ GİRİŞİ (AI) ---
         let voiceRecognition = null;
         let isRecording = false;
+        let initialInputValue = '';
 
         function toggleVoiceRecord() {
             const btn = document.getElementById('btn-record-voice');
@@ -2675,8 +2676,8 @@
 
                 voiceRecognition.onresult = (event) => {
                     const transcript = event.results[0][0].transcript;
-                    if (input.value) {
-                        input.value += ' ' + transcript;
+                    if (initialInputValue) {
+                        input.value = initialInputValue + ' ' + transcript;
                     } else {
                         input.value = transcript;
                     }
@@ -2697,6 +2698,7 @@
             if (isRecording) {
                 voiceRecognition.stop();
             } else {
+                initialInputValue = input.value.trim();
                 voiceRecognition.start();
             }
         }

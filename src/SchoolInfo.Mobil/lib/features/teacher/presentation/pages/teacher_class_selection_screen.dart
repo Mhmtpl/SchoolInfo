@@ -2615,11 +2615,11 @@ class _TeacherClassroomDetailScreenState
                       shape: BoxShape.circle,
                       color: _isListening
                           ? const Color(0xFF10B981)
-                          : theme.colorScheme.secondary.withOpacity(0.08),
+                          : theme.colorScheme.primary.withOpacity(0.08),
                       border: Border.all(
                         color: _isListening
                             ? const Color(0xFF34D399)
-                            : theme.colorScheme.secondary.withOpacity(0.2),
+                            : theme.colorScheme.primary.withOpacity(0.2),
                         width: _isListening ? 6 : 2,
                       ),
                       boxShadow: _isListening
@@ -2634,7 +2634,7 @@ class _TeacherClassroomDetailScreenState
                     ),
                     child: Icon(
                       _isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
-                      color: _isListening ? Colors.white : theme.colorScheme.secondary,
+                      color: _isListening ? Colors.white : theme.colorScheme.primary,
                       size: 32,
                     ),
                   ),

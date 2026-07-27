@@ -542,7 +542,7 @@
                     }
                     else
                     {
-                        var currentTime = DateTime.UtcNow.ToLocalTime().TimeOfDay;
+                        var currentTime = DateTime.UtcNow.AddHours(3).TimeOfDay;
                         <div class="timeline">
                             @foreach (var activity in activities.OrderBy(a => a.StartTime))
                             {
