@@ -81,12 +81,16 @@ class _HomeScreenState extends State<HomeScreen> {
     _currentClassroom = '';
     _currentPhone = '';
 
-    // İlk seçili çocuğun verilerini çekelim
+    // İlk seçili çocuğun verilerini çekelim (Animasyonun bitmesini bekleyerek)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final initialChild = _selectedChild;
-      if (initialChild != null) {
-        _loadAllChildData(initialChild.id, initialChild.classroomId);
-      }
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (mounted) {
+          final initialChild = _selectedChild;
+          if (initialChild != null) {
+            _loadAllChildData(initialChild.id, initialChild.classroomId);
+          }
+        }
+      });
     });
   }
 
