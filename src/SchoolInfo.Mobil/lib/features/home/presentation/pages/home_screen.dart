@@ -49,13 +49,13 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentTabIndex = 0;
   String _classroomName = 'Yükleniyor...';
   List<dynamic> _newsletters = [];
-  bool _isClassroomLoading = false;
-  bool _isNewslettersLoading = false;
+  bool _isClassroomLoading = true;
+  bool _isNewslettersLoading = true;
   int _waterIntake = 0;
   String _sleepStatusText = 'Belirtilmemiş';
   String _teacherNote = '';
   List<dynamic> _meals = [];
-  bool _isLoadingDailyDetails = false;
+  bool _isLoadingDailyDetails = true;
   late String _currentFirstName;
   late String _currentLastName;
   late String _currentEmail;
@@ -88,6 +88,12 @@ class _HomeScreenState extends State<HomeScreen> {
           final initialChild = _selectedChild;
           if (initialChild != null) {
             _loadAllChildData(initialChild.id, initialChild.classroomId);
+          } else {
+            setState(() {
+              _isClassroomLoading = false;
+              _isNewslettersLoading = false;
+              _isLoadingDailyDetails = false;
+            });
           }
         }
       });
