@@ -29,9 +29,15 @@ class AuthRepositoryImpl implements AuthRepository {
     );
 
     if (response.statusCode != 200) {
-      throw Exception(
-        'Giriş başarısız. Sunucu durumu: ${response.statusCode}.',
-      );
+      if (response.statusCode == 401) {
+        throw Exception('E-posta veya şifre hatalı.');
+      } else if (response.statusCode == 429) {
+        throw Exception('Çok fazla giriş denemesi yaptınız. Lütfen daha sonra tekrar deneyin.');
+      } else {
+        throw Exception(
+          'Giriş başarısız. Sunucu durumu: ${response.statusCode}.',
+        );
+      }
     }
 
     final Map<String, dynamic> body =

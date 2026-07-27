@@ -161,7 +161,7 @@
                     {
                         var rowId = record.StudentId.ToString();
                         
-                        <tr id="row-@rowId" class="@(record.IsAbsent ? "absent-row" : "")">
+                        <tr id="row-@rowId" class="@(record.IsAbsent ? "absent-row" : "")" data-student-name="@record.FirstName @record.LastName">
                             <td>
                                 <div class="student-info">
                                     @record.FirstName @record.LastName
@@ -1297,11 +1297,16 @@
                         if (rateValEl && badgeEl) {
                             rateValEl.innerText = update.heartRate;
                             
-                            // Duruma göre renk ataması
-                            if (update.heartRate > 130) {
+                            // Duruma göre renk ataması ve kritik uyarı tetikleme
+                            if (update.heartRate > 130 || update.heartRate < 60) {
                                 badgeEl.style.background = 'rgba(239, 68, 68, 0.15)';
                                 badgeEl.style.color = '#dc2626';
                                 badgeEl.classList.add('pulse-animation');
+                                
+                                // Öğretmen paneline anlık görsel uyarı kartı çıkar
+                                const rowEl = document.getElementById(`row-${studentId}`);
+                                const studentName = rowEl ? rowEl.getAttribute('data-student-name') : 'Öğrenci';
+                                showBiometricAlert(studentId, studentName, update.heartRate);
                             } else if (update.heartRate > 100) {
                                 badgeEl.style.background = 'rgba(245, 158, 11, 0.1)';
                                 badgeEl.style.color = '#d97706';
@@ -1315,6 +1320,98 @@
                     }
                 }
             });
+
+            function showBiometricAlert(studentId, studentName, bpm) {
+                let container = document.getElementById('biometric-alerts-container');
+                if (!container) {
+                    container = document.createElement('div');
+                    container.id = 'biometric-alerts-container';
+                    container.style.position = 'fixed';
+                    container.style.top = '20px';
+                    container.style.right = '20px';
+                    container.style.zIndex = '99999';
+                    container.style.display = 'flex';
+                    container.style.flexDirection = 'column';
+                    container.style.gap = '10px';
+                    document.body.appendChild(container);
+                }
+
+                const alertId = `alert-student-${studentId}`;
+                let alertEl = document.getElementById(alertId);
+                if (alertEl) {
+                    alertEl.querySelector('.alert-bpm').innerText = bpm;
+                    alertEl.querySelector('.alert-time').innerText = new Date().toLocaleTimeString();
+                    alertEl.style.animation = 'none';
+                    alertEl.offsetHeight; // trigger reflow
+                    alertEl.style.animation = 'shakeAlert 0.4s ease-in-out';
+                    return;
+                }
+
+                alertEl = document.createElement('div');
+                alertEl.id = alertId;
+                alertEl.style.background = '#fef2f2';
+                alertEl.style.borderLeft = '6px solid #dc2626';
+                alertEl.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
+                alertEl.style.borderRadius = '8px';
+                alertEl.style.padding = '14px 18px';
+                alertEl.style.minWidth = '320px';
+                alertEl.style.color = '#7f1d1d';
+                alertEl.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+                alertEl.style.display = 'flex';
+                alertEl.style.alignItems = 'center';
+                alertEl.style.gap = '12px';
+                alertEl.style.animation = 'slideInAlert 0.3s ease-out';
+
+                if (!document.getElementById('biometric-alert-styles')) {
+                    const style = document.createElement('style');
+                    style.id = 'biometric-alert-styles';
+                    style.innerText = `
+                        @@keyframes slideInAlert {
+                            from { transform: translateX(120%); opacity: 0; }
+                            to { transform: translateX(0); opacity: 1; }
+                        }
+                        @@keyframes slideOutAlert {
+                            from { transform: translateX(0); opacity: 1; }
+                            to { transform: translateX(120%); opacity: 0; }
+                        }
+                        @@keyframes shakeAlert {
+                            0%, 100% { transform: translateX(0); }
+                            25% { transform: translateX(-6px); }
+                            75% { transform: translateX(6px); }
+                        }
+                        @@keyframes alertPulse {
+                            0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+                            70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+                            100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+
+                alertEl.innerHTML = `
+                    <div style="background: #fee2e2; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; animation: alertPulse 1.5s infinite;">
+                        <svg style="width: 20px; height: 20px; color: #dc2626;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                    </div>
+                    <div style="flex-grow: 1;">
+                        <div style="font-weight: 700; font-size: 13px; margin-bottom: 2px;">Kritik Nabız Uyarısı</div>
+                        <div style="font-size: 11px; color: #991b1b; font-weight: 500;">
+                            <strong>${studentName}</strong>: <span class="alert-bpm">${bpm}</span> BPM (<span class="alert-time">${new Date().toLocaleTimeString()}</span>)
+                        </div>
+                    </div>
+                    <button onclick="this.parentElement.remove()" style="background: transparent; border: none; color: #991b1b; font-weight: 700; font-size: 18px; cursor: pointer; padding: 0 4px; display: flex; align-items: center; justify-content: center;">&times;</button>
+                `;
+
+                container.appendChild(alertEl);
+
+                setTimeout(() => {
+                    if (alertEl.parentElement) {
+                        alertEl.style.animation = 'slideOutAlert 0.3s ease-in forwards';
+                        setTimeout(() => alertEl.remove(), 300);
+                    }
+                }, 8000);
+            }
 
             connection.start()
                 .then(() => {

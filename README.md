@@ -3,6 +3,9 @@
 > Anaokulları ve kreşler için AI destekli, multi-tenant okul yönetim platformu.  
 > Öğretmen-veli iletişimini güçlendirir, günlük rutinleri takip eder ve yapay zeka ile kişiselleştirilmiş özetler üretir.
 
+> [!NOTE]
+> Yapay zeka (AI) ajanları ve yeni geliştiriciler için hazırlanan teknik uyum kılavuzuna **[AI_CONTEXT.md](file:///C:/Users/mhmtp/Desktop/1-Projeler/Work/SchoolInfo/AI_CONTEXT.md)** dosyasından erişebilirsiniz.
+
 ---
 
 ## 🚀 Kullanılan Teknolojiler

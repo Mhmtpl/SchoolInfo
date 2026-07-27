@@ -982,7 +982,6 @@ class _TeacherClassroomDetailScreenState
                               keyboardType: TextInputType.number,
                               decoration: const InputDecoration(
                                 labelText: 'Tümüne su miktarı (ml)',
-                                border: OutlineInputBorder(),
                               ),
                               onChanged: (value) {},
                               onFieldSubmitted: (value) {

@@ -1364,6 +1364,11 @@ a:hover {
         grid-template-columns: repeat(2, 1fr);
     }
 }
+@media (min-width: 1024px) {
+    .features-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
 .feature-card {
     display: flex;
     flex-direction: column;
@@ -1474,4 +1479,230 @@ a:hover {
 }
 .cta-actions {
     margin-top: 1rem;
+}
+
+/* Custom Pulse Animation & Feature classes for Landing page */
+.feature-icon.bg-red { background: rgba(239, 68, 68, 0.08); }
+@keyframes landingPulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.15); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
+.landing-heart-pulse {
+    animation: landingPulse 1.2s infinite ease-in-out;
+    display: inline-block;
+}
+
+/* --- MOBILE RESPONSIVENESS PATCH FOR PARENT PORTAL --- */
+@media (max-width: 768px) {
+    .navbar {
+        padding: 1rem !important;
+        flex-direction: column !important;
+        gap: 0.75rem !important;
+        text-align: center !important;
+    }
+    .nav-user {
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+        width: 100% !important;
+    }
+    .user-badge {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+    
+    .main-content {
+        padding: 1.25rem 0.75rem !important;
+    }
+    
+    .child-hero-card {
+        padding: 1.5rem !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 1.25rem !important;
+        border-radius: 16px !important;
+    }
+    
+    .child-hero-card > div {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 1rem !important;
+    }
+    
+    .child-hero-info h1 {
+        font-size: 1.8rem !important;
+    }
+    
+    .child-hero-date {
+        width: 100% !important;
+        justify-content: space-between !important;
+        box-sizing: border-box;
+    }
+    
+    .glass-card {
+        padding: 1.25rem !important;
+        border-radius: 16px !important;
+    }
+    
+    .parent-dashboard {
+        gap: 1.5rem !important;
+    }
+    
+    #ecg-card {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+        text-align: center !important;
+        justify-items: center !important;
+        padding: 1.25rem !important;
+    }
+    
+    #ecg-card > div {
+        width: 100% !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+    
+    #ecg-card > div:nth-child(3) {
+        align-items: center !important;
+    }
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+
+/* --- DATA FLOW SCHEMA SECTION --- */
+.landing-schema-section {
+    margin: 6rem 0;
+}
+.schema-diamond-container {
+    position: relative;
+    max-width: 1100px;
+    margin: 4rem auto 0 auto;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    padding: 2rem;
+}
+.schema-diamond-node {
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(160, 140, 120, 0.05);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    position: relative;
+    text-align: center;
+    z-index: 2;
+}
+.schema-diamond-node:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(2, 132, 199, 0.12);
+}
+.schema-node-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    display: inline-block;
+}
+.schema-diamond-node h4 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+.schema-diamond-node p {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 0;
+}
+.schema-node-badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.25rem 0.75rem;
+    border-radius: 100px;
+    white-space: nowrap;
+}
+.schema-node-badge.live {
+    background: #ef4444;
+    animation: landingPulse 1.2s infinite ease-in-out;
+}
+.schema-node-badge.ai {
+    background: #8b5cf6;
+}
+.schema-node-badge.parent-badge {
+    background: #10b981;
+}
+
+/* Connectors */
+.schema-line-h, .schema-line-v {
+    display: none;
+    position: absolute;
+    pointer-events: none;
+    z-index: 1;
+}
+
+@media (min-width: 900px) {
+    .schema-diamond-container {
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(2, auto);
+        gap: 3.5rem 2.5rem;
+        height: 520px;
+    }
+    .teacher-node {
+        grid-column: 2;
+        grid-row: 1;
+        align-self: end;
+        border-color: var(--accent-purple);
+    }
+    .child-node {
+        grid-column: 1;
+        grid-row: 2;
+        align-self: center;
+        border-color: var(--accent-blue);
+    }
+    .hub-node {
+        grid-column: 2;
+        grid-row: 2;
+        align-self: center;
+        border-color: var(--border-hover);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(2, 132, 199, 0.03) 100%);
+    }
+    .parent-node {
+        grid-column: 3;
+        grid-row: 2;
+        align-self: center;
+        border-color: var(--accent-green);
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(16, 185, 129, 0.03) 100%);
+    }
+
+    .schema-line-h {
+        display: block;
+        top: 72%;
+        left: 20%;
+        right: 20%;
+        height: 3px;
+        background: linear-gradient(90deg, rgba(2, 132, 199, 0.2) 0%, var(--accent-blue) 50%, rgba(16, 185, 129, 0.2) 100%);
+    }
+    .schema-line-v {
+        display: block;
+        top: 25%;
+        left: 50%;
+        height: 25%;
+        width: 3px;
+        transform: translateX(-50%);
+        background: linear-gradient(180deg, rgba(139, 92, 246, 0.2) 0%, var(--accent-purple) 50%, rgba(2, 132, 199, 0.2) 100%);
+    }
 }

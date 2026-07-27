@@ -177,7 +177,11 @@ using (var scope = app.Services.CreateScope())
     var dbContext = scope.ServiceProvider.GetRequiredService<SchoolInfo.Infrastructure.Persistence.AppDbContext>();
     // Veri tabanını ve tablolarını otomatik oluştur/güncelle
     await Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.MigrateAsync(dbContext.Database);
-    await SchoolInfo.Infrastructure.Persistence.DatabaseInitializer.SeedAsync(dbContext);
+    
+    if (app.Environment.IsDevelopment())
+    {
+        await SchoolInfo.Infrastructure.Persistence.DatabaseInitializer.SeedAsync(dbContext);
+    }
 }
 
 app.UseAuthentication();

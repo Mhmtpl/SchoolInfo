@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using SchoolInfo.Application.Common.Interfaces;
 using SchoolInfo.Domain.Entities;
 using SchoolInfo.Domain.Exceptions;
@@ -50,7 +52,7 @@ public class GenerateDailySummaryCommandHandler : IRequestHandler<GenerateDailyS
     public async Task<Guid> Handle(GenerateDailySummaryCommand request, CancellationToken cancellationToken)
     {
         // 1. ICurrentUserService ile yetki kontrolü yap (Arka plan servisi çalıştığında role boş gelecektir, buna izin veriyoruz)
-        if (_currentUserService.Role != "Teacher" && _currentUserService.Role != "Admin" && _currentUserService.Role != "System" && _currentUserService.Role != "")
+        if (_currentUserService.Role != "Teacher" && _currentUserService.Role != "Admin" && _currentUserService.Role != "System" && _currentUserService.Role != "Parent" && _currentUserService.Role != "")
         {
             throw new UnauthorizedAccessException("Günlük özet raporu oluşturmak için yetkiniz bulunmamaktadır.");
         }
@@ -75,6 +77,54 @@ public class GenerateDailySummaryCommandHandler : IRequestHandler<GenerateDailyS
         // 5. IActivityRepository'den etkinlikleri getir
         var activities = await _activityRepository.GetByClassroomIdAsync(student.ClassroomId, dailyRecord.Date);
 
+        // 5b. Biyometrik verileri veritabanından çek ve ders saatlerine göre eşle
+        BiometricSummaryDto? biometricSummary = null;
+        var bioRecord = await _dbContext.StudentBiometricRecords
+            .FirstOrDefaultAsync(b => b.StudentId == student.Id && b.Date == dailyRecord.Date && !b.IsDeleted, cancellationToken);
+
+        if (bioRecord != null && !string.IsNullOrWhiteSpace(bioRecord.DataJson))
+        {
+            try
+            {
+                var points = System.Text.Json.JsonSerializer.Deserialize<List<BiometricPointDto>>(bioRecord.DataJson) ?? new();
+                var biometricActivities = new List<BiometricActivitySummaryDto>();
+
+                foreach (var activity in activities)
+                {
+                    // Aktivite saat aralığındaki nabız verilerini filtrele
+                    var matchedPoints = points.Where(p => 
+                        TimeSpan.TryParse(p.Time, out var pointTime) && 
+                        pointTime >= activity.StartTime && 
+                        pointTime <= activity.EndTime
+                    ).ToList();
+
+                    var hrValues = matchedPoints.Where(p => p.HeartRate.HasValue).Select(p => p.HeartRate!.Value).ToList();
+                    
+                    if (hrValues.Any())
+                    {
+                        biometricActivities.Add(new BiometricActivitySummaryDto(
+                            ActivityTitle: activity.Title,
+                            ActivityType: activity.Type.ToString(),
+                            AvgHeartRate: (int)Math.Round(hrValues.Average()),
+                            MinHeartRate: hrValues.Min(),
+                            MaxHeartRate: hrValues.Max()
+                        ));
+                    }
+                }
+
+                biometricSummary = new BiometricSummaryDto(
+                    OverallAvgHeartRate: bioRecord.AverageHeartRate,
+                    OverallAvgSpO2: bioRecord.AverageSpO2,
+                    OverallAvgTemp: bioRecord.AverageBodyTemperature,
+                    Activities: biometricActivities
+                );
+            }
+            catch (Exception ex)
+            {
+                // Biyometri okuma hatasında sessizce yoksay (hata toleransı)
+            }
+        }
+
         // 6. Verileri SummaryRequestDto'ya map et
         var summaryDto = new SummaryRequestDto(
             StudentName: student.FirstName,
@@ -87,7 +137,8 @@ public class GenerateDailySummaryCommandHandler : IRequestHandler<GenerateDailyS
                 Status: dailyRecord.SleepInfo.Status.ToString()),
             ToiletCount: 0, // VarsayÄ±lan deÄŸer
             Meals: meals.Select(m => new MealDto(m.MealName, m.Status.Type.ToString(), m.Status.Description ?? "")).ToList(),
-            Activities: activities.Select(a => new ActivityDto(a.Title, a.Description, a.ActivityDate)).ToList()
+            Activities: activities.Select(a => new ActivityDto(a.Title, a.Description, a.ActivityDate)).ToList(),
+            Biometrics: biometricSummary
         );
 
         string aiContent;
@@ -110,4 +161,19 @@ public class GenerateDailySummaryCommandHandler : IRequestHandler<GenerateDailyS
 
         return summary.Id;
     }
+}
+
+internal class BiometricPointDto
+{
+    [System.Text.Json.Serialization.JsonPropertyName("t")]
+    public string Time { get; set; } = string.Empty;
+
+    [System.Text.Json.Serialization.JsonPropertyName("hr")]
+    public int? HeartRate { get; set; }
+
+    [System.Text.Json.Serialization.JsonPropertyName("sp")]
+    public double? SpO2 { get; set; }
+
+    [System.Text.Json.Serialization.JsonPropertyName("temp")]
+    public double? BodyTemperature { get; set; }
 }

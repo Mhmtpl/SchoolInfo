@@ -56,6 +56,9 @@ public class AuthEndpoints : IEndpoint
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(u => u.Email == request.Email && !u.IsDeleted);
 
+        if (user == null)
+            return Results.Unauthorized();
+
         // Hem BCrypt doğrulamasını hem de düz metin karşılaştırmasını (fallback) destekliyoruz
         bool isPasswordValid = false;
         try
@@ -73,7 +76,7 @@ public class AuthEndpoints : IEndpoint
             isPasswordValid = true;
         }
 
-        if (user == null || !isPasswordValid)
+        if (!isPasswordValid)
             return Results.Unauthorized();
 
         var accessToken = GenerateAccessToken(user, configuration);

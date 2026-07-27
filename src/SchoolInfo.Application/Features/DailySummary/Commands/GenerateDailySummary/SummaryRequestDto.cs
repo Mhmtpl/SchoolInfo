@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace SchoolInfo.Application.Features.DailySummary.Commands.GenerateDailySummary;
@@ -13,10 +13,26 @@ public record SummaryRequestDto(
     SleepDto Sleep,
     int ToiletCount,
     List<MealDto> Meals,
-    List<ActivityDto> Activities
+    List<ActivityDto> Activities,
+    BiometricSummaryDto? Biometrics = null
 );
 
 public record WaterIntakeDto(int AmountMl, bool WasDrunk);
 public record SleepDto(int Minutes, string Status);
 public record MealDto(string MealName, string Status, string Note);
 public record ActivityDto(string Title, string Goal, DateTime? CompletedAt);
+
+public record BiometricSummaryDto(
+    int? OverallAvgHeartRate,
+    double? OverallAvgSpO2,
+    double? OverallAvgTemp,
+    List<BiometricActivitySummaryDto> Activities
+);
+
+public record BiometricActivitySummaryDto(
+    string ActivityTitle,
+    string ActivityType,
+    int? AvgHeartRate,
+    int? MinHeartRate,
+    int? MaxHeartRate
+);

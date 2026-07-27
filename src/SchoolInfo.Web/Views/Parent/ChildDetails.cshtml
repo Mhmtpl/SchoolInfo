@@ -5,6 +5,7 @@
     var activities = ViewBag.Activities as List<ActivityDto> ?? new List<ActivityDto>();
     var newsletters = ViewBag.Newsletters as List<NewsletterDto> ?? new List<NewsletterDto>();
     var aiSummary = ViewBag.AiSummary as string;
+    var weeklySchedule = ViewBag.WeeklySchedule as List<WeeklyScheduleDto> ?? new List<WeeklyScheduleDto>();
     
     ViewData["Title"] = $"{ViewBag.StudentName} Gelişim Kartı";
 
@@ -143,6 +144,7 @@
                    max="@DateTime.UtcNow.AddHours(3).Date.ToString("yyyy-MM-dd")" 
                    style="padding: 0.25rem 0.5rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); font-family: inherit; font-size: 0.9rem; font-weight: 600; color: #1e293b; background: white; cursor: pointer;"
                    onchange="changeChildDate(this.value)" />
+        </div>
         </div>
     </div>
 
@@ -518,7 +520,10 @@
             <!-- MODERN TABS FOR PARENT PANELS -->
             <div class="modern-tabs">
                 <button onclick="switchParentTab('tab-parent-activities')" id="btn-parent-activities" class="modern-tab-btn active">🎨 Bugünün Akışı</button>
-                <button onclick="switchParentTab('tab-parent-weekly')" id="btn-parent-weekly" class="modern-tab-btn">📅 Haftalık Program</button>
+                @if (weeklySchedule.Any())
+                {
+                    <button onclick="switchParentTab('tab-parent-weekly')" id="btn-parent-weekly" class="modern-tab-btn">📅 Haftalık Program</button>
+                }
                 <button onclick="switchParentTab('tab-parent-newsletters')" id="btn-parent-newsletters" class="modern-tab-btn">📰 Sınıf Bültenleri</button>
             </div>
 
@@ -574,12 +579,8 @@
             <div id="tab-parent-weekly" class="modern-tab-content">
                 <div class="glass-card" style="padding: 2rem;">
                     <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                        📅 Haftalık Sınıf Etkinlik Şablonu
+                        📅 Haftalık Ders Programı
                     </h2>
-                    
-                    @{
-                        var weeklySchedule = ViewBag.WeeklySchedule as List<WeeklyScheduleDto> ?? new List<WeeklyScheduleDto>();
-                    }
 
                     <!-- Gün Switcher'ı (Monday-Friday) -->
                     <div style="display: flex; gap: 0.35rem; justify-content: space-between; background: rgba(0,0,0,0.03); padding: 0.25rem; border-radius: 12px; border: 1px solid rgba(0,0,0,0.04); margin-bottom: 1.5rem;">

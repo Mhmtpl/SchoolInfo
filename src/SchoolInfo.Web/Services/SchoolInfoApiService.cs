@@ -86,12 +86,17 @@ public class SchoolInfoApiService
 
         try
         {
-            // API'ye refresh isteği atıyoruz. Authorization header eklememek için doğrudan PostAsJsonAsync çağrısı yapıyoruz.
+            // Eski/Süresi dolmuş Bearer token'ın refresh isteği ile birlikte gidip API tarafından reddedilmesini önlemek için temizliyoruz.
+            _httpClient.DefaultRequestHeaders.Authorization = null;
+
             var response = await _httpClient.PostAsJsonAsync("api/auth/refresh", new { RefreshToken = refreshToken });
             if (!response.IsSuccessStatusCode)
             {
-                // Refresh token geçersiz ise kullanıcının oturumunu kapat
-                await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                // Sadece yetersiz/geçersiz token durumunda (401 veya 400) oturumu sonlandır. Geçici ağ hatalarında oturumu açık tut.
+                if (response.StatusCode == HttpStatusCode.Unauthorized || response.StatusCode == HttpStatusCode.BadRequest)
+                {
+                    await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                }
                 return false;
             }
 

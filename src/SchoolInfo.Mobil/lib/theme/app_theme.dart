@@ -76,6 +76,51 @@ final ThemeData lightTheme = ThemeData(
     selectedItemColor: AppColors.primary,
     unselectedItemColor: AppColors.lightMuted,
   ),
+  inputDecorationTheme: InputDecorationTheme(
+    filled: true,
+    fillColor: const Color(0xFFF8FAFC),
+    labelStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 14, fontWeight: FontWeight.w500),
+    floatingLabelStyle: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide.none,
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide.none,
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(
+        color: AppColors.primary,
+        width: 1.5,
+      ),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(
+        color: AppColors.error,
+        width: 1,
+      ),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(
+        color: AppColors.error,
+        width: 1.5,
+      ),
+    ),
+  ),
+  filledButtonTheme: FilledButtonThemeData(
+    style: FilledButton.styleFrom(
+      backgroundColor: AppColors.primary,
+      foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      textStyle: const TextStyle(fontWeight: FontWeight.w700),
+    ),
+  ),
 );
 
 final ThemeData darkTheme = ThemeData(
@@ -134,6 +179,51 @@ final ThemeData darkTheme = ThemeData(
     elevation: 12,
     selectedItemColor: AppColors.primary,
     unselectedItemColor: AppColors.darkMuted,
+  ),
+  inputDecorationTheme: InputDecorationTheme(
+    filled: true,
+    fillColor: const Color(0xFF0F172A),
+    labelStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14, fontWeight: FontWeight.w500),
+    floatingLabelStyle: const TextStyle(color: AppColors.darkDetail, fontWeight: FontWeight.bold),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide.none,
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide.none,
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(
+        color: AppColors.darkDetail,
+        width: 1.5,
+      ),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(
+        color: AppColors.error,
+        width: 1,
+      ),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(
+        color: AppColors.error,
+        width: 1.5,
+      ),
+    ),
+  ),
+  filledButtonTheme: FilledButtonThemeData(
+    style: FilledButton.styleFrom(
+      backgroundColor: AppColors.darkDetail,
+      foregroundColor: Colors.black,
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      textStyle: const TextStyle(fontWeight: FontWeight.w700),
+    ),
   ),
 );
 
