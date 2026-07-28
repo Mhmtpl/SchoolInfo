@@ -1,45 +1,98 @@
-@model List<SchoolInfo.Web.Models.ClassroomDto>
+@model dynamic
 @{
-    ViewData["Title"] = "Yönetici Paneli";
+    ViewData["Title"] = "Dashboard";
+    Layout = "_AdminLayout";
 }
 
-<div class="teacher-workspace">
-    <div>
-        <h1 class="dashboard-title">Yönetici Paneli</h1>
-        <p class="dashboard-desc">Okulunuzdaki sınıfları ve genel düzeni buradan yönetebilirsiniz.</p>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+    <!-- Total Schools -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-center gap-4 hover:shadow-md transition-shadow">
+        <div class="w-14 h-14 rounded-full bg-brand-50 flex items-center justify-center text-brand-600">
+            <i class="ph ph-buildings text-2xl"></i>
+        </div>
+        <div>
+            <p class="text-sm font-medium text-slate-500">Kayıtlı Okullar</p>
+            <h3 class="text-2xl font-bold text-slate-800">@(Model?.totalSchools ?? 0)</h3>
+        </div>
     </div>
 
-    @if (ViewBag.ErrorMessage != null)
-    {
-        <div class="error-summary">@ViewBag.ErrorMessage</div>
-    }
-
-    <div class="glass-card">
-        <div class="section-card-header">
-            <h2>Sınıflar (@Model.Count)</h2>
+    <!-- Total Students -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-center gap-4 hover:shadow-md transition-shadow">
+        <div class="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+            <i class="ph ph-student text-2xl"></i>
         </div>
+        <div>
+            <p class="text-sm font-medium text-slate-500">Toplam Öğrenci</p>
+            <h3 class="text-2xl font-bold text-slate-800">@(Model?.totalStudents ?? 0)</h3>
+        </div>
+    </div>
 
-        @if (Model.Count == 0)
-        {
-            <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">Henüz bir sınıf bulunmuyor.</p>
-        }
-        else
-        {
-            <div class="classrooms-grid">
-                @foreach (var classroom in Model)
-                {
-                    <div class="glass-card class-card" style="padding: 1.5rem;">
-                        <div>
-                            <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em;">Sınıf Tanımı</span>
-                            <h3 style="margin-top: 0.25rem;">@classroom.Name</h3>
-                        </div>
-                        <div class="class-card-action">
-                            <span style="font-size: 0.85rem; color: var(--text-secondary);">Aktif Sınıf</span>
-                            <a href="#" class="card-link" style="color: var(--accent-blue);">Sınıfı Düzenle &rarr;</a>
-                        </div>
-                    </div>
-                }
-            </div>
-        }
+    <!-- Total Teachers -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-center gap-4 hover:shadow-md transition-shadow">
+        <div class="w-14 h-14 rounded-full bg-purple-50 flex items-center justify-center text-purple-600">
+            <i class="ph ph-chalkboard-teacher text-2xl"></i>
+        </div>
+        <div>
+            <p class="text-sm font-medium text-slate-500">Öğretmenler</p>
+            <h3 class="text-2xl font-bold text-slate-800">@(Model?.totalTeachers ?? 0)</h3>
+        </div>
+    </div>
+
+    <!-- Total Parents -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-center gap-4 hover:shadow-md transition-shadow">
+        <div class="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center text-orange-600">
+            <i class="ph ph-users-three text-2xl"></i>
+        </div>
+        <div>
+            <p class="text-sm font-medium text-slate-500">Veliler</p>
+            <h3 class="text-2xl font-bold text-slate-800">@(Model?.totalParents ?? 0)</h3>
+        </div>
+    </div>
+
+    <!-- Active ESP32 -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-center gap-4 hover:shadow-md transition-shadow">
+        <div class="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
+            <i class="ph ph-cpu text-2xl"></i>
+        </div>
+        <div>
+            <p class="text-sm font-medium text-slate-500">Aktif ESP32 Cihazı</p>
+            <h3 class="text-2xl font-bold text-slate-800">@(Model?.activeEsp32Devices ?? 0)</h3>
+        </div>
+    </div>
+
+    <!-- Today AI Summaries -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-center gap-4 hover:shadow-md transition-shadow">
+        <div class="w-14 h-14 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600">
+            <i class="ph ph-brain text-2xl"></i>
+        </div>
+        <div>
+            <p class="text-sm font-medium text-slate-500">Bugün Üretilen AI Özeti</p>
+            <h3 class="text-2xl font-bold text-slate-800">@(Model?.todayAiSummaries ?? 0)</h3>
+        </div>
+    </div>
+</div>
+
+<div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+    <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+        <i class="ph-fill ph-rocket-launch text-brand-500"></i>
+        Hızlı İşlemler
+    </h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <button class="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium hover:bg-brand-50 hover:border-brand-200 hover:text-brand-700 transition-colors flex items-center justify-center gap-2">
+            <i class="ph ph-plus-circle text-lg"></i>
+            Yeni Okul Ekle
+        </button>
+        <button class="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium hover:bg-brand-50 hover:border-brand-200 hover:text-brand-700 transition-colors flex items-center justify-center gap-2">
+            <i class="ph ph-user-plus text-lg"></i>
+            Kullanıcı Ekle
+        </button>
+        <button class="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium hover:bg-brand-50 hover:border-brand-200 hover:text-brand-700 transition-colors flex items-center justify-center gap-2">
+            <i class="ph ph-cpu text-lg"></i>
+            ESP32 Token Üret
+        </button>
+        <button class="px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium hover:bg-brand-50 hover:border-brand-200 hover:text-brand-700 transition-colors flex items-center justify-center gap-2">
+            <i class="ph ph-robot text-lg"></i>
+            AI Manuel Tetikle
+        </button>
     </div>
 </div>

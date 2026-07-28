@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - SchoolInfo SuperAdmin</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS (CDN for admin, ideally bundled in production) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#f0fdfa', 100: '#ccfbf1', 500: '#14b8a6', 600: '#0d9488', 900: '#134e4a' },
+                        dark: { 800: '#1e293b', 900: '#0f172a' }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@@phosphor-icons/web"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .sidebar-link { transition: all 0.2s ease; }
+        .sidebar-link:hover, .sidebar-link.active { background-color: rgba(20, 184, 166, 0.1); color: #0d9488; border-right: 3px solid #0d9488; }
+    </style>
+</head>
+<body class="text-slate-800 antialiased h-screen flex overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col hidden md:flex z-10 shadow-sm">
+        <div class="h-16 flex items-center px-6 border-b border-slate-200">
+            <div class="flex items-center gap-2 text-brand-600">
+                <i class="ph-fill ph-shield-check text-2xl"></i>
+                <span class="text-lg font-bold tracking-tight">SuperAdmin</span>
+            </div>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto py-4">
+            <nav class="space-y-1">
+                <a href="/Admin" class="sidebar-link active flex items-center gap-3 px-6 py-3 text-sm font-medium text-slate-600">
+                    <i class="ph ph-squares-four text-lg"></i>
+                    Dashboard
+                </a>
+                <a href="/Admin/Schools" class="sidebar-link flex items-center gap-3 px-6 py-3 text-sm font-medium text-slate-600">
+                    <i class="ph ph-buildings text-lg"></i>
+                    Okul Yönetimi
+                </a>
+                <a href="/Admin/Users" class="sidebar-link flex items-center gap-3 px-6 py-3 text-sm font-medium text-slate-600">
+                    <i class="ph ph-users text-lg"></i>
+                    Kullanıcılar
+                </a>
+                <a href="#" class="sidebar-link flex items-center gap-3 px-6 py-3 text-sm font-medium text-slate-600">
+                    <i class="ph ph-cpu text-lg"></i>
+                    IoT / ESP32 Cihazları
+                </a>
+                <a href="#" class="sidebar-link flex items-center gap-3 px-6 py-3 text-sm font-medium text-slate-600">
+                    <i class="ph ph-brain text-lg"></i>
+                    Yapay Zeka (AI)
+                </a>
+            </nav>
+        </div>
+        
+        <div class="p-4 border-t border-slate-200">
+            <a asp-controller="Home" asp-action="Index" class="flex items-center gap-3 px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors rounded-md hover:bg-slate-100">
+                <i class="ph ph-arrow-left text-lg"></i>
+                Ana Siteye Dön
+            </a>
+            <a asp-controller="Account" asp-action="Logout" class="flex mt-2 items-center gap-3 px-4 py-2 text-sm font-medium text-red-500 hover:text-red-700 transition-colors rounded-md hover:bg-red-50">
+                <i class="ph ph-sign-out text-lg"></i>
+                Çıkış Yap
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col overflow-hidden relative">
+        <!-- Topbar -->
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 z-10 shadow-sm">
+            <div class="flex items-center gap-4">
+                <button class="md:hidden text-slate-500 hover:text-brand-600">
+                    <i class="ph ph-list text-2xl"></i>
+                </button>
+                <h1 class="text-lg font-semibold text-slate-800">@ViewData["Title"]</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold text-sm">
+                        AD
+                    </div>
+                    <span class="text-sm font-medium text-slate-700 hidden sm:block">Sistem Yöneticisi</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <main class="flex-1 overflow-y-auto bg-slate-50 p-6 md:p-8">
+            <div class="max-w-7xl mx-auto">
+                @RenderBody()
+            </div>
+        </main>
+    </div>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

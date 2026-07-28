@@ -1,0 +1,225 @@
+@using SchoolInfo.Application.Features.Users.Queries.GetUsers
+@using SchoolInfo.Application.Features.Schools.Queries.GetSchool
+@using SchoolInfo.Domain.Enums
+@model List<UserDto>
+@{
+    ViewData["Title"] = "Kullanıcı Yönetimi";
+    Layout = "_AdminLayout";
+    var schools = ViewBag.Schools as List<SchoolDto> ?? new List<SchoolDto>();
+}
+
+<div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold text-slate-800">Sistem Kullanıcıları</h2>
+    <button onclick="document.getElementById('addUserModal').classList.remove('hidden')" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2">
+        <i class="ph ph-user-plus text-lg"></i>
+        Yeni Kullanıcı Ekle
+    </button>
+</div>
+
+@if (ViewBag.ErrorMessage != null)
+{
+    <div class="bg-red-50 text-red-600 p-4 rounded-lg mb-6 border border-red-100 flex items-center gap-3">
+        <i class="ph-fill ph-warning-circle text-xl"></i>
+        @ViewBag.ErrorMessage
+    </div>
+}
+
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 border-b border-slate-200 text-slate-600">
+                <tr>
+                    <th class="py-3 px-6 font-semibold">Ad Soyad</th>
+                    <th class="py-3 px-6 font-semibold">E-posta</th>
+                    <th class="py-3 px-6 font-semibold">Rol</th>
+                    <th class="py-3 px-6 font-semibold">Bağlı Olduğu Okul</th>
+                    <th class="py-3 px-6 font-semibold text-right">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200">
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var user in Model)
+                    {
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="py-3 px-6 font-medium text-slate-800">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">
+                                        <i class="ph-fill ph-user"></i>
+                                    </div>
+                                    @user.FirstName @user.LastName
+                                </div>
+                            </td>
+                            <td class="py-3 px-6 text-slate-600">@user.Email</td>
+                            <td class="py-3 px-6">
+                                @if (user.Role == UserRole.Admin)
+                                {
+                                    <span class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">Sistem Yöneticisi</span>
+                                }
+                                else if (user.Role == UserRole.Teacher)
+                                {
+                                    <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">Öğretmen</span>
+                                }
+                                else
+                                {
+                                    <span class="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs font-medium">Veli</span>
+                                }
+                            </td>
+                            <td class="py-3 px-6 text-slate-600">
+                                @(string.IsNullOrEmpty(user.SchoolName) ? "-" : user.SchoolName)
+                            </td>
+                            <td class="py-3 px-6 text-right">
+                                <button onclick="openEditModal('@user.Id', '@user.FirstName', '@user.LastName', '@user.Email', '@((int)user.Role)', '@user.SchoolId')" class="text-blue-600 hover:text-blue-800 mr-3 transition-colors" title="Düzenle">
+                                    <i class="ph ph-pencil-simple text-lg"></i>
+                                </button>
+                                <form asp-action="DeleteUser" asp-controller="Admin" method="post" class="inline" onsubmit="return confirm('Bu kullanıcıyı silmek istediğinize emin misiniz? Bu işlem geri alınamaz!');">
+                                    <input type="hidden" name="id" value="@user.Id" />
+                                    <button type="submit" class="text-red-600 hover:text-red-800 transition-colors" title="Sil">
+                                        <i class="ph ph-trash text-lg"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="py-8 text-center text-slate-500">
+                            Henüz kayıtlı kullanıcı bulunmuyor.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Ekleme Modalı -->
+<div id="addUserModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-50 flex items-center justify-center">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+            <h3 class="font-semibold text-lg text-slate-800">Yeni Kullanıcı Ekle</h3>
+            <button onclick="document.getElementById('addUserModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
+                <i class="ph ph-x text-xl"></i>
+            </button>
+        </div>
+        <form asp-action="CreateUser" asp-controller="Admin" method="post">
+            <div class="p-6 grid grid-cols-2 gap-4">
+                <div class="col-span-1">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Ad</label>
+                    <input type="text" name="FirstName" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none" />
+                </div>
+                <div class="col-span-1">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Soyad</label>
+                    <input type="text" name="LastName" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none" />
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">E-posta Adresi</label>
+                    <input type="email" name="Email" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none" />
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Şifre</label>
+                    <input type="password" name="Password" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none" />
+                </div>
+                <div class="col-span-1">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Rol</label>
+                    <select name="Role" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none bg-white">
+                        <option value="1">Admin</option>
+                        <option value="2" selected>Öğretmen</option>
+                        <option value="3">Veli</option>
+                    </select>
+                </div>
+                <div class="col-span-1">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Okul</label>
+                    <select name="SchoolId" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none bg-white">
+                        <option value="">-- Okul Yok --</option>
+                        @foreach (var school in schools)
+                        {
+                            <option value="@school.Id">@school.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-200 flex justify-end gap-3 bg-slate-50">
+                <button type="button" onclick="document.getElementById('addUserModal').classList.add('hidden')" class="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg font-medium transition-colors">İptal</button>
+                <button type="submit" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium transition-colors">Kaydet</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Düzenleme Modalı -->
+<div id="editUserModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-50 flex items-center justify-center">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+            <h3 class="font-semibold text-lg text-slate-800">Kullanıcıyı Düzenle</h3>
+            <button onclick="document.getElementById('editUserModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
+                <i class="ph ph-x text-xl"></i>
+            </button>
+        </div>
+        <form asp-action="UpdateUser" asp-controller="Admin" method="post">
+            <input type="hidden" name="Id" id="editUserId" />
+            <div class="p-6 grid grid-cols-2 gap-4">
+                <div class="col-span-1">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Ad</label>
+                    <input type="text" name="FirstName" id="editFirstName" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none" />
+                </div>
+                <div class="col-span-1">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Soyad</label>
+                    <input type="text" name="LastName" id="editLastName" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none" />
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">E-posta Adresi</label>
+                    <input type="email" name="Email" id="editEmail" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none" />
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Yeni Şifre (İsteğe Bağlı)</label>
+                    <input type="password" name="Password" placeholder="Değiştirmek istemiyorsanız boş bırakın" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none" />
+                </div>
+                <div class="col-span-1">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Rol</label>
+                    <select name="Role" id="editRole" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none bg-white">
+                        <option value="1">Admin</option>
+                        <option value="2">Öğretmen</option>
+                        <option value="3">Veli</option>
+                    </select>
+                </div>
+                <div class="col-span-1">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Okul</label>
+                    <select name="SchoolId" id="editSchoolId" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none bg-white">
+                        <option value="">-- Okul Yok --</option>
+                        @foreach (var school in schools)
+                        {
+                            <option value="@school.Id">@school.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-200 flex justify-end gap-3 bg-slate-50">
+                <button type="button" onclick="document.getElementById('editUserModal').classList.add('hidden')" class="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg font-medium transition-colors">İptal</button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">Güncelle</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openEditModal(id, firstName, lastName, email, role, schoolId) {
+            document.getElementById('editUserId').value = id;
+            document.getElementById('editFirstName').value = firstName;
+            document.getElementById('editLastName').value = lastName;
+            document.getElementById('editEmail').value = email;
+            document.getElementById('editRole').value = role;
+            
+            if (schoolId && schoolId !== "null" && schoolId !== "") {
+                document.getElementById('editSchoolId').value = schoolId;
+            } else {
+                document.getElementById('editSchoolId').value = "";
+            }
+            
+            document.getElementById('editUserModal').classList.remove('hidden');
+        }
+    </script>
+}
